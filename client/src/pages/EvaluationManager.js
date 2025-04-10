@@ -1,4 +1,3 @@
-// src/pages/EvaluationManager.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -9,25 +8,22 @@ import {
   Card,
   CardContent,
   CardActions,
+  Alert,
+  Divider
 } from "@mui/material";
-import { Delete, Edit, Save, Add } from "@mui/icons-material";
+import { Delete, Edit, Save } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const EvaluationManager = () => {
-  // Stocke la liste des questions récupérées du backend
   const [questions, setQuestions] = useState([]);
-
-  // États pour l'édition d'une question existante
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editedQuestionText, setEditedQuestionText] = useState("");
-  const [editedOptions, setEditedOptions] = useState([]);
 
-  // États pour l'ajout d'une nouvelle question
+  const [newChapter, setNewChapter] = useState("");
   const [newQuestionText, setNewQuestionText] = useState("");
-  const [newOptionsText, setNewOptionsText] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
-  // Récupération des questions lors du montage du composant
   useEffect(() => {
     fetch("http://localhost:5000/api/qcm")
       .then((response) => response.json())
@@ -37,43 +33,41 @@ const EvaluationManager = () => {
       );
   }, []);
 
-  // Déclenche le mode édition pour la question sélectionnée
+  // Regrouper les questions par chapitre
+  const groupedQuestions = questions.reduce((acc, q) => {
+    const chapter = q.chapter || "Non défini";
+    if (!acc[chapter]) acc[chapter] = [];
+    acc[chapter].push(q);
+    return acc;
+  }, {});
+
   const startEditing = (q) => {
-    // Utilisation de _id car Mongoose retourne habituellement _id
     setEditingQuestionId(q._id);
     setEditedQuestionText(q.question);
-    setEditedOptions(q.options || []);
   };
 
-  // Annule l'édition
   const cancelEditing = () => {
     setEditingQuestionId(null);
     setEditedQuestionText("");
-    setEditedOptions([]);
   };
 
-  // Sauvegarde les modifications apportées à la question
   const saveEditing = (id) => {
+    const originalQuestion = questions.find((q) => q._id === id);
     const updatedQuestion = {
+      chapter: originalQuestion ? originalQuestion.chapter : "",
       question: editedQuestionText,
-      options: editedOptions,
     };
 
     fetch(`http://localhost:5000/api/qcm/${id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedQuestion),
     })
       .then((response) => response.json())
       .then((data) => {
-        // Remplace la question modifiée dans le state
-        const updatedQuestions = questions.map((q) => {
-          // On compare avec _id puisque le backend retourne _id
-          if (q._id === id) return data;
-          return q;
-        });
+        const updatedQuestions = questions.map((q) =>
+          q._id === id ? data : q
+        );
         setQuestions(updatedQuestions);
         cancelEditing();
       })
@@ -82,14 +76,12 @@ const EvaluationManager = () => {
       );
   };
 
-  // Supprime une question
   const deleteQuestion = (id) => {
     fetch(`http://localhost:5000/api/qcm/${id}`, {
       method: "DELETE",
     })
       .then((response) => {
         if (response.ok) {
-          // On filtre en se basant sur _id
           setQuestions(questions.filter((q) => q._id !== id));
         }
       })
@@ -98,24 +90,17 @@ const EvaluationManager = () => {
       );
   };
 
-  // Ajoute une nouvelle question
+  // Fonction d'ajout d'une nouvelle question
   const addNewQuestion = () => {
-    if (newQuestionText.trim() === "" || newOptionsText.trim() === "") {
-      alert("Veuillez remplir le texte de la question et les options.");
+    if (newChapter.trim() === "" || newQuestionText.trim() === "") {
+      alert("Veuillez remplir le chapitre et le texte de la question.");
       return;
     }
-    // Transformation des options depuis une chaîne séparée par des virgules
-    const options = newOptionsText
-      .split(",")
-      .map((opt) => opt.trim())
-      .filter((opt) => opt !== "");
-    if (options.length === 0) {
-      alert("Veuillez fournir au moins une option valide.");
-      return;
-    }
+
     const newQuestion = {
+      chapter: newChapter,
       question: newQuestionText,
-      options,
+      // Les options seront générées automatiquement côté serveur
     };
 
     fetch("http://localhost:5000/api/qcm", {
@@ -125,41 +110,65 @@ const EvaluationManager = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        // Ajoute la nouvelle question dans le state
         setQuestions([...questions, data]);
+        // Réinitialise les champs pour l'ajout
+        setNewChapter("");
         setNewQuestionText("");
-        setNewOptionsText("");
+        setFeedback({
+          type: "success",
+          message: "Nouvelle question ajoutée !",
+        });
       })
       .catch((error) =>
         console.error("Erreur lors de l'ajout de la question :", error)
       );
   };
 
-  // Fonction pour exporter les questions et options en PDF
+  // Action : Préremplir le champ "Chapitre" et défiler jusqu'au formulaire
+  const handleAddInChapter = (chapterName) => {
+    setNewChapter(chapterName);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
+  // Exporter en PDF
   const handleExportPDF = () => {
     const doc = new jsPDF();
     doc.text("Données du QCM", 14, 20);
-
-    // Préparer les colonnes : Numéro, Question, Options
-    const tableColumn = ["N°", "Question", "Options"];
+    const tableColumn = ["N°", "Chapitre", "Question", "Options", "Note max"];
     const tableRows = questions.map((q, index) => {
-      const optionsText = (q.options || []).join(", ");
-      return [index + 1, q.question, optionsText];
+      const optionsText = (q.options || [])
+        .map((opt) => `${opt.text} (${opt.note})`)
+        .join(", ");
+      // Note max : pour cette configuration, il s'agit de 5
+      const maxNote = 5;
+      return [index + 1, q.chapter, q.question, optionsText, maxNote];
     });
-
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 30,
       styles: { fontSize: 10 },
     });
-
     doc.save("qcm_data.pdf");
   };
 
   return (
-    <Box sx={{ p: 3, background: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+    <Box
+      sx={{
+        p: 3,
+        background: "white",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+        borderRadius: 2,
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h5" gutterBottom>
           Gestion des questions du QCM
         </Typography>
@@ -167,65 +176,95 @@ const EvaluationManager = () => {
           Exporter en PDF
         </Button>
       </Box>
-      {questions.map((q) => (
-        <Card key={q._id} sx={{ mb: 2 }}>
-          <CardContent>
-            {editingQuestionId === q._id ? (
-              <>
-                <TextField
-                  fullWidth
-                  label="Question"
-                  value={editedQuestionText}
-                  onChange={(e) => setEditedQuestionText(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Options (séparées par une virgule)"
-                  value={(editedOptions || []).join(", ")}
-                  onChange={(e) =>
-                    setEditedOptions(
-                      e.target.value.split(",").map((opt) => opt.trim())
-                    )
-                  }
-                />
-              </>
-            ) : (
-              <>
-                <Typography variant="h6">{q.question}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Options: {(q.options || []).join(", ")}
-                </Typography>
-              </>
-            )}
-          </CardContent>
-          <CardActions>
-            {editingQuestionId === q._id ? (
-              <>
-                <IconButton onClick={() => saveEditing(q._id)} color="primary">
-                  <Save />
-                </IconButton>
-                <IconButton onClick={cancelEditing} color="secondary">
-                  <Delete />
-                </IconButton>
-              </>
-            ) : (
-              <>
-                <IconButton onClick={() => startEditing(q)} color="primary">
-                  <Edit />
-                </IconButton>
-                <IconButton onClick={() => deleteQuestion(q._id)} color="secondary">
-                  <Delete />
-                </IconButton>
-              </>
-            )}
-          </CardActions>
-        </Card>
+      {feedback && (
+        <Alert severity={feedback.type} sx={{ mb: 2 }}>
+          {feedback.message}
+        </Alert>
+      )}
+
+      {Object.entries(groupedQuestions).map(([chapter, chapterQuestions]) => (
+        <Box key={chapter} sx={{ mb: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" color="primary" sx={{ mb: 2 }}>
+              Chapitre: {chapter}
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => handleAddInChapter(chapter)}
+            >
+              Ajouter une question dans ce chapitre
+            </Button>
+          </Box>
+          {chapterQuestions.map((q) => (
+            <Card key={q._id} sx={{ mb: 2 }}>
+              <CardContent>
+                {editingQuestionId === q._id ? (
+                  <TextField
+                    fullWidth
+                    label="Question"
+                    value={editedQuestionText}
+                    onChange={(e) => setEditedQuestionText(e.target.value)}
+                    sx={{ mb: 2 }}
+                  />
+                ) : (
+                  <>
+                    <Typography variant="body1">{q.question}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Options: {(q.options || [])
+                        .map((opt) => `${opt.text} (${opt.note})`)
+                        .join(", ")}
+                    </Typography>
+                  </>
+                )}
+              </CardContent>
+              <CardActions>
+                {editingQuestionId === q._id ? (
+                  <>
+                    <IconButton onClick={() => saveEditing(q._id)} color="primary">
+                      <Save />
+                    </IconButton>
+                    <IconButton onClick={cancelEditing} color="secondary">
+                      <Delete />
+                    </IconButton>
+                  </>
+                ) : (
+                  <>
+                    <IconButton onClick={() => startEditing(q)} color="primary">
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => deleteQuestion(q._id)}
+                      color="secondary"
+                    >
+                      <Delete />
+                    </IconButton>
+                  </>
+                )}
+              </CardActions>
+              <Divider />
+            </Card>
+          ))}
+        </Box>
       ))}
+
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" gutterBottom>
           Ajouter une nouvelle question
         </Typography>
+        <TextField
+          fullWidth
+          label="Chapitre"
+          value={newChapter}
+          onChange={(e) => setNewChapter(e.target.value)}
+          sx={{ mb: 2 }}
+        />
         <TextField
           fullWidth
           label="Texte de la question"
@@ -233,14 +272,7 @@ const EvaluationManager = () => {
           onChange={(e) => setNewQuestionText(e.target.value)}
           sx={{ mb: 2 }}
         />
-        <TextField
-          fullWidth
-          label="Options (séparées par une virgule)"
-          value={newOptionsText}
-          onChange={(e) => setNewOptionsText(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        <Button variant="contained" startIcon={<Add />} onClick={addNewQuestion}>
+        <Button variant="contained" onClick={addNewQuestion}>
           Ajouter la question
         </Button>
       </Box>

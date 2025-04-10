@@ -2,8 +2,18 @@
 import React from 'react';
 import { Box, Typography, Grid, Paper } from '@mui/material';
 import DashboardChart from '../components/DashboardChart';
+import PieChart from '../components/PieChart';
+import MonthlyRecruitmentChart from '../components/MonthlyRecruitmentChart';
 
-const DashboardHome = ({ employeeCount, projectCount, departmentCount }) => {
+const DashboardHome = ({
+  employeeCount,
+  projectCount,
+  departmentCount,
+  departmentLabels,
+  departmentData,
+  recruitmentLabels,
+  recruitmentData
+}) => {
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" gutterBottom>
@@ -29,11 +39,34 @@ const DashboardHome = ({ employeeCount, projectCount, departmentCount }) => {
           </Paper>
         </Grid>
       </Grid>
-      <Box sx={{ mt: 4 }}>
+
+      <Box sx={{ mt: 4, height: '300px' }}>
         <DashboardChart
           employeeCount={employeeCount}
           projectCount={projectCount}
           departmentCount={departmentCount}
+        />
+      </Box>
+
+      <Box sx={{ mt: 4, height: '300px' }}>
+        <Typography variant="h6" gutterBottom>
+          Répartition des employés par département
+        </Typography>
+        <PieChart
+          labels={departmentLabels}
+          data={departmentData}
+          title="Départements"
+        />
+      </Box>
+
+      <Box sx={{ mt: 4, height: '300px' }}>
+        <Typography variant="h6" gutterBottom>
+          Recrutement Mensuel
+        </Typography>
+        <MonthlyRecruitmentChart
+          labels={recruitmentLabels}
+          data={recruitmentData}
+          title="Recrutement Mensuel"
         />
       </Box>
     </Box>

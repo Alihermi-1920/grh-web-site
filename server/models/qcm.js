@@ -1,11 +1,18 @@
-// models/qcm.js
 const mongoose = require("mongoose");
 
-const qcmSchema = new mongoose.Schema({
-  question: { type: String, required: true },
-  options: { type: [String], required: true },
-}, {
-  timestamps: true // Optionnel : ajoute des timestamps pour la création et la mise à jour
+const optionSchema = new mongoose.Schema({
+  text: { type: String, required: true },
+  note: { type: Number, required: true, min: 0, max: 5 },
 });
+
+const qcmSchema = new mongoose.Schema(
+  {
+    chapter: { type: String, required: true },
+    question: { type: String, required: true },
+    // Les options seront générées automatiquement (0 à 5)
+    options: { type: [optionSchema], required: true },
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("QCM", qcmSchema);

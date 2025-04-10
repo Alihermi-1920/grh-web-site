@@ -14,6 +14,7 @@ const taskRoutes = require("./routes/taskRoutes"); // Nom du fichier mis à jour
 const notificationRoutes = require("./routes/notification");
 // Si vous utilisez encore les routes de congés, vous pouvez les importer ici
 const congeRoutes = require("./routes/conges");
+const evaluationResultatRoutes = require("./routes/evaluationresultat");
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/qcm", qcmRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/conges", congeRoutes);
+app.use("/api/evaluationresultat", evaluationResultatRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI, {

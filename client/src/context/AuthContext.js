@@ -1,3 +1,4 @@
+// src/context/AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext();
@@ -11,7 +12,6 @@ export const AuthProvider = ({ children }) => {
     if (storedEmployee) {
       setUser(JSON.parse(storedEmployee));
     }
-    // Vous pouvez également gérer l'authentification admin ici si nécessaire
   }, []);
 
   return (

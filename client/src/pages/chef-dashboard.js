@@ -21,6 +21,13 @@ import {
   DialogContent,
   DialogActions,
   List as MuiList,
+  AppBar,
+  Toolbar,
+  Stack,
+  Divider,
+  Tooltip,
+  useMediaQuery,
+  Fade,
 } from "@mui/material";
 import {
   People,
@@ -32,6 +39,13 @@ import {
   Close as CloseIcon,
   ExpandLess,
   ExpandMore,
+  Dashboard as DashboardIcon,
+  EventNote,
+  CalendarMonth,
+  ExitToApp,
+  Menu,
+  LightMode,
+  DarkMode,
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import EmployeeList from "./EmployeeList";
@@ -42,22 +56,98 @@ import AttendanceCalendar from "./AttendanceCalendar";
 import TaskManager from "./TaskManager";
 import LeaveManagement from "./LeaveManagement";
 import LeaveHistory from "./LeaveHistory";
+import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
 import { AuthContext } from "../context/AuthContext";
-
-const theme = createTheme({
-  palette: {
-    primary: { main: "#1a237e" },
-    secondary: { main: "#3949ab" },
-  },
-});
 
 const ChefDashboard = () => {
   const { user } = useContext(AuthContext);
-  const [activeView, setActiveView] = useState("");
+  const [activeView, setActiveView] = useState("dashboardHomeChef");
   const [newProjectNotifications, setNewProjectNotifications] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
   const [openAttendanceSubmenu, setOpenAttendanceSubmenu] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Thème dynamique
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? "dark" : "light",
+      primary: {
+        main: "#1a237e",
+        light: "#534bae",
+        dark: "#000051",
+      },
+      secondary: {
+        main: "#3949ab",
+        light: "#6f74dd",
+        dark: "#00227b",
+      },
+      background: {
+        default: darkMode ? "#121212" : "#f5f7fa",
+        paper: darkMode ? "#1e1e1e" : "#ffffff",
+      },
+      text: {
+        primary: darkMode ? "#ffffff" : "#333333",
+        secondary: darkMode ? "#b0b0b0" : "#666666",
+      },
+    },
+    typography: {
+      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+      h4: { fontWeight: 700, letterSpacing: "-0.5px" },
+      h6: { fontWeight: 600 },
+      button: { textTransform: "none", fontWeight: 600 },
+    },
+    shape: { borderRadius: 12 },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            boxShadow: darkMode
+              ? "0 4px 14px 0 rgba(26, 35, 126, 0.3)"
+              : "0 4px 14px 0 rgba(26, 35, 126, 0.2)",
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 16,
+            boxShadow: darkMode
+              ? "0 5px 22px 0 rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.05)"
+              : "0 5px 22px 0 rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)",
+          },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            margin: "4px 0",
+            "&.Mui-selected": {
+              backgroundColor: darkMode
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(26, 35, 126, 0.1)",
+              "&:hover": {
+                backgroundColor: darkMode
+                  ? "rgba(255,255,255,0.15)"
+                  : "rgba(26, 35, 126, 0.15)",
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const drawerWidth = 280;
+
+  // Fermer le drawer sur mobile
+  useEffect(() => {
+    if (isMobile) setDrawerOpen(false);
+  }, [isMobile]);
 
   useEffect(() => {
     const fetchNotificationCount = async () => {
@@ -96,152 +186,357 @@ const ChefDashboard = () => {
   };
 
   const handleAttendanceClick = () => setOpenAttendanceSubmenu(!openAttendanceSubmenu);
+  const toggleDrawer = () => setDrawerOpen(!drawerOpen);
+  const handleThemeToggle = () => setDarkMode(!darkMode);
 
   const Sidebar = () => (
     <Drawer
-      variant="permanent"
+      variant={isMobile ? "temporary" : "permanent"}
+      open={drawerOpen}
+      onClose={toggleDrawer}
       sx={{
-        width: 240,
+        width: drawerWidth,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: 240,
+          width: drawerWidth,
           boxSizing: "border-box",
-          background: "linear-gradient(195deg, #1a237e 0%, #3949ab 100%)",
+          background: darkMode
+            ? "linear-gradient(165deg, #000051 0%, #1a237e 100%)"
+            : "linear-gradient(165deg, #1a237e 0%, #3949ab 100%)",
           color: "white",
-          display: "flex",
-          flexDirection: "column",
+          borderRight: "none",
+          overflow: "auto",
+          "&::-webkit-scrollbar": { width: "8px" },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "rgba(255,255,255,0.2)",
+            borderRadius: "4px",
+          },
         },
       }}
     >
-      <Box sx={{ textAlign: "center", pt: 2, pb: 1 }}>
+      {/* Profil */}
+      <Stack
+        alignItems="center"
+        spacing={2}
+        sx={{ p: 4, borderBottom: "1px solid rgba(255,255,255,0.12)" }}
+      >
         {user?.photo ? (
-          <img
+          <Avatar
             src={`/${user.photo.split(/(\\|\/)/g).pop()}`}
             alt={`${user.firstName} ${user.lastName}`}
-            style={{
-              width: "140px",
-              height: "140px",
-              objectFit: "cover",
-              borderRadius: "50%",
-              border: "3px solid white",
+            sx={{
+              width: 80,
+              height: 80,
+              bgcolor: "white",
+              border: "4px solid rgba(255,255,255,0.2)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
             }}
           />
         ) : (
           <Avatar
             sx={{
-              width: 140,
-              height: 140,
+              width: 80,
+              height: 80,
               bgcolor: "white",
-              border: "3px solid #e0e0e0",
-              margin: "0 auto",
+              border: "4px solid rgba(255,255,255,0.2)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
             }}
           >
-            <AdminPanelSettings sx={{ fontSize: 70, color: "primary.main" }} />
+            <AdminPanelSettings sx={{ fontSize: 40, color: "primary.main" }} />
           </Avatar>
         )}
-        <Box sx={{ mt: 1 }}>
+        <Box sx={{ textAlign: "center" }}>
           <Typography variant="h6" fontWeight="600">
             {user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ backgroundColor: "rgba(255,255,255,0.15)", px: 1.5, py: 0.5, borderRadius: 2 }}
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.12)",
+              px: 2,
+              py: 0.5,
+              borderRadius: 4,
+              fontWeight: 500,
+              display: "inline-block",
+              mt: 0.5,
+            }}
           >
             {user?.role || "Chef de service"}
           </Typography>
-          <Typography
-            variant="h6"
-            fontWeight="600"
-            color="primary.main"
-            sx={{ mt: 1, backgroundColor: "rgba(255,255,255,0.15)", px: 1.5, py: 0.5, borderRadius: 2 }}
+          {user?.department && (
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+                mt: 1,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                px: 2,
+                py: 0.5,
+                borderRadius: 4,
+                fontWeight: 500,
+              }}
+            >
+              {user.department}
+            </Typography>
+          )}
+        </Box>
+      </Stack>
+
+      <List sx={{ px: 2, py: 3 }}>
+        {/* Dashboard */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("dashboardHomeChef")}
+            selected={activeView === "dashboardHomeChef"}
+            sx={{ py: 1.2 }}
           >
-            {user?.department}
+            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="Dashboard"
+              primaryTypographyProps={{
+                fontWeight: activeView === "dashboardHomeChef" ? 600 : 500,
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Section Équipe */}
+        <Box sx={{ my: 2 }}>
+          <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
+          <Typography
+            variant="caption"
+            sx={{
+              color: "rgba(255,255,255,0.6)",
+              px: 2,
+              py: 1,
+              display: "block",
+            }}
+          >
+            GESTION D'ÉQUIPE
           </Typography>
         </Box>
-      </Box>
-      <List sx={{ flexGrow: 1, px: 2 }}>
-        {/* Menu Employés */}
+
+        {/* Employés */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("employeeList")} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("employeeList")}
+            selected={activeView === "employeeList"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <People />
             </ListItemIcon>
-            <ListItemText primary="Mes Employés" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Mes Employés"
+              primaryTypographyProps={{
+                fontWeight: activeView === "employeeList" ? 600 : 500,
+              }}
+            />
           </ListItemButton>
         </ListItem>
-        {/* Menu Projets */}
+
+        {/* Évaluation */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("projectList")} sx={{ borderRadius: 1, mb: 0.5 }}>
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <Assignment />
-            </ListItemIcon>
-            <ListItemText primary="Mes Projets" primaryTypographyProps={{ fontSize: 14 }} />
-          </ListItemButton>
-        </ListItem>
-        {/* Menu Evaluation */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("evaluation")} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("evaluation")}
+            selected={activeView === "evaluation"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <RateReview />
             </ListItemIcon>
-            <ListItemText primary="Evaluation" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Évaluation"
+              primaryTypographyProps={{
+                fontWeight: activeView === "evaluation" ? 600 : 500,
+              }}
+            />
           </ListItemButton>
         </ListItem>
-        {/* Menu Présence avec sous-menu */}
+
+        {/* Projets */}
         <ListItem disablePadding>
-          <ListItemButton onClick={handleAttendanceClick} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("projectList")}
+            selected={activeView === "projectList"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <Assignment />
             </ListItemIcon>
-            <ListItemText primary="Présence" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Mes Projets"
+              primaryTypographyProps={{
+                fontWeight: activeView === "projectList" ? 600 : 500,
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Section Présence et Congés */}
+        <Box sx={{ my: 2 }}>
+          <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
+          <Typography
+            variant="caption"
+            sx={{
+              color: "rgba(255,255,255,0.6)",
+              px: 2,
+              py: 1,
+              display: "block",
+            }}
+          >
+            PRÉSENCE & CONGÉS
+          </Typography>
+        </Box>
+
+        {/* Présence avec sous-menu */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={handleAttendanceClick}
+            selected={["attendance", "attendanceCalendar"].includes(activeView)}
+            sx={{ py: 1.2 }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+              <EventNote />
+            </ListItemIcon>
+            <ListItemText
+              primary="Présence"
+              primaryTypographyProps={{
+                fontWeight: ["attendance", "attendanceCalendar"].includes(activeView)
+                  ? 600
+                  : 500,
+              }}
+            />
             {openAttendanceSubmenu ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
         </ListItem>
         <Collapse in={openAttendanceSubmenu} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => setActiveView("attendance")} sx={{ pl: 4 }}>
-                <ListItemText primary="Liste de présences" primaryTypographyProps={{ fontSize: 14 }} />
+              <ListItemButton
+                onClick={() => setActiveView("attendance")}
+                selected={activeView === "attendance"}
+                sx={{ pl: 5, py: 1 }}
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                  <ListAlt fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Liste de présences"
+                  primaryTypographyProps={{
+                    fontWeight: activeView === "attendance" ? 600 : 500,
+                    fontSize: 14,
+                  }}
+                />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton onClick={() => setActiveView("attendanceCalendar")} sx={{ pl: 4 }}>
-                <ListItemText primary="Calendrier de présence" primaryTypographyProps={{ fontSize: 14 }} />
+              <ListItemButton
+                onClick={() => setActiveView("attendanceCalendar")}
+                selected={activeView === "attendanceCalendar"}
+                sx={{ pl: 5, py: 1 }}
+              >
+                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                  <CalendarMonth fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Calendrier de présence"
+                  primaryTypographyProps={{
+                    fontWeight: activeView === "attendanceCalendar" ? 600 : 500,
+                    fontSize: 14,
+                  }}
+                />
               </ListItemButton>
             </ListItem>
           </List>
         </Collapse>
-        {/* Menu Demande de Congé */}
+
+        {/* Congés */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("leaveManagement")} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("leaveManagement")}
+            selected={activeView === "leaveManagement"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <Assignment />
             </ListItemIcon>
-            <ListItemText primary="Nouvelle demande de congé" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Nouvelle demande de congé"
+              primaryTypographyProps={{
+                fontWeight: activeView === "leaveManagement" ? 600 : 500,
+              }}
+            />
           </ListItemButton>
         </ListItem>
-        {/* Historique des congés */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("leaveHistory")} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("leaveHistory")}
+            selected={activeView === "leaveHistory"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <ListAlt />
             </ListItemIcon>
-            <ListItemText primary="Historique des congés" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Historique des congés"
+              primaryTypographyProps={{
+                fontWeight: activeView === "leaveHistory" ? 600 : 500,
+              }}
+            />
           </ListItemButton>
         </ListItem>
-        {/* Menu Tâches */}
+
+        {/* Tâches */}
         <ListItem disablePadding>
-          <ListItemButton onClick={() => setActiveView("taskManager")} sx={{ borderRadius: 1, mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("taskManager")}
+            selected={activeView === "taskManager"}
+            sx={{ py: 1.2 }}
+          >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
               <ListAlt />
             </ListItemIcon>
-            <ListItemText primary="Tâches" primaryTypographyProps={{ fontSize: 14 }} />
+            <ListItemText
+              primary="Gestion des tâches"
+              primaryTypographyProps={{
+                fontWeight: activeView === "taskManager" ? 600 : 500,
+              }}
+            />
           </ListItemButton>
         </ListItem>
       </List>
-      <Box sx={{ p: 2 }}>
-        <Button variant="contained" fullWidth color="secondary" onClick={handleLogout}>
-          Déconnecter
+
+      {/* Boutons bas de sidebar */}
+      <Box sx={{ mt: "auto", p: 3 }}>
+        <Button
+          variant="contained"
+          fullWidth
+          startIcon={darkMode ? <LightMode /> : <DarkMode />}
+          sx={{
+            mb: 2,
+            py: 1.2,
+            backgroundColor: "rgba(255,255,255,0.18)",
+            "&:hover": { backgroundColor: "rgba(255,255,255,0.25)" },
+          }}
+          onClick={handleThemeToggle}
+        >
+          {darkMode ? "Mode Clair" : "Mode Sombre"}
+        </Button>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={handleLogout}
+          startIcon={<ExitToApp />}
+          sx={{
+            py: 1.2,
+            backgroundColor: "rgba(255,255,255,0.12)",
+            "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
+          }}
+        >
+          Déconnexion
         </Button>
       </Box>
     </Drawer>
@@ -256,70 +551,166 @@ const ChefDashboard = () => {
           component="main"
           sx={{
             flexGrow: 1,
-            background: "#f8f9fe",
+            background: theme.palette.background.default,
             display: "flex",
             flexDirection: "column",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
-          <Box
+          {/* AppBar */}
+          <AppBar
+            position="sticky"
+            color="inherit"
+            elevation={0}
             sx={{
-              p: 3,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "white",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+              borderBottom: "1px solid rgba(0,0,0,0.05)",
+              backgroundColor: theme.palette.background.paper,
             }}
           >
-            <Typography variant="h4" fontWeight="600" color="#1a237e">
-              Tableau de Bord Chef
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton onClick={handleNotificationClick}>
-                <Badge badgeContent={newProjectNotifications} color="error">
-                  <Notifications fontSize="large" color="action" />
-                </Badge>
-              </IconButton>
-            </Box>
-          </Box>
-          <Container maxWidth="xl" sx={{ p: 4, flexGrow: 1 }}>
-            {activeView === "employeeList" && <EmployeeList />}
-            {activeView === "projectList" && <ProjectListPage />}
-            {activeView === "evaluation" && <Evaluation />}
-            {activeView === "attendance" && <Attendance />}
-            {activeView === "attendanceCalendar" && <AttendanceCalendar />}
-            {activeView === "leaveManagement" && <LeaveManagement />}
-            {activeView === "leaveHistory" && <LeaveHistory />}
-            {activeView === "taskManager" && <TaskManager />}
-            {!activeView && (
-              <Box
-                sx={{
-                  p: 4,
-                  background: "white",
-                  borderRadius: 3,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                  minHeight: "60vh",
-                }}
-              >
-                <Typography variant="h6" color="textSecondary">
-                  Sélectionnez une option dans la barre latérale.
+            <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                {isMobile && (
+                  <IconButton edge="start" onClick={toggleDrawer} sx={{ mr: 2 }}>
+                    <Menu />
+                  </IconButton>
+                )}
+                <Typography variant="h5" fontWeight="600" color="primary.main">
+                  {activeView === "dashboardHomeChef" && "Tableau de Bord Chef"}
+                  {activeView === "employeeList" && "Mes Employés"}
+                  {activeView === "projectList" && "Mes Projets"}
+                  {activeView === "evaluation" && "Évaluation"}
+                  {activeView === "attendance" && "Liste de Présences"}
+                  {activeView === "attendanceCalendar" && "Calendrier de Présence"}
+                  {activeView === "leaveManagement" && "Demande de Congé"}
+                  {activeView === "leaveHistory" && "Historique des Congés"}
+                  {activeView === "taskManager" && "Gestion des Tâches"}
+                  {!activeView && "Tableau de Bord Chef"}
                 </Typography>
               </Box>
-            )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                {!isMobile && (
+                  <Tooltip title={darkMode ? "Passer au mode clair" : "Passer au mode sombre"} arrow>
+                    <IconButton
+                      onClick={handleThemeToggle}
+                      sx={{
+                        bgcolor: "rgba(0,0,0,0.05)",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
+                      }}
+                    >
+                      {darkMode ? <LightMode /> : <DarkMode />}
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Tooltip title={`${newProjectNotifications} notifications`} arrow>
+                  <IconButton
+                    onClick={handleNotificationClick}
+                    size="large"
+                    sx={{
+                      bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+                      "&:hover": {
+                        bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+                      },
+                    }}
+                  >
+                    <Badge badgeContent={newProjectNotifications} color="error">
+                      <Notifications />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"} arrow>
+                  <Avatar
+                    src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
+                    sx={{
+                      bgcolor: theme.palette.primary.light,
+                      width: 40,
+                      height: 40,
+                      fontSize: 16,
+                      border: `2px solid ${darkMode ? "#333333" : "#e0e0e0"}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {user ? `${user.firstName[0]}${user.lastName[0]}` : "CD"}
+                  </Avatar>
+                </Tooltip>
+              </Stack>
+            </Toolbar>
+          </AppBar>
+
+          {/* Contenu principal */}
+          <Container
+            maxWidth="xl"
+            sx={{ p: { xs: 2, md: 4 }, flexGrow: 1, position: "relative", zIndex: 1 }}
+          >
+            <Fade in timeout={800}>
+              <Box>
+                {activeView === "dashboardHomeChef" && <DashboardHomeChef />}
+                {activeView === "employeeList" && <EmployeeList />}
+                {activeView === "projectList" && <ProjectListPage />}
+                {activeView === "evaluation" && <Evaluation />}
+                {activeView === "attendance" && <Attendance />}
+                {activeView === "attendanceCalendar" && <AttendanceCalendar />}
+                {activeView === "leaveManagement" && <LeaveManagement />}
+                {activeView === "leaveHistory" && <LeaveHistory />}
+                {activeView === "taskManager" && <TaskManager />}
+                {!activeView && (
+                  <Box
+                    sx={{
+                      p: 4,
+                      background: theme.palette.background.paper,
+                      borderRadius: 3,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                      minHeight: "60vh",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Typography variant="h6" color="textSecondary">
+                      Sélectionnez une option dans la barre latérale
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Fade>
           </Container>
+
+          {/* Élément décoratif arrière-plan */}
+          <Box
+            sx={{
+              position: "fixed",
+              top: "-15%",
+              right: "-10%",
+              width: "500px",
+              height: "500px",
+              borderRadius: "50%",
+              background: darkMode
+                ? `linear-gradient(135deg, ${theme.palette.primary.dark}22, ${theme.palette.secondary.dark}22)`
+                : `linear-gradient(135deg, ${theme.palette.primary.light}22, ${theme.palette.secondary.light}22)`,
+              filter: "blur(60px)",
+              zIndex: 0,
+            }}
+          />
         </Box>
       </Box>
 
+      {/* Dialogue des notifications */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         fullWidth
         maxWidth="sm"
-        PaperProps={{ sx: { borderRadius: 3, backgroundColor: "#f5f5f5" } }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            backgroundColor: theme.palette.background.paper,
+            backgroundImage: "none",
+          },
+        }}
       >
         <DialogTitle
           sx={{
-            background: "linear-gradient(90deg, #1a237e, #3949ab)",
+            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
             color: "white",
             m: 0,
             p: 2,
@@ -351,7 +742,20 @@ const ChefDashboard = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2, justifyContent: "center" }}>
-          <Button onClick={() => setOpenDialog(false)} variant="contained" color="primary">
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="contained"
+            sx={{
+              backgroundImage: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 90%)`,
+              px: 3,
+              py: 1,
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 8px 18px 0 rgba(26, 35, 126, 0.25)",
+              },
+            }}
+          >
             Fermer
           </Button>
         </DialogActions>
