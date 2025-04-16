@@ -1,4 +1,4 @@
-// models/Project.js
+// models/Project.js (updated)
 const mongoose = require("mongoose");
 
 const ProjectSchema = new mongoose.Schema(
@@ -7,15 +7,22 @@ const ProjectSchema = new mongoose.Schema(
     projectLeader: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
     deadline: { type: Date },
     description: { type: String },
+    status: {
+      type: String,
+      enum: ["planning", "in-progress", "completed", "on-hold"],
+      default: "planning",
+    },
     priority: {
       type: String,
       enum: ["low", "medium", "high"],
       default: "medium",
     },
     team: [{ type: mongoose.Schema.Types.ObjectId, ref: "Employee" }],
+    budget: { type: Number },
+    completionPercentage: { type: Number, default: 0 },
   },
   {
-    timestamps: true, // ajoute createdAt et updatedAt automatiquement
+    timestamps: true,
   }
 );
 

@@ -20,73 +20,232 @@ import {
   DialogActions,
   TextField,
   Snackbar,
-  Select,
   FormControl,
   InputLabel,
+  Select,
   Alert,
+  Tabs,
+  Tab,
+  Chip,
+  LinearProgress,
+  Tooltip,
+  Paper,
+  Container,
+  Fab,
+  Badge,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
-import { Assignment, MoreVert, PictureAsPdf } from "@mui/icons-material";
+import {
+  Assignment,
+  MoreVert,
+  PictureAsPdf,
+  Add,
+  Search,
+  FilterList,
+  CheckCircle,
+  Schedule,
+  Flag,
+  Group,
+  AssignmentTurnedIn,
+  InsertChart,
+  AddTask,
+  Person,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const ProjectListPage = () => {
-  // État principal
+  // Navigation
+  const navigate = useNavigate();
+  
+  // User context (mock - in a real app, this would come from your auth context)
+  const [userRole, setUserRole] = useState("admin"); // admin, projectLeader, employee
+  const [currentUser, setCurrentUser] = useState({ id: "12345", name: "John Doe" });
+  
+  // Main state
   const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // UI state
+  const [tabValue, setTabValue] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [showMyProjects, setShowMyProjects] = useState(false);
 
-  // États pour le menu contextuel
+  // Context menu state
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const menuOpen = Boolean(anchorEl);
 
-  // États pour la modal d'édition
+  // Task dialog state
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    assignedTo: "",
+    deadline: "",
+    priority: "medium",
+  });
+
+  // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editedProject, setEditedProject] = useState({
     projectName: "",
     description: "",
     deadline: "",
     priority: "",
+    status: "",
+    budget: "",
   });
 
-  // État pour la modal de confirmation de suppression
+  // Delete dialog state
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // État pour les notifications
+  // Team management dialog
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [employees, setEmployees] = useState([]);
+
+  // Snackbar state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "info", // 'success', 'error', 'info', 'warning'
+    severity: "info",
   });
 
-  // Récupération des projets depuis l'API
+  // Fetch projects and employees
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/api/projects");
-        if (!response.ok) {
-          throw new Error(`Erreur ${response.status}: Impossible de récupérer les projets`);
+        // Fetch projects
+        const projectResponse = await fetch("http://localhost:5000/api/projects");
+        if (!projectResponse.ok) {
+          throw new Error(`Error ${projectResponse.status}: Unable to fetch projects`);
         }
-        const data = await response.json();
-        setProjects(data);
+        const projectData = await projectResponse.json();
+        setProjects(projectData);
+        setFilteredProjects(projectData);
+        
+        // Fetch employees for task assignment
+        const employeeResponse = await fetch("http://localhost:5000/api/employees");
+        if (!employeeResponse.ok) {
+          throw new Error(`Error ${employeeResponse.status}: Unable to fetch employees`);
+        }
+        const employeeData = await employeeResponse.json();
+        setEmployees(employeeData);
       } catch (err) {
         setError(err.message);
-        console.error("Erreur lors de la récupération des projets:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProjects();
+    fetchData();
   }, []);
 
-  // Formatage de la date pour l'affichage
+  // Apply filters when filter state changes
+  useEffect(() => {
+    applyFilters();
+  }, [searchTerm, filterPriority, filterStatus, showMyProjects, tabValue, projects]);
+
+  // Filter projects based on current filters
+  const applyFilters = () => {
+    let filtered = [...projects];
+    
+    // Filter by tab
+    if (tabValue === 1) {
+      filtered = filtered.filter(p => p.status === "in-progress");
+    } else if (tabValue === 2) {
+      filtered = filtered.filter(p => p.status === "completed");
+    } else if (tabValue === 3) {
+      filtered = filtered.filter(p => p.status === "on-hold");
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        p => 
+          p.projectName.toLowerCase().includes(term) || 
+          (p.description && p.description.toLowerCase().includes(term))
+      );
+    }
+    
+    // Filter by priority
+    if (filterPriority) {
+      filtered = filtered.filter(p => p.priority === filterPriority);
+    }
+    
+    // Filter by status
+    if (filterStatus) {
+      filtered = filtered.filter(p => p.status === filterStatus);
+    }
+    
+    // Filter by user's projects
+    if (showMyProjects) {
+      if (userRole === "projectLeader") {
+        filtered = filtered.filter(p => p.projectLeader && p.projectLeader._id === currentUser.id);
+      } else if (userRole === "employee") {
+        filtered = filtered.filter(p => 
+          p.team && p.team.some(member => member._id === currentUser.id)
+        );
+      }
+    }
+    
+    setFilteredProjects(filtered);
+  };
+
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "Non définie";
     return new Date(dateString).toLocaleDateString();
   };
 
-  // GESTION DU MENU CONTEXTUEL
+  // Get status chip based on project status
+  const getStatusChip = (status) => {
+    let color = "default";
+    let label = "Inconnu";
+    
+    switch (status) {
+      case "planning":
+        color = "info";
+        label = "Planification";
+        break;
+      case "in-progress":
+        color = "warning";
+        label = "En cours";
+        break;
+      case "completed":
+        color = "success";
+        label = "Terminé";
+        break;
+      case "on-hold":
+        color = "error";
+        label = "En attente";
+        break;
+      default:
+        break;
+    }
+    
+    return <Chip label={label} color={color} size="small" />;
+  };
+
+  // CONTEXT MENU HANDLERS
   const handleMenuClick = (event, project) => {
     setAnchorEl(event.currentTarget);
     setSelectedProject(project);
@@ -96,7 +255,7 @@ const ProjectListPage = () => {
     setAnchorEl(null);
   };
 
-  // GESTION DE L'ÉDITION
+  // EDIT PROJECT HANDLERS
   const handleEditModalOpen = () => {
     if (!selectedProject) return;
     
@@ -107,6 +266,8 @@ const ProjectListPage = () => {
         ? new Date(selectedProject.deadline).toISOString().split("T")[0]
         : "",
       priority: selectedProject.priority || "",
+      status: selectedProject.status || "",
+      budget: selectedProject.budget || "",
     });
     
     setEditOpen(true);
@@ -152,7 +313,7 @@ const ProjectListPage = () => {
 
       const data = await response.json();
       
-      // Mise à jour de l'état local
+      // Update local state
       setProjects((prevProjects) =>
         prevProjects.map((proj) => (proj._id === selectedProject._id ? data : proj))
       );
@@ -174,7 +335,7 @@ const ProjectListPage = () => {
     }
   };
 
-  // GESTION DE LA SUPPRESSION
+  // DELETE PROJECT HANDLERS
   const handleDeleteModalOpen = () => {
     setDeleteOpen(true);
     handleMenuClose();
@@ -197,7 +358,7 @@ const ProjectListPage = () => {
         throw new Error(`Erreur ${response.status}: Suppression impossible`);
       }
       
-      // Mise à jour de l'état local
+      // Update local state
       setProjects((prevProjects) =>
         prevProjects.filter((proj) => proj._id !== selectedProject._id)
       );
@@ -219,378 +380,690 @@ const ProjectListPage = () => {
     }
   };
 
-  // EXPORTATION EN PDF
-  const handleExportPDF = () => {
+  // TEAM MANAGEMENT HANDLERS
+  const handleTeamDialogOpen = () => {
+    setTeamDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleTeamDialogClose = () => {
+    setTeamDialogOpen(false);
+  };
+
+  const handleTeamUpdate = async (newTeam) => {
     try {
-      const doc = new jsPDF();
-      const title = "Liste des Projets";
+      const updatedProject = { 
+        ...selectedProject, 
+        team: newTeam.map(emp => emp._id)
+      };
       
-      // Titre du document
-      doc.setFontSize(18);
-      doc.text(title, 14, 20);
-      doc.setLineWidth(0.5);
-      doc.line(14, 22, 80, 22);
-      
-      // Préparation des colonnes
-      const tableColumn = [
-        "N°",
-        "Nom du projet",
-        "Description",
-        "Date limite",
-        "Priorité",
-        "Chef de projet",
-      ];
-      
-      // Préparation des données
-      const tableRows = projects.map((proj, index) => [
-        index + 1,
-        proj.projectName,
-        proj.description ? (proj.description.length > 30 
-          ? proj.description.substring(0, 30) + "..." 
-          : proj.description) 
-        : "-",
-        formatDate(proj.deadline),
-        proj.priority 
-          ? proj.priority.charAt(0).toUpperCase() + proj.priority.slice(1) 
-          : "-",
-        proj.projectLeader 
-          ? `${proj.projectLeader.firstName} ${proj.projectLeader.lastName}`
-          : "-",
-      ]);
-      
-      // Génération du tableau
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 30,
-        styles: {
-          fontSize: 10,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [66, 66, 155],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-        alternateRowStyles: {
-          fillColor: [240, 240, 240],
-        },
-      });
-      
-      // Date de génération en bas de page
-      const dateStr = new Date().toLocaleDateString();
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.text(
-          `Généré le ${dateStr} - Page ${i} / ${pageCount}`,
-          doc.internal.pageSize.width - 60,
-          doc.internal.pageSize.height - 10
-        );
+      const response = await fetch(
+        `http://localhost:5000/api/projects/${selectedProject._id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedProject),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: Mise à jour de l'équipe impossible`);
       }
+
+      const data = await response.json();
       
-      doc.save("liste-projets.pdf");
+      // Update local state
+      setProjects((prevProjects) =>
+        prevProjects.map((proj) => (proj._id === selectedProject._id ? data : proj))
+      );
       
       setSnackbar({
         open: true,
-        message: "PDF exporté avec succès",
+        message: "Équipe mise à jour avec succès",
         severity: "success",
       });
+      
+      handleTeamDialogClose();
     } catch (error) {
-      console.error("Erreur lors de l'exportation PDF:", error);
+      console.error("Erreur lors de la mise à jour de l'équipe:", error);
       setSnackbar({
         open: true,
-        message: "Erreur lors de l'exportation PDF",
+        message: `Erreur: ${error.message}`,
         severity: "error",
       });
     }
   };
 
-  // Gestion de la fermeture du snackbar
-  const handleSnackbarClose = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
+  // TASK MANAGEMENT HANDLERS
+  const handleTaskDialogOpen = () => {
+    setTaskForm({
+      title: "",
+      description: "",
+      assignedTo: "",
+      deadline: "",
+      priority: "medium",
+    });
+    setTaskDialogOpen(true);
+    handleMenuClose();
   };
 
-  // Affichage du chargement
-  if (loading) {
-    return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
-        sx={{ minHeight: "300px" }}
-      >
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Chargement des projets...
-        </Typography>
-      </Box>
-    );
-  }
+  const handleTaskDialogClose = () => {
+    setTaskDialogOpen(false);
+  };
 
-  // Affichage des erreurs
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
+  const handleTaskChange = (e) => {
+    const { name, value } = e.target;
+    setTaskForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleTaskSubmit = async () => {
+    if (!taskForm.title.trim()) {
+      setSnackbar({
+        open: true,
+        message: "Le titre de la tâche est obligatoire",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      const newTask = {
+        ...taskForm,
+        projectId: selectedProject._id,
+      };
+
+      const response = await fetch("http://localhost:5000/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTask),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: Création de tâche impossible`);
+      }
+
+      const data = await response.json();
+      
+      // Update project with new task reference
+      const updatedProject = {
+        ...selectedProject,
+        tasks: [...(selectedProject.tasks || []), data._id],
+      };
+      
+      await fetch(`http://localhost:5000/api/projects/${selectedProject._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedProject),
+      });
+      
+      // Update local state
+      setProjects((prevProjects) =>
+        prevProjects.map((proj) => 
+          proj._id === selectedProject._id 
+            ? { ...proj, tasks: [...(proj.tasks || []), data] } 
+            : proj
+        )
+      );
+      
+      setSnackbar({
+        open: true,
+        message: "Tâche créée avec succès",
+        severity: "success",
+      });
+      
+      handleTaskDialogClose();
+    } catch (error) {
+      console.error("Erreur lors de la création de la tâche:", error);
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // EXPORT TO PDF
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text("Liste des Projets", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Généré le ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Table data
+    const tableColumn = ["Nom du projet", "Responsable", "Statut", "Priorité", "Échéance", "Progression"];
+    const tableRows = filteredProjects.map((project) => [
+      project.projectName,
+      project.projectLeader ? project.projectLeader.name : "Non assigné",
+      project.status || "Non défini",
+      project.priority || "Non défini",
+      formatDate(project.deadline),
+      `${project.progress || 0}%`,
+    ]);
+    
+    // Generate table
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+    
+    // Save document
+    doc.save("projets.pdf");
+    handleMenuClose();
+  };
+
+  // NAVIGATION HANDLERS
+  const handleProjectClick = (projectId) => {
+    navigate(`/projects/${projectId}`);
+  };
+
+  const handleCreateProject = () => {
+    navigate("/projects/new");
+  };
+
+  // SNACKBAR HANDLER
+  const handleSnackbarClose = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false,
+    });
+  };
+
+  // RENDER METHODS
+  const renderProjectCards = () => {
+    if (loading) {
+      return (
+        <Box sx={{ display: "flex", justifyContent: "center", padding: 4 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert severity="error" sx={{ margin: 2 }}>
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          onClick={() => window.location.reload()}
-        >
-          Réessayer
-        </Button>
-      </Box>
-    );
-  }
+      );
+    }
 
-  // Rendu principal
-  return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      {/* En-tête avec titre et bouton d'export */}
-      <Box 
-        sx={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          mb: 4,
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2
-        }}
-      >
-        <Typography
-          variant="h4"
-          sx={{ fontWeight: "bold", fontSize: { xs: "1.5rem", md: "2rem" } }}
-        >
-          Liste des Projets
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleExportPDF}
-          startIcon={<PictureAsPdf />}
-        >
-          Exporter en PDF
-        </Button>
-      </Box>
-
-      {/* Message si aucun projet n'existe */}
-      {projects.length === 0 ? (
-        <Box sx={{ textAlign: "center", my: 8 }}>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-            Aucun projet disponible
+    if (filteredProjects.length === 0) {
+      return (
+        <Box sx={{ textAlign: "center", padding: 4 }}>
+          <Typography variant="h6" color="textSecondary">
+            Aucun projet trouvé
           </Typography>
-          <Button variant="contained" color="primary" href="/projects/new">
-            Créer un nouveau projet
-          </Button>
+          {userRole === "admin" && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={handleCreateProject}
+              sx={{ marginTop: 2 }}
+            >
+              Créer un projet
+            </Button>
+          )}
         </Box>
-      ) : (
-        /* Grille des projets */
-        <Grid container spacing={3}>
-          {projects.map((project) => (
-            <Grid item xs={12} sm={6} md={4} key={project._id}>
-              <Card
-                sx={{
-                  height: "100%",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                  "&:hover": {
-                    transform: "translateY(-5px)",
-                    boxShadow: 6,
-                  },
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <CardHeader
-                  avatar={
-                    <Avatar
+      );
+    }
+
+    return (
+      <Grid container spacing={3} sx={{ padding: 2 }}>
+        {filteredProjects.map((project) => (
+          <Grid item xs={12} sm={6} md={4} key={project._id}>
+            <Card sx={{ height: "100%" }}>
+              <CardHeader
+                avatar={
+                  <Avatar sx={{ bgcolor: project.priority === "high" ? "error.main" : "primary.main" }}>
+                    <Assignment />
+                  </Avatar>
+                }
+                action={
+                  <IconButton
+                    aria-label="project-menu"
+                    onClick={(e) => handleMenuClick(e, project)}
+                  >
+                    <MoreVert />
+                  </IconButton>
+                }
+                title={
+                  <Tooltip title="Voir les détails du projet">
+                    <Typography
+                      variant="h6"
                       sx={{
-                        bgcolor: project.priority === "haute" ? "error.main" : 
-                                 project.priority === "moyenne" ? "warning.main" : "success.main",
-                        width: 56,
-                        height: 56,
+                        cursor: "pointer",
+                        "&:hover": { textDecoration: "underline" },
                       }}
+                      onClick={() => handleProjectClick(project._id)}
                     >
-                      <Assignment sx={{ fontSize: 32 }} />
-                    </Avatar>
-                  }
-                  action={
-                    <IconButton
-                      aria-label="options"
-                      onClick={(event) => handleMenuClick(event, project)}
-                    >
-                      <MoreVert />
-                    </IconButton>
-                  }
-                  title={
-                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                       {project.projectName}
                     </Typography>
-                  }
-                  subheader={
-                    <>
-                      <Typography variant="body2" color="text.secondary">
-                        Date limite: {formatDate(project.deadline)}
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: project.priority === "haute" ? "error.main" : 
-                                 project.priority === "moyenne" ? "warning.main" : "success.main",
-                          fontWeight: "bold"
-                        }}
-                      >
-                        Priorité: {project.priority 
-                          ? project.priority.charAt(0).toUpperCase() + project.priority.slice(1) 
-                          : "-"}
-                      </Typography>
-                    </>
-                  }
-                  sx={{ pb: 0 }}
-                />
-                <Divider />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 2 }}
-                  >
-                    {project.description || "Aucune description fournie."}
+                  </Tooltip>
+                }
+                subheader={`Créé le ${formatDate(project.createdAt)}`}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Statut:
                   </Typography>
-                
-                  {/* Chef de projet */}
-                  {project.projectLeader && (
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ mr: 1, fontWeight: 500 }}
-                      >
-                        Chef de projet:
-                      </Typography>
-                      <Avatar
-                        src={
-                          project.projectLeader.photo
-                            ? `/${project.projectLeader.photo.split(/(\\|\/)/g).pop()}`
-                            : undefined
-                        }
-                        alt={`${project.projectLeader.firstName} ${project.projectLeader.lastName}`}
-                        sx={{ width: 32, height: 32 }}
-                      />
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        {project.projectLeader.firstName} {project.projectLeader.lastName}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {/* Équipe */}
-                  {project.team && project.team.length > 0 && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ mb: 1, fontWeight: 500 }}
-                      >
-                        Équipe ({project.team.length}):
-                      </Typography>
-                      <Box sx={{ display: "flex", flexWrap: "wrap" }}>
-                        {project.team.map((member) => (
-                          <Avatar
-                            key={member._id}
-                            src={
-                              member.photo
-                                ? `/${member.photo.split(/(\\|\/)/g).pop()}`
-                                : undefined
-                            }
-                            alt={`${member.firstName} ${member.lastName}`}
-                            title={`${member.firstName} ${member.lastName}`}
-                            sx={{ width: 32, height: 32, mr: 0.5, mb: 0.5 }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+                  {getStatusChip(project.status)}
+                </Box>
 
-      {/* Menu des options (Modifier / Supprimer) */}
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Priorité:
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={
+                      project.priority === "high"
+                        ? "Haute"
+                        : project.priority === "medium"
+                        ? "Moyenne"
+                        : "Basse"
+                    }
+                    color={
+                      project.priority === "high"
+                        ? "error"
+                        : project.priority === "medium"
+                        ? "warning"
+                        : "success"
+                    }
+                  />
+                </Box>
+
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Échéance:
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatDate(project.deadline)}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Responsable:
+                  </Typography>
+                  <Typography variant="body2">
+                    {project.projectLeader ? project.projectLeader.name : "Non assigné"}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Progression:
+                    </Typography>
+                    <Typography variant="body2">{project.progress || 0}%</Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={project.progress || 0}
+                    color={
+                      project.progress >= 75
+                        ? "success"
+                        : project.progress >= 25
+                        ? "warning"
+                        : "error"
+                    }
+                  />
+                </Box>
+
+                <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
+                  <Tooltip title="Membres de l'équipe">
+                    <Badge
+                      badgeContent={project.team ? project.team.length : 0}
+                      color="primary"
+                      sx={{ mr: 1 }}
+                    >
+                      <Group color="action" />
+                    </Badge>
+                  </Tooltip>
+                  
+                  <Tooltip title="Tâches">
+                    <Badge
+                      badgeContent={project.tasks ? project.tasks.length : 0}
+                      color="secondary"
+                    >
+                      <AssignmentTurnedIn color="action" />
+                    </Badge>
+                  </Tooltip>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
+  return (
+    <Container maxWidth="xl">
+      <Box sx={{ padding: 2 }}>
+        <Paper sx={{ padding: 2, mb: 3 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="h4" component="h1">
+              Gestion des Projets
+            </Typography>
+            
+            <Box>
+              {userRole === "admin" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Add />}
+                  onClick={handleCreateProject}
+                  sx={{ mr: 2 }}
+                >
+                  Nouveau Projet
+                </Button>
+              )}
+              
+              <Button
+                variant="outlined"
+                startIcon={<PictureAsPdf />}
+                onClick={handleExportPDF}
+              >
+                Exporter PDF
+              </Button>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+            <Box sx={{ flexGrow: 1, display: "flex" }}>
+              <TextField
+                label="Rechercher"
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx={{ mr: 2, width: 250 }}
+                InputProps={{
+                  startAdornment: <Search color="action" sx={{ mr: 1 }} />,
+                }}
+              />
+              
+              <FormControl variant="outlined" size="small" sx={{ mr: 2, width: 150 }}>
+                <InputLabel>Priorité</InputLabel>
+                <Select
+                  label="Priorité"
+                  value={filterPriority}
+                  onChange={(e) => setFilterPriority(e.target.value)}
+                >
+                  <MenuItem value="">Toutes</MenuItem>
+                  <MenuItem value="high">Haute</MenuItem>
+                  <MenuItem value="medium">Moyenne</MenuItem>
+                  <MenuItem value="low">Basse</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl variant="outlined" size="small" sx={{ width: 150 }}>
+                <InputLabel>Statut</InputLabel>
+                <Select
+                  label="Statut"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <MenuItem value="">Tous</MenuItem>
+                  <MenuItem value="planning">Planification</MenuItem>
+                  <MenuItem value="in-progress">En cours</MenuItem>
+                  <MenuItem value="completed">Terminé</MenuItem>
+                  <MenuItem value="on-hold">En attente</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showMyProjects}
+                  onChange={(e) => setShowMyProjects(e.target.checked)}
+                />
+              }
+              label="Mes projets"
+            />
+          </Box>
+
+          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              <Tab
+                icon={<InsertChart />}
+                iconPosition="start"
+                label="Tous les projets"
+              />
+              <Tab
+                icon={<Schedule />}
+                iconPosition="start"
+                label="En cours"
+              />
+              <Tab
+                icon={<CheckCircle />}
+                iconPosition="start"
+                label="Terminés"
+              />
+              <Tab
+                icon={<Flag />}
+                iconPosition="start"
+                label="En attente"
+              />
+            </Tabs>
+          </Box>
+        </Paper>
+
+        {renderProjectCards()}
+      </Box>
+
+      {/* Project Menu */}
       <Menu
         anchorEl={anchorEl}
         open={menuOpen}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem onClick={handleEditModalOpen}>Modifier</MenuItem>
-        <MenuItem onClick={handleDeleteModalOpen} sx={{ color: "error.main" }}>
-          Supprimer
+        <MenuItem onClick={() => {
+          handleProjectClick(selectedProject?._id);
+          handleMenuClose();
+        }}>
+          Voir les détails
         </MenuItem>
+        
+        {(userRole === "admin" || (userRole === "projectLeader" && selectedProject?.projectLeader?._id === currentUser.id)) && (
+          <>
+            <MenuItem onClick={handleEditModalOpen}>Modifier</MenuItem>
+            <MenuItem onClick={handleTeamDialogOpen}>Gérer l'équipe</MenuItem>
+            <MenuItem onClick={handleTaskDialogOpen}>Ajouter une tâche</MenuItem>
+            <Divider />
+            <MenuItem onClick={handleDeleteModalOpen} sx={{ color: "error.main" }}>
+              Supprimer
+            </MenuItem>
+          </>
+        )}
       </Menu>
 
-      {/* Modal d'édition */}
-      <Dialog 
-        open={editOpen} 
-        onClose={handleEditModalClose}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Modifier le Projet</DialogTitle>
-        <DialogContent dividers>
+      {/* Edit Project Modal */}
+      <Dialog open={editOpen} onClose={handleEditModalClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Modifier le projet</DialogTitle>
+        <DialogContent>
           <TextField
-            margin="normal"
-            label="Nom du projet"
+            autoFocus
+            margin="dense"
             name="projectName"
+            label="Nom du projet"
+            type="text"
             fullWidth
+            variant="outlined"
             value={editedProject.projectName}
             onChange={handleEditChange}
-            required
-            autoFocus
+            sx={{ mb: 2 }}
           />
+          
           <TextField
-            margin="normal"
-            label="Description"
+            margin="dense"
             name="description"
-            fullWidth
+            label="Description"
             multiline
-            rows={3}
+            rows={4}
+            fullWidth
+            variant="outlined"
             value={editedProject.description}
             onChange={handleEditChange}
+            sx={{ mb: 2 }}
           />
+          
           <TextField
-            margin="normal"
-            label="Date limite"
+            margin="dense"
             name="deadline"
+            label="Échéance"
             type="date"
             fullWidth
-            InputLabelProps={{ shrink: true }}
+            variant="outlined"
             value={editedProject.deadline}
             onChange={handleEditChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
           />
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="priority-label">Priorité</InputLabel>
+          
+          <TextField
+            margin="dense"
+            name="budget"
+            label="Budget (€)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={editedProject.budget}
+            onChange={handleEditChange}
+            sx={{ mb: 2 }}
+          />
+          
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Priorité</InputLabel>
             <Select
-              labelId="priority-label"
               name="priority"
               value={editedProject.priority}
               label="Priorité"
               onChange={handleEditChange}
             >
-              <MenuItem value="">-</MenuItem>
-              <MenuItem value="basse">Basse</MenuItem>
-              <MenuItem value="moyenne">Moyenne</MenuItem>
-              <MenuItem value="haute">Haute</MenuItem>
+              <MenuItem value="high">Haute</MenuItem>
+              <MenuItem value="medium">Moyenne</MenuItem>
+              <MenuItem value="low">Basse</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <FormControl fullWidth>
+            <InputLabel>Statut</InputLabel>
+            <Select
+              name="status"
+              value={editedProject.status}
+              label="Statut"
+              onChange={handleEditChange}
+            >
+              <MenuItem value="planning">Planification</MenuItem>
+              <MenuItem value="in-progress">En cours</MenuItem>
+              <MenuItem value="completed">Terminé</MenuItem>
+              <MenuItem value="on-hold">En attente</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleEditModalClose}>Annuler</Button>
-          <Button 
-            onClick={handleEditSave} 
-            variant="contained" 
+          <Button onClick={handleEditSave} variant="contained" color="primary">
+            Enregistrer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onClose={handleDeleteModalClose}>
+        <DialogTitle>Confirmation de suppression</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Êtes-vous sûr de vouloir supprimer le projet "{selectedProject?.projectName}" ?
+            Cette action est irréversible.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteModalClose}>Annuler</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Team Management Dialog */}
+      <Dialog
+        open={teamDialogOpen}
+        onClose={handleTeamDialogClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Gestion de l'équipe</DialogTitle>
+        <DialogContent>
+          <List>
+            {employees.map((employee) => (
+              <ListItem key={employee._id}>
+                <ListItemAvatar>
+                  <Avatar>
+                    <Person />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={employee.name}
+                  secondary={employee.position || employee.department || "Employé"}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={
+                        selectedProject?.team?.some(
+                          (member) => member._id === employee._id
+                        ) || false
+                      }
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const currentTeam = selectedProject?.team || [];
+                        
+                        let newTeam;
+                        if (isChecked) {
+                          newTeam = [...currentTeam, employee];
+                        } else {
+                          newTeam = currentTeam.filter(
+                            (member) => member._id !== employee._id
+                          );
+                        }
+                        
+                        setSelectedProject({
+                          ...selectedProject,
+                          team: newTeam,
+                        });
+                      }}
+                    />
+                  }
+                  label=""
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleTeamDialogClose}>Annuler</Button>
+          <Button
+            onClick={() => handleTeamUpdate(selectedProject?.team || [])}
+            variant="contained"
             color="primary"
           >
             Enregistrer
@@ -598,46 +1071,115 @@ const ProjectListPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Modal de confirmation de suppression */}
-      <Dialog 
-        open={deleteOpen} 
-        onClose={handleDeleteModalClose}
+      {/* Add Task Dialog */}
+      <Dialog
+        open={taskDialogOpen}
+        onClose={handleTaskDialogClose}
+        maxWidth="sm"
+        fullWidth
       >
-        <DialogTitle>Confirmer la suppression</DialogTitle>
+        <DialogTitle>Ajouter une nouvelle tâche</DialogTitle>
         <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir supprimer le projet 
-            "{selectedProject?.projectName}" ? Cette action est irréversible.
-          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="title"
+            label="Titre de la tâche"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={taskForm.title}
+            onChange={handleTaskChange}
+            sx={{ mb: 2 }}
+          />
+          
+          <TextField
+            margin="dense"
+            name="description"
+            label="Description"
+            multiline
+            rows={3}
+            fullWidth
+            variant="outlined"
+            value={taskForm.description}
+            onChange={handleTaskChange}
+            sx={{ mb: 2 }}
+          />
+          
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Assigner à</InputLabel>
+            <Select
+              name="assignedTo"
+              value={taskForm.assignedTo}
+              label="Assigner à"
+              onChange={handleTaskChange}
+            >
+              <MenuItem value="">Non assigné</MenuItem>
+              {selectedProject?.team?.map((member) => (
+                <MenuItem key={member._id} value={member._id}>
+                  {member.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <TextField
+            margin="dense"
+            name="deadline"
+            label="Échéance"
+            type="date"
+            fullWidth
+            variant="outlined"
+            value={taskForm.deadline}
+            onChange={handleTaskChange}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+          
+          <FormControl fullWidth>
+            <InputLabel>Priorité</InputLabel>
+            <Select
+              name="priority"
+              value={taskForm.priority}
+              label="Priorité"
+              onChange={handleTaskChange}
+            >
+              <MenuItem value="high">Haute</MenuItem>
+              <MenuItem value="medium">Moyenne</MenuItem>
+              <MenuItem value="low">Basse</MenuItem>
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteModalClose}>Annuler</Button>
-          <Button 
-            onClick={handleDeleteConfirm} 
-            variant="contained" 
-            color="error"
+          <Button onClick={handleTaskDialogClose}>Annuler</Button>
+          <Button
+            onClick={handleTaskSubmit}
+            variant="contained"
+            color="primary"
+            startIcon={<AddTask />}
           >
-            Supprimer
+            Ajouter la tâche
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Notification */}
+      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={4000}
+        autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
-          severity={snackbar.severity} 
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
           variant="filled"
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Container>
   );
 };
 
