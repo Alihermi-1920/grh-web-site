@@ -1,16 +1,17 @@
 // src/components/PrivateRoute.js
-import React, { useContext } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
 
 const PrivateRoute = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  // Simple direct check for authentication in localStorage
+  const storedEmployee = localStorage.getItem("employee");
 
-  // Si aucun utilisateur n'est défini, redirige vers /login
-  if (!user) {
+  // Si aucun utilisateur n'est trouvé dans localStorage, redirige vers /login
+  if (!storedEmployee) {
     return <Navigate to="/login" replace />;
   }
-  
+
+  // Si l'utilisateur est authentifié, afficher les enfants
   return children;
 };
 

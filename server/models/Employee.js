@@ -13,11 +13,13 @@ const EmployeeSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // stockera "iv:encrypted"
   phone: String,
+  cin: String,
   department: String,
   role: String,
   position: String,
   hireDate: Date,
-  photo: String  
+  photo: String,
+  chefId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }  // Référence au chef (si l'employé est sous sa responsabilité)
 });
 
 // Hook pour chiffrer le mot de passe de manière réversible

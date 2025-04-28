@@ -19,14 +19,43 @@ import {
   TextField,
   Button,
   Snackbar,
+  Alert,
+  Chip,
+  Avatar,
+  Card,
+  CardContent,
+  Grid,
+  Divider,
+  Tooltip,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Breadcrumbs,
+  Link,
+  Container,
+  TablePagination,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility,
   VisibilityOff,
+  PictureAsPdf,
+  Home,
+  FilterList,
+  Search,
+  Person,
+  Badge,
+  Business,
+  Email,
+  Phone,
+  VpnKey,
+  Work,
+  CreditCard,
+  SupervisorAccount,
 } from "@mui/icons-material";
-// Import jsPDF et le plugin autotable en tant que fonction
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -47,10 +76,26 @@ const MaskedPassword = ({ password }) => {
   );
 };
 
+// Composant principal pour la liste des employés
 const EmployeeListPage = () => {
   const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // États pour la pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // États pour le filtrage
+  const [filterValue, setFilterValue] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [chefFilter, setChefFilter] = useState("all");
+  const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [chefs, setChefs] = useState([]);
+  const [loadingChefs, setLoadingChefs] = useState(false);
 
   // États pour la modale d'édition
   const [editOpen, setEditOpen] = useState(false);
@@ -63,6 +108,7 @@ const EmployeeListPage = () => {
     password: "",
     role: "",
     phone: "",
+    cin: "",
   });
 
   // États pour la modale de confirmation de suppression
@@ -73,6 +119,7 @@ const EmployeeListPage = () => {
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
+    severity: "success",
   });
 
   // Récupération de la liste des employés depuis l'API
@@ -86,7 +133,18 @@ const EmployeeListPage = () => {
       })
       .then((data) => {
         setEmployees(data);
+        setFilteredEmployees(data);
+
+        // Extraire les départements et les rôles uniques pour les filtres
+        const uniqueDepartments = [...new Set(data.map(emp => emp.department))].filter(Boolean);
+        const uniqueRoles = [...new Set(data.map(emp => emp.role))].filter(Boolean);
+
+        setDepartments(uniqueDepartments);
+        setRoles(uniqueRoles);
         setLoading(false);
+
+        // Récupérer les chefs
+        fetchChefs();
       })
       .catch((err) => {
         setError(err.message);
@@ -94,39 +152,167 @@ const EmployeeListPage = () => {
       });
   }, []);
 
+  // Fonction pour récupérer la liste des chefs
+  const fetchChefs = async () => {
+    setLoadingChefs(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/employees/chefs");
+      if (!response.ok) {
+        throw new Error("Erreur lors de la récupération des chefs");
+      }
+      const data = await response.json();
+      setChefs(data);
+    } catch (error) {
+      console.error("Erreur:", error);
+      setSnackbar({
+        open: true,
+        message: "Erreur lors de la récupération des chefs",
+        severity: "error"
+      });
+    } finally {
+      setLoadingChefs(false);
+    }
+  };
+
+  // Filtrer les employés selon les critères
+  useEffect(() => {
+    let result = employees;
+
+    // Filtre par texte (nom, prénom, email, téléphone, CIN)
+    if (filterValue) {
+      const searchTerm = filterValue.toLowerCase();
+      result = result.filter(
+        (emp) =>
+          emp.firstName?.toLowerCase().includes(searchTerm) ||
+          emp.lastName?.toLowerCase().includes(searchTerm) ||
+          emp.email?.toLowerCase().includes(searchTerm) ||
+          emp.phone?.includes(searchTerm) ||
+          emp.cin?.includes(searchTerm)
+      );
+    }
+
+    // Filtre par département
+    if (departmentFilter !== "all") {
+      result = result.filter((emp) => emp.department === departmentFilter);
+    }
+
+    // Filtre par rôle
+    if (roleFilter !== "all") {
+      result = result.filter((emp) => emp.role === roleFilter);
+    }
+
+    // Filtre par chef
+    if (chefFilter !== "all") {
+      result = result.filter((emp) => {
+        // Check if chefId exists and is an object with _id property
+        if (emp.chefId && typeof emp.chefId === 'object' && emp.chefId._id) {
+          return emp.chefId._id === chefFilter;
+        }
+
+        // If chefId is a string (just the ID), compare directly
+        if (emp.chefId && typeof emp.chefId === 'string') {
+          return emp.chefId === chefFilter;
+        }
+
+        return false;
+      });
+    }
+
+    setFilteredEmployees(result);
+    setPage(0); // Retour à la première page après filtrage
+  }, [filterValue, departmentFilter, roleFilter, chefFilter, employees]);
+
+  // Gérer les changements de page
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // Gérer les changements du nombre de lignes par page
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   // Fonction pour exporter la liste des employés en PDF
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    doc.text("Liste des employés", 14, 20);
+
+    // Ajouter un en-tête pour le document
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text("HRMS - Liste des employés", 105, 15, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    const date = new Date().toLocaleDateString();
+    doc.text(`Généré le: ${date}`, 105, 22, { align: "center" });
+
+    doc.line(14, 25, 196, 25); // Ligne de séparation
+
     // Préparer les colonnes
     const tableColumn = [
       "N°",
       "Prénom",
       "Nom",
+      "CIN",
       "Département",
       "Email",
       "Rôle",
       "Téléphone",
     ];
-    // Préparer les données
-    const tableRows = employees.map((emp, index) => [
+
+    // Préparer les données (utiliser les employés filtrés)
+    const tableRows = filteredEmployees.map((emp, index) => [
       index + 1,
-      emp.firstName,
-      emp.lastName,
-      emp.department,
-      emp.email,
-      emp.role,
-      emp.phone,
+      emp.firstName || "-",
+      emp.lastName || "-",
+      emp.cin || "-",
+      emp.department || "-",
+      emp.email || "-",
+      emp.role || "-",
+      emp.phone || "-",
     ]);
 
-    // Générer la table dans le PDF via autoTable
+    // Générer la table dans le PDF
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 30,
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+        lineColor: [44, 62, 80],
+      },
+      headStyles: {
+        fillColor: [44, 62, 80],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240],
+      },
     });
+
+    // Ajouter un pied de page
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Page ${i} sur ${pageCount}`, 105, doc.internal.pageSize.height - 10, {
+        align: "center",
+      });
+    }
+
     // Sauvegarder le PDF
-    doc.save("employees.pdf");
+    doc.save("employees-list.pdf");
+
+    // Notification de succès
+    setSnackbar({
+      open: true,
+      message: "Le fichier PDF a été généré avec succès!",
+      severity: "success",
+    });
   };
 
   // Ouvrir la modale d'édition et initialiser les valeurs des champs
@@ -140,6 +326,7 @@ const EmployeeListPage = () => {
       password: employee.plainPassword || "",
       role: employee.role || "",
       phone: employee.phone || "",
+      cin: employee.cin || "",
     });
     setEditOpen(true);
   };
@@ -163,18 +350,35 @@ const EmployeeListPage = () => {
           body: JSON.stringify(updatedEmployee),
         }
       );
-      if (!response.ok) throw new Error("Erreur lors de la modification");
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la modification");
+      }
+
       const data = await response.json();
+
+      // Mettre à jour la liste des employés
       setEmployees((prevEmployees) =>
         prevEmployees.map((emp) =>
           emp._id === selectedEmployee._id ? data : emp
         )
       );
-      setSnackbar({ open: true, message: "Employé modifié avec succès." });
+
+      setSnackbar({
+        open: true,
+        message: "Employé modifié avec succès.",
+        severity: "success"
+      });
+
       handleEditModalClose();
     } catch (error) {
       console.error(error);
-      setSnackbar({ open: true, message: "Erreur lors de la modification de l'employé." });
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message || "Erreur lors de la modification de l'employé."}`,
+        severity: "error"
+      });
     }
   };
 
@@ -193,6 +397,7 @@ const EmployeeListPage = () => {
   // Confirmer la suppression de l'employé via l'API
   const handleDeleteConfirm = async () => {
     if (!employeeToDelete) return;
+
     try {
       const response = await fetch(
         `http://localhost:5000/api/employees/${employeeToDelete._id}`,
@@ -200,229 +405,588 @@ const EmployeeListPage = () => {
           method: "DELETE",
         }
       );
-      if (!response.ok) throw new Error("Erreur lors de la suppression");
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la suppression");
+      }
+
+      // Mettre à jour la liste des employés
       setEmployees((prevEmployees) =>
         prevEmployees.filter((emp) => emp._id !== employeeToDelete._id)
       );
+
       setSnackbar({
         open: true,
-        message: "L'employé a été supprimé avec succès !",
+        message: "L'employé a été supprimé avec succès!",
+        severity: "success",
       });
+
       handleDeleteModalClose();
     } catch (error) {
       console.error(error);
       setSnackbar({
         open: true,
-        message: "Erreur lors de la suppression de l'employé.",
+        message: `Erreur: ${error.message || "Erreur lors de la suppression de l'employé."}`,
+        severity: "error",
       });
     }
   };
 
+  // Afficher un écran de chargement
   if (loading) {
     return (
       <Box
         display="flex"
+        flexDirection="column"
         alignItems="center"
         justifyContent="center"
-        sx={{ minHeight: "200px" }}
+        sx={{ minHeight: "300px" }}
       >
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Chargement...</Typography>
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" sx={{ mt: 2, color: "text.secondary" }}>
+          Chargement des données...
+        </Typography>
       </Box>
     );
   }
+
+  // Afficher un message d'erreur si nécessaire
   if (error) {
-    return <Typography color="error">{error}</Typography>;
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={() => window.location.reload()}>
+          Réessayer
+        </Button>
+      </Box>
+    );
   }
 
+  // Utiliser les employés filtrés pour l'affichage paginé
+  const displayedEmployees = filteredEmployees
+    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Liste des employés
-      </Typography>
+    <Container maxWidth="xl">
+      <Box sx={{ py: 4 }}>
+        {/* Fil d'Ariane */}
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <Link
+            underline="hover"
+            color="inherit"
+            href="/"
+            sx={{ display: 'flex', alignItems: 'center' }}
+          >
+            <Home sx={{ mr: 0.5 }} fontSize="small" />
+            Accueil
+          </Link>
+          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
+            <Person sx={{ mr: 0.5 }} fontSize="small" />
+            Gestion des employés
+          </Typography>
+        </Breadcrumbs>
 
-      {/* Bouton pour exporter en PDF */}
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleExportPDF}
-        sx={{ mb: 2 }}
-      >
-        Exporter en PDF
-      </Button>
+        {/* Titre de la page et statistiques */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            Gestion des Employés
+          </Typography>
 
-      <TableContainer component={Paper}>
-        <Table aria-label="employee table">
-          <TableHead>
-            <TableRow>
-              <TableCell>N°</TableCell>
-              <TableCell>Photo</TableCell>
-              <TableCell>Prénom</TableCell>
-              <TableCell>Nom</TableCell>
-              <TableCell>Département</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Mot de passe</TableCell>
-              <TableCell>Rôle</TableCell>
-              <TableCell>Téléphone</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {employees.map((emp, index) => (
-              <TableRow key={emp._id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>
-                  {emp.photo ? (
-                    <img
-                      src={`/${emp.photo.split(/(\\|\/)/g).pop()}`}
-                      alt={`${emp.firstName} ${emp.lastName}`}
-                      style={{
-                        width: "50px",
-                        height: "50px",
-                        objectFit: "cover",
-                        borderRadius: "50%",
-                      }}
-                    />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Card sx={{ minWidth: 120, bgcolor: 'primary.light' }}>
+              <CardContent sx={{ p: 1.5 }}>
+                <Typography variant="overline" sx={{ color: 'primary.contrastText' }}>
+                  Total
+                </Typography>
+                <Typography variant="h5" sx={{ color: 'primary.contrastText' }}>
+                  {employees.length}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            <Card sx={{ minWidth: 120, bgcolor: 'info.light' }}>
+              <CardContent sx={{ p: 1.5 }}>
+                <Typography variant="overline" sx={{ color: 'info.contrastText' }}>
+                  Départements
+                </Typography>
+                <Typography variant="h5" sx={{ color: 'info.contrastText' }}>
+                  {departments.length}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+
+        {/* Filtres et boutons d'action */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={7}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Rechercher par nom, email, téléphone ou CIN..."
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={6} md={1.5}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="department-filter-label">Département</InputLabel>
+              <Select
+                labelId="department-filter-label"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                label="Département"
+              >
+                <MenuItem value="all">Tous</MenuItem>
+                {departments.map((dept) => (
+                  <MenuItem key={dept} value={dept}>
+                    {dept}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={6} md={1.5}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="role-filter-label">Rôle</InputLabel>
+              <Select
+                labelId="role-filter-label"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                label="Rôle"
+              >
+                <MenuItem value="all">Tous</MenuItem>
+                {roles.map((role) => (
+                  <MenuItem key={role} value={role}>
+                    {role}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={6} md={2}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="chef-filter-label">Chef responsable</InputLabel>
+              <Select
+                labelId="chef-filter-label"
+                value={chefFilter}
+                onChange={(e) => setChefFilter(e.target.value)}
+                label="Chef responsable"
+                disabled={loadingChefs}
+                startAdornment={
+                  loadingChefs ? (
+                    <InputAdornment position="start">
+                      <CircularProgress size={20} />
+                    </InputAdornment>
                   ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>{emp.firstName}</TableCell>
-                <TableCell>{emp.lastName}</TableCell>
-                <TableCell>{emp.department}</TableCell>
-                <TableCell>{emp.email || "-"}</TableCell>
-                <TableCell>
-                  <MaskedPassword password={emp.plainPassword || ""} />
-                </TableCell>
-                <TableCell>{emp.role || "-"}</TableCell>
-                <TableCell>{emp.phone || "-"}</TableCell>
-                <TableCell>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEditModalOpen(emp)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDeleteModalOpen(emp)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    <InputAdornment position="start">
+                      <SupervisorAccount />
+                    </InputAdornment>
+                  )
+                }
+              >
+                <MenuItem value="all">Tous les chefs</MenuItem>
+                {chefs.map((chef) => (
+                  <MenuItem key={chef._id} value={chef._id}>
+                    {chef.firstName} {chef.lastName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={6} md={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              onClick={handleExportPDF}
+              startIcon={<PictureAsPdf />}
+              sx={{ height: '100%' }}
+            >
+              Exporter PDF
+            </Button>
+          </Grid>
+        </Grid>
+
+        {/* Tableau des employés */}
+        <Paper
+          elevation={3}
+          sx={{
+            overflow: 'hidden',
+            borderRadius: 2,
+            '& .MuiTableCell-head': {
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              fontWeight: 'bold',
+            },
+          }}
+        >
+          {filteredEmployees.length === 0 ? (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="text.secondary">
+                Aucun employé trouvé avec les critères sélectionnés.
+              </Typography>
+              <Button
+                sx={{ mt: 2 }}
+                variant="outlined"
+                onClick={() => {
+                  setFilterValue('');
+                  setDepartmentFilter('all');
+                  setRoleFilter('all');
+                  setChefFilter('all');
+                }}
+              >
+                Réinitialiser les filtres
+              </Button>
+            </Box>
+          ) : (
+            <>
+              <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
+                <Table stickyHeader aria-label="employee table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center" width={50}>N°</TableCell>
+                      <TableCell align="center" width={80}>Photo</TableCell>
+                      <TableCell>Prénom</TableCell>
+                      <TableCell>Nom</TableCell>
+                      <TableCell>CIN</TableCell>
+                      <TableCell>Département</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell align="center">Mot de passe</TableCell>
+                      <TableCell>Rôle</TableCell>
+                      <TableCell>Chef responsable</TableCell>
+                      <TableCell>Téléphone</TableCell>
+                      <TableCell align="center" width={120}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {displayedEmployees.map((emp, index) => (
+                      <TableRow
+                        key={emp._id}
+                        hover
+                        sx={{
+                          '&:nth-of-type(odd)': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                          },
+                        }}
+                      >
+                        <TableCell align="center">
+                          {page * rowsPerPage + index + 1}
+                        </TableCell>
+                        <TableCell align="center">
+                          {emp.photo ? (
+                            <Avatar
+                              src={`/${emp.photo.split(/(\\|\/)/g).pop()}`}
+                              alt={`${emp.firstName} ${emp.lastName}`}
+                              sx={{ width: 50, height: 50, mx: 'auto' }}
+                            />
+                          ) : (
+                            <Avatar sx={{ width: 50, height: 50, mx: 'auto', bgcolor: 'primary.main' }}>
+                              {emp.firstName?.[0] || ''}{emp.lastName?.[0] || ''}
+                            </Avatar>
+                          )}
+                        </TableCell>
+                        <TableCell>{emp.firstName || "-"}</TableCell>
+                        <TableCell>{emp.lastName || "-"}</TableCell>
+                        <TableCell>
+                          {emp.cin ? (
+                            <Chip
+                              label={emp.cin}
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              sx={{ fontFamily: 'monospace' }}
+                            />
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {emp.department ? (
+                            <Chip
+                              label={emp.department}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell>{emp.email || "-"}</TableCell>
+                        <TableCell align="center">
+                          <MaskedPassword password={emp.plainPassword || ""} />
+                        </TableCell>
+                        <TableCell>
+                          {emp.role ? (
+                            <Chip
+                              label={emp.role}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                            />
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {emp.chefId ? (
+                            <Tooltip title={`ID: ${emp.chefId._id}`}>
+                              <Chip
+                                icon={<SupervisorAccount />}
+                                label={`${emp.chefId.firstName} ${emp.chefId.lastName}`}
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                              />
+                            </Tooltip>
+                          ) : (
+                            emp.role === "Chef" ? (
+                              <Chip label="N/A" size="small" variant="outlined" />
+                            ) : (
+                              <Chip label="Non assigné" size="small" variant="outlined" color="error" />
+                            )
+                          )}
+                        </TableCell>
+                        <TableCell>{emp.phone || "-"}</TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="Modifier">
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleEditModalOpen(emp)}
+                              size="small"
+                              sx={{ mr: 1 }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton
+                              color="error"
+                              onClick={() => handleDeleteModalOpen(emp)}
+                              size="small"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                component="div"
+                count={filteredEmployees.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="Lignes par page:"
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
+              />
+            </>
+          )}
+        </Paper>
+      </Box>
 
       {/* Modale d'édition */}
-      <Dialog open={editOpen} onClose={handleEditModalClose}>
-        <DialogTitle>Modifier l'employé</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            label="Prénom"
-            fullWidth
-            value={editedEmployee.firstName}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                firstName: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Nom"
-            fullWidth
-            value={editedEmployee.lastName}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                lastName: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Département"
-            fullWidth
-            value={editedEmployee.department}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                department: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Email"
-            fullWidth
-            value={editedEmployee.email}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                email: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Mot de passe"
-            type="password"
-            fullWidth
-            value={editedEmployee.password}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                password: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Rôle"
-            fullWidth
-            value={editedEmployee.role}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                role: e.target.value,
-              })
-            }
-          />
-          <TextField
-            margin="dense"
-            label="Téléphone"
-            fullWidth
-            value={editedEmployee.phone}
-            onChange={(e) =>
-              setEditedEmployee({
-                ...editedEmployee,
-                phone: e.target.value,
-              })
-            }
-          />
+      <Dialog
+        open={editOpen}
+        onClose={handleEditModalClose}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <EditIcon sx={{ mr: 1 }} />
+            Modifier l'employé
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Prénom"
+                fullWidth
+                value={editedEmployee.firstName}
+                onChange={(e) => setEditedEmployee({...editedEmployee, firstName: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Badge fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Nom"
+                fullWidth
+                value={editedEmployee.lastName}
+                onChange={(e) => setEditedEmployee({...editedEmployee, lastName: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Badge fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Département"
+                fullWidth
+                value={editedEmployee.department}
+                onChange={(e) => setEditedEmployee({...editedEmployee, department: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Business fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Rôle"
+                fullWidth
+                value={editedEmployee.role}
+                onChange={(e) => setEditedEmployee({...editedEmployee, role: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Work fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Email"
+                fullWidth
+                value={editedEmployee.email}
+                onChange={(e) => setEditedEmployee({...editedEmployee, email: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Mot de passe"
+                type="password"
+                fullWidth
+                value={editedEmployee.password}
+                onChange={(e) => setEditedEmployee({...editedEmployee, password: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <VpnKey fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Téléphone"
+                fullWidth
+                value={editedEmployee.phone}
+                onChange={(e) => setEditedEmployee({...editedEmployee, phone: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="CIN"
+                fullWidth
+                value={editedEmployee.cin}
+                onChange={(e) => setEditedEmployee({...editedEmployee, cin: e.target.value})}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CreditCard fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleEditModalClose}>Annuler</Button>
-          <Button onClick={handleEditSave} variant="contained" color="primary">
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleEditModalClose} variant="outlined">
+            Annuler
+          </Button>
+          <Button
+            onClick={handleEditSave}
+            variant="contained"
+            color="primary"
+            startIcon={<EditIcon />}
+          >
             Enregistrer
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Modale de confirmation de suppression */}
-      <Dialog open={deleteOpen} onClose={handleDeleteModalClose}>
-        <DialogTitle>Confirmer la suppression</DialogTitle>
-        <DialogContent>
-          <Typography>Voulez-vous vraiment supprimer cet employé ?</Typography>
+      <Dialog
+        open={deleteOpen}
+        onClose={handleDeleteModalClose}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white', py: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <DeleteIcon sx={{ mr: 1 }} />
+            Confirmer la suppression
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Cette action est irréversible.
+          </Alert>
+          <Typography variant="body1">
+            Êtes-vous sûr de vouloir supprimer l'employé :
+            <Box component="span" fontWeight="bold" sx={{ mx: 1 }}>
+              {employeeToDelete?.firstName} {employeeToDelete?.lastName}
+            </Box>?
+          </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteModalClose}>Annuler</Button>
-          <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleDeleteModalClose} variant="outlined">
+            Annuler
+          </Button>
+          <Button onClick={handleDeleteConfirm} variant="contained" color="error" startIcon={<DeleteIcon />}>
             Supprimer
           </Button>
         </DialogActions>
@@ -431,11 +995,20 @@ const EmployeeListPage = () => {
       {/* Snackbar pour les notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
+        autoHideDuration={5000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        message={snackbar.message}
-      />
-    </Box>
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };
 

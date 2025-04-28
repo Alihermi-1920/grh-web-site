@@ -21,11 +21,13 @@ import {
   AdminPanelSettings,
   EventNote,
   History,
+  WorkOutline,
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import LeaveManagement from "./LeaveManagement"; // Correction : import depuis LeaveManagement.js
+import LeaveManagement from "./LeaveManagement"; // Import depuis LeaveManagement.js
 import Attendance from "./Attendance"; // Historique de présence
 import EmployeeTaskList from "../components/EmployeeTaskList"; // Composant pour afficher les tâches assignées
+import EmployeeProjectDashboard from "./EmployeeProjectDashboard"; // Import du tableau de bord des projets
 import { AuthContext } from "../context/AuthContext";
 
 const theme = createTheme({
@@ -126,7 +128,7 @@ const EmployeeDashboard = () => {
             }}
           >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <Assignment />
+              <WorkOutline />
             </ListItemIcon>
             <ListItemText primary="Mes Projets" primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }} />
           </ListItemButton>
@@ -172,7 +174,7 @@ const EmployeeDashboard = () => {
             }}
           >
             <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <Assignment /> {/* Vous pouvez changer l'icône */}
+              <Assignment />
             </ListItemIcon>
             <ListItemText primary="Mes Tâches" primaryTypographyProps={{ fontSize: 14, fontWeight: 500 }} />
           </ListItemButton>
@@ -213,7 +215,7 @@ const EmployeeDashboard = () => {
           </Box>
           <Container maxWidth="xl" sx={{ p: 4, flexGrow: 1 }}>
             {activeView === "profile" && <Typography variant="h6">Mon Profil (Vue Employé)</Typography>}
-            {activeView === "projects" && <Typography variant="h6">Mes Projets (Vue Employé)</Typography>}
+            {activeView === "projects" && <EmployeeProjectDashboard />}
             {activeView === "leaves" && (
               <LeaveManagement leaveBalance={leaveBalance} onLeaveSubmit={handleLeaveSubmit} />
             )}

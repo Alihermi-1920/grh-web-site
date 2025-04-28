@@ -1,6 +1,7 @@
 // src/pages/DashboardHome.js
 import React from 'react';
-import { Box, Typography, Grid, Paper } from '@mui/material';
+import { Box, Typography, Grid, Paper, useTheme } from '@mui/material';
+import { PeopleAlt, Assignment, Business } from '@mui/icons-material';
 import DashboardChart from '../components/DashboardChart';
 import PieChart from '../components/PieChart';
 import MonthlyRecruitmentChart from '../components/MonthlyRecruitmentChart';
@@ -10,65 +11,174 @@ const DashboardHome = ({
   projectCount,
   departmentCount,
   departmentLabels,
-  departmentData,
-  recruitmentLabels,
-  recruitmentData
+  departmentDistribution,
+  monthLabels,
+  recruitmentData,
+  darkMode
 }) => {
+  const theme = useTheme();
+
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Vue d'ensemble
+    <Box>
+      <Typography variant="h4" fontWeight="bold" color="primary" gutterBottom>
+        Tableau de bord
       </Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h6">Employés</Typography>
-            <Typography variant="h4">{employeeCount}</Typography>
+
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              borderRadius: 4,
+              height: '100%',
+              background: darkMode
+                ? `linear-gradient(45deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`
+                : `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
+              color: 'white',
+              boxShadow: darkMode
+                ? '0 8px 16px rgba(0,0,0,0.3)'
+                : '0 8px 16px rgba(98,0,234,0.2)'
+            }}
+          >
+            <PeopleAlt sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
+            <Typography variant="h6" sx={{ opacity: 0.9 }}>Total des Employés</Typography>
+            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+              {employeeCount}
+            </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h6">Projets</Typography>
-            <Typography variant="h4">{projectCount}</Typography>
+
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              borderRadius: 4,
+              height: '100%',
+              background: darkMode
+                ? `linear-gradient(45deg, ${theme.palette.secondary.dark} 0%, ${theme.palette.secondary.main} 100%)`
+                : `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.secondary.light} 90%)`,
+              color: darkMode ? 'black' : 'black',
+              boxShadow: darkMode
+                ? '0 8px 16px rgba(0,0,0,0.3)'
+                : '0 8px 16px rgba(3,218,198,0.2)'
+            }}
+          >
+            <Assignment sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
+            <Typography variant="h6" sx={{ opacity: 0.9 }}>Projets Actifs</Typography>
+            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+              {projectCount}
+            </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h6">Départements</Typography>
-            <Typography variant="h4">{departmentCount}</Typography>
+
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              borderRadius: 4,
+              height: '100%',
+              background: darkMode
+                ? 'linear-gradient(45deg, #00695c 0%, #00897b 100%)'
+                : 'linear-gradient(45deg, #00897b 30%, #4db6ac 90%)',
+              color: 'white',
+              boxShadow: darkMode
+                ? '0 8px 16px rgba(0,0,0,0.3)'
+                : '0 8px 16px rgba(0,137,123,0.2)'
+            }}
+          >
+            <Business sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
+            <Typography variant="h6" sx={{ opacity: 0.9 }}>Départements</Typography>
+            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+              {departmentCount}
+            </Typography>
           </Paper>
         </Grid>
       </Grid>
 
-      <Box sx={{ mt: 4, height: '300px' }}>
-        <DashboardChart
-          employeeCount={employeeCount}
-          projectCount={projectCount}
-          departmentCount={departmentCount}
-        />
-      </Box>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              borderRadius: 4,
+              boxShadow: darkMode
+                ? '0 8px 24px rgba(0,0,0,0.2)'
+                : '0 8px 24px rgba(0,0,0,0.05)',
+              height: '100%'
+            }}
+          >
+            <Typography variant="h6" fontWeight="600" gutterBottom>
+              Répartition des employés par département
+            </Typography>
+            <Box sx={{ height: 300, mt: 2 }}>
+              <PieChart
+                labels={departmentLabels}
+                data={departmentDistribution}
+                title="Départements"
+                darkMode={darkMode}
+              />
+            </Box>
+          </Paper>
+        </Grid>
 
-      <Box sx={{ mt: 4, height: '300px' }}>
-        <Typography variant="h6" gutterBottom>
-          Répartition des employés par département
-        </Typography>
-        <PieChart
-          labels={departmentLabels}
-          data={departmentData}
-          title="Départements"
-        />
-      </Box>
+        <Grid item xs={12} md={6}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              borderRadius: 4,
+              boxShadow: darkMode
+                ? '0 8px 24px rgba(0,0,0,0.2)'
+                : '0 8px 24px rgba(0,0,0,0.05)',
+              height: '100%'
+            }}
+          >
+            <Typography variant="h6" fontWeight="600" gutterBottom>
+              Recrutement Mensuel
+            </Typography>
+            <Box sx={{ height: 300, mt: 2 }}>
+              <MonthlyRecruitmentChart
+                labels={monthLabels}
+                data={recruitmentData}
+                title="Recrutement Mensuel"
+                darkMode={darkMode}
+              />
+            </Box>
+          </Paper>
+        </Grid>
 
-      <Box sx={{ mt: 4, height: '300px' }}>
-        <Typography variant="h6" gutterBottom>
-          Recrutement Mensuel
-        </Typography>
-        <MonthlyRecruitmentChart
-          labels={recruitmentLabels}
-          data={recruitmentData}
-          title="Recrutement Mensuel"
-        />
-      </Box>
+        <Grid item xs={12}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              borderRadius: 4,
+              boxShadow: darkMode
+                ? '0 8px 24px rgba(0,0,0,0.2)'
+                : '0 8px 24px rgba(0,0,0,0.05)',
+            }}
+          >
+            <Typography variant="h6" fontWeight="600" gutterBottom>
+              Vue d'ensemble des statistiques
+            </Typography>
+            <Box sx={{ height: 350, mt: 2 }}>
+              <DashboardChart
+                employeeCount={employeeCount}
+                projectCount={projectCount}
+                departmentCount={departmentCount}
+                darkMode={darkMode}
+              />
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };

@@ -50,7 +50,7 @@ import {
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import EmployeeList from "./EmployeeList";
 import Evaluation from "./Evaluation";
-import ProjectListPage from "./ProjectListPage";
+import ChefProjectPage from "./ChefProjectPage";
 import Attendance from "./Attendance";
 import AttendanceCalendar from "./AttendanceCalendar";
 import TaskManager from "./TaskManager";
@@ -646,7 +646,7 @@ const ChefDashboard = () => {
               <Box>
                 {activeView === "dashboardHomeChef" && <DashboardHomeChef />}
                 {activeView === "employeeList" && <EmployeeList />}
-                {activeView === "projectList" && <ProjectListPage />}
+                {activeView === "projectList" && <ChefProjectPage />}
                 {activeView === "evaluation" && <Evaluation />}
                 {activeView === "attendance" && <Attendance />}
                 {activeView === "attendanceCalendar" && <AttendanceCalendar />}

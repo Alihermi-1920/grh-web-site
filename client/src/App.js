@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./App.css"; // Styles propres à App (optionnel)
 
 const App = () => {
-  // On ne se sert pas du "user" pour l’instant, mais on l’enregistre dans l’état
+  // On ne se sert pas du "user" pour l'instant, mais on l'enregistre dans l'état
   const [, setUser] = useState(null);
   const navigate = useNavigate();
 
