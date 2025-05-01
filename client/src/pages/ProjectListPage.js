@@ -426,6 +426,7 @@ const ProjectListPage = () => {
   const getStatusChip = (status) => {
     let color = "default";
     let label = "Inconnu";
+    const darkMode = localStorage.getItem("themeMode") === "dark";
 
     switch (status) {
       case "planning":
@@ -452,7 +453,18 @@ const ProjectListPage = () => {
         break;
     }
 
-    return <Chip label={label} color={color} size="small" />;
+    return (
+      <Chip
+        label={label}
+        color={color}
+        size="small"
+        sx={{
+          color: darkMode ?
+            (color === 'default' ? 'rgba(255,255,255,0.7)' : undefined) :
+            undefined
+        }}
+      />
+    );
   };
 
   // CONTEXT MENU HANDLERS
@@ -1358,6 +1370,8 @@ const ProjectListPage = () => {
               sx={{
                 height: "100%",
                 transition: "transform 0.2s, box-shadow 0.2s",
+                bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.9)' : 'white',
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
                 "&:hover": {
                   transform: "translateY(-4px)",
                   boxShadow: 6
@@ -1380,6 +1394,7 @@ const ProjectListPage = () => {
                   <IconButton
                     aria-label="project-menu"
                     onClick={(e) => handleMenuClick(e, project)}
+                    sx={{ color: localStorage.getItem("themeMode") === "dark" ? "white" : "inherit" }}
                   >
                     <MoreVert />
                   </IconButton>
@@ -1390,6 +1405,7 @@ const ProjectListPage = () => {
                       variant="h6"
                       sx={{
                         cursor: "pointer",
+                        color: localStorage.getItem("themeMode") === "dark" ? "white" : "inherit",
                         "&:hover": { textDecoration: "underline" },
                       }}
                       onClick={() => handleProjectClick(project)}
@@ -1398,18 +1414,25 @@ const ProjectListPage = () => {
                     </Typography>
                   </Tooltip>
                 }
-                subheader={`Créé le ${formatDate(project.createdAt)}`}
+                subheader={
+                  <Typography
+                    variant="body2"
+                    sx={{ color: localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary" }}
+                  >
+                    {`Créé le ${formatDate(project.createdAt)}`}
+                  </Typography>
+                }
               />
               <CardContent>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}>
                     Statut:
                   </Typography>
                   {getStatusChip(project.status)}
                 </Box>
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}>
                     Priorité:
                   </Typography>
                   <Chip
@@ -1428,23 +1451,28 @@ const ProjectListPage = () => {
                         ? "warning"
                         : "success"
                     }
+                    sx={{
+                      color: localStorage.getItem("themeMode") === "dark" ?
+                        (project.priority === "low" ? 'rgba(255,255,255,0.9)' : undefined) :
+                        undefined
+                    }}
                   />
                 </Box>
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}>
                     Échéance:
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "white" : "text.primary"}>
                     {formatDate(project.deadline)}
                   </Typography>
                 </Box>
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}>
                     Responsable:
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "white" : "text.primary"}>
                     {project.projectLeader ?
                       `${project.projectLeader.firstName} ${project.projectLeader.lastName}` :
                       "Non assigné"}
@@ -1453,10 +1481,12 @@ const ProjectListPage = () => {
 
                 <Box sx={{ mt: 2 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}>
                       Progression:
                     </Typography>
-                    <Typography variant="body2">{project.completionPercentage || 0}%</Typography>
+                    <Typography variant="body2" color={localStorage.getItem("themeMode") === "dark" ? "white" : "text.primary"}>
+                      {project.completionPercentage || 0}%
+                    </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
@@ -2041,7 +2071,9 @@ const ProjectListPage = () => {
   };
 
   return (
-    <Container maxWidth="xl">
+    <Container maxWidth="xl" sx={{
+      color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
+    }}>
       <Box sx={{ padding: 2 }}>
         {/* Breadcrumbs */}
         <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
@@ -2066,7 +2098,10 @@ const ProjectListPage = () => {
             padding: 3,
             mb: 3,
             borderRadius: 2,
-            background: 'linear-gradient(to right, #f5f7fa, #ffffff)'
+            background: localStorage.getItem("themeMode") === "dark"
+              ? 'linear-gradient(135deg, rgba(66, 66, 66, 0.95), rgba(33, 33, 33, 0.9))'
+              : 'linear-gradient(135deg, #f5f7fa, #ffffff)',
+            color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
@@ -2126,15 +2161,35 @@ const ProjectListPage = () => {
               size="small"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ flexGrow: 1, minWidth: 200 }}
+              sx={{
+                flexGrow: 1,
+                minWidth: 200,
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                  },
+                  '& .MuiInputBase-input': {
+                    color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                }
+              }}
               InputProps={{
-                startAdornment: <Search color="action" sx={{ mr: 1 }} />,
+                startAdornment: <Search color={localStorage.getItem("themeMode") === "dark" ? "info" : "action"} sx={{ mr: 1 }} />,
                 endAdornment: searchTerm ? (
                   <InputAdornment position="end">
                     <IconButton
                       size="small"
                       onClick={() => setSearchTerm("")}
                       edge="end"
+                      sx={{
+                        color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined
+                      }}
                     >
                       <Close fontSize="small" />
                     </IconButton>
@@ -2143,13 +2198,29 @@ const ProjectListPage = () => {
               }}
             />
 
-            <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
+            <FormControl variant="outlined" size="small" sx={{
+              minWidth: 150,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                },
+                '&:hover fieldset': {
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                },
+                '& .MuiInputBase-input': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                }
+              },
+              '& .MuiInputLabel-root': {
+                color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+              }
+            }}>
               <InputLabel>Priorité</InputLabel>
               <Select
                 label="Priorité"
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value)}
-                startAdornment={<Flag sx={{ mr: 1, ml: -0.5 }} fontSize="small" />}
+                startAdornment={<Flag sx={{ mr: 1, ml: -0.5, color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined }} fontSize="small" />}
               >
                 <MenuItem value="">Toutes</MenuItem>
                 <MenuItem value="high">
@@ -2167,13 +2238,29 @@ const ProjectListPage = () => {
               </Select>
             </FormControl>
 
-            <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
+            <FormControl variant="outlined" size="small" sx={{
+              minWidth: 150,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                },
+                '&:hover fieldset': {
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                },
+                '& .MuiInputBase-input': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                }
+              },
+              '& .MuiInputLabel-root': {
+                color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+              }
+            }}>
               <InputLabel>Statut</InputLabel>
               <Select
                 label="Statut"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                startAdornment={<Schedule sx={{ mr: 1, ml: -0.5 }} fontSize="small" />}
+                startAdornment={<Schedule sx={{ mr: 1, ml: -0.5, color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined }} fontSize="small" />}
               >
                 <MenuItem value="">Tous</MenuItem>
                 <MenuItem value="planning">Planification</MenuItem>
@@ -2192,7 +2279,8 @@ const ProjectListPage = () => {
               borderRadius: 2,
               overflow: 'hidden',
               border: '1px solid',
-              borderColor: 'divider'
+              borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.15)' : 'divider',
+              bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.9)' : undefined
             }}
           >
             <Tabs
@@ -2203,12 +2291,17 @@ const ProjectListPage = () => {
               sx={{
                 '& .MuiTabs-indicator': {
                   height: 3,
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined
                 },
                 '& .MuiTab-root': {
                   minHeight: 64,
                   fontWeight: 'medium',
                   fontSize: '0.95rem',
-                  px: 3
+                  px: 3,
+                  color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  '&.Mui-selected': {
+                    color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined
+                  }
                 }
               }}
             >

@@ -2,25 +2,25 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const UserSchema = new mongoose.Schema({
-  firstName: { 
-    type: String, 
+  firstName: {
+    type: String,
     required: [true, "Le prénom est obligatoire"],
     trim: true
   },
-  lastName: { 
-    type: String, 
+  lastName: {
+    type: String,
     required: [true, "Le nom est obligatoire"],
     trim: true
   },
-  email: { 
-    type: String, 
+  email: {
+    type: String,
     required: [true, "L'email est obligatoire"],
     unique: true,
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email invalide"]
   },
-  password: { 
-    type: String, 
+  password: {
+    type: String,
     required: [true, "Le mot de passe est obligatoire"],
     minlength: [6, "Le mot de passe doit contenir au moins 6 caractères"]
   },
@@ -59,6 +59,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  chef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -76,7 +81,7 @@ UserSchema.virtual("fullName").get(function() {
 // Hash du mot de passe avant sauvegarde
 UserSchema.pre("save", async function(next) {
   if (!this.isModified("password")) return next();
-  
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();

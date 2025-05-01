@@ -470,33 +470,49 @@ const AttendanceCalendar = () => {
             {/* Statistiques de la journée */}
             <Grid container spacing={1} sx={{ mb: 3 }}>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: '#e8f5e9' }}>
+                <Card sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Typography variant="body2">Présents</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Présents</Typography>
                     <Typography variant="h6">{dailyStats.present}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: '#fff8e1' }}>
+                <Card sx={{
+                  bgcolor: 'warning.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Typography variant="body2">Retards</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Retards</Typography>
                     <Typography variant="h6">{dailyStats.late}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: '#e3f2fd' }}>
+                <Card sx={{
+                  bgcolor: 'info.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Typography variant="body2">Congés</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Congés</Typography>
                     <Typography variant="h6">{dailyStats.ropo}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={6}>
-                <Card sx={{ bgcolor: '#ffebee' }}>
+                <Card sx={{
+                  bgcolor: 'error.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Typography variant="body2">Absents</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Absents</Typography>
                     <Typography variant="h6">{dailyStats.absent}</Typography>
                   </CardContent>
                 </Card>

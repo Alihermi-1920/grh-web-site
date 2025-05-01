@@ -21,6 +21,8 @@ const evaluationResultatRoutes = require("./routes/evaluationresultat");
 // New routes for uploads and comments
 const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
+// Messaging system routes
+const messageRoutes = require("./routes/messageRoutes");
 
 const app = express();
 
@@ -76,6 +78,7 @@ app.use("/api/evaluationresultat", evaluationResultatRoutes);
 // Register new routes
 app.use("/api/upload", uploadRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/messages", messageRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI, {

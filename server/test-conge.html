@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Leave System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Leave System</h1>
+  
+  <div class="form-group">
+    <label for="employeeId">Employee ID:</label>
+    <input type="text" id="employeeId" value="67dc85b85f3551562c5457ca">
+    <small>Use a valid MongoDB ObjectId (24 characters)</small>
+  </div>
+  
+  <h2>1. Check Leave Balance</h2>
+  <button id="checkBalance">Check Balance</button>
+  <div id="balanceResult" class="result"></div>
+  
+  <h2>2. Submit Leave Request (JSON)</h2>
+  <form id="jsonForm">
+    <div class="form-group">
+      <label for="leaveType">Leave Type:</label>
+      <select id="leaveType">
+        <option value="Congé payé">Congé payé</option>
+        <option value="Congé sans solde">Congé sans solde</option>
+        <option value="Congé médical">Congé médical</option>
+        <option value="Congé personnel">Congé personnel</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="startDate">Start Date:</label>
+      <input type="date" id="startDate">
+    </div>
+    
+    <div class="form-group">
+      <label for="endDate">End Date:</label>
+      <input type="date" id="endDate">
+    </div>
+    
+    <div class="form-group">
+      <label for="reason">Reason:</label>
+      <textarea id="reason" rows="3">Test reason</textarea>
+    </div>
+    
+    <button type="submit">Submit JSON Request</button>
+  </form>
+  <div id="jsonResult" class="result"></div>
+  
+  <h2>3. Submit Leave Request (FormData)</h2>
+  <form id="formDataForm">
+    <div class="form-group">
+      <label for="fdLeaveType">Leave Type:</label>
+      <select id="fdLeaveType">
+        <option value="Congé payé">Congé payé</option>
+        <option value="Congé sans solde">Congé sans solde</option>
+        <option value="Congé médical">Congé médical</option>
+        <option value="Congé personnel">Congé personnel</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="fdStartDate">Start Date:</label>
+      <input type="date" id="fdStartDate">
+    </div>
+    
+    <div class="form-group">
+      <label for="fdEndDate">End Date:</label>
+      <input type="date" id="fdEndDate">
+    </div>
+    
+    <div class="form-group">
+      <label for="fdReason">Reason:</label>
+      <textarea id="fdReason" rows="3">Test reason</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="documents">Documents:</label>
+      <input type="file" id="documents" multiple>
+    </div>
+    
+    <button type="submit">Submit FormData Request</button>
+  </form>
+  <div id="formDataResult" class="result"></div>
+  
+  <h2>4. View Leave Requests</h2>
+  <button id="viewRequests">View Requests</button>
+  <div id="requestsResult" class="result"></div>
+  
+  <script>
+    // Set default dates
+    document.getElementById('startDate').valueAsDate = new Date();
+    document.getElementById('endDate').valueAsDate = new Date(Date.now() + 86400000); // Tomorrow
+    document.getElementById('fdStartDate').valueAsDate = new Date();
+    document.getElementById('fdEndDate').valueAsDate = new Date(Date.now() + 86400000); // Tomorrow
+    
+    // Check balance
+    document.getElementById('checkBalance').addEventListener('click', async () => {
+      const employeeId = document.getElementById('employeeId').value;
+      const resultDiv = document.getElementById('balanceResult');
+      
+      try {
+        resultDiv.innerHTML = 'Loading...';
+        
+        const response = await fetch(`http://localhost:5002/api/test-conges/balance/${employeeId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="success">Balance retrieved successfully</div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">Error: ${data.error}</div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Error: ${error.message}</div>
+        `;
+      }
+    });
+    
+    // Submit JSON request
+    document.getElementById('jsonForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const employeeId = document.getElementById('employeeId').value;
+      const leaveType = document.getElementById('leaveType').value;
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const reason = document.getElementById('reason').value;
+      
+      const resultDiv = document.getElementById('jsonResult');
+      
+      try {
+        resultDiv.innerHTML = 'Submitting...';
+        
+        // Calculate number of days
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const numberOfDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        
+        const requestData = {
+          employee: employeeId,
+          leaveType,
+          startDate,
+          endDate,
+          numberOfDays,
+          reason,
+          isMedical: leaveType === 'Congé médical'
+        };
+        
+        console.log('Sending JSON request:', requestData);
+        
+        const response = await fetch('http://localhost:5002/api/test-conges', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="success">Leave request submitted successfully</div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">Error: ${data.error}</div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Error: ${error.message}</div>
+        `;
+      }
+    });
+    
+    // Submit FormData request
+    document.getElementById('formDataForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const employeeId = document.getElementById('employeeId').value;
+      const leaveType = document.getElementById('fdLeaveType').value;
+      const startDate = document.getElementById('fdStartDate').value;
+      const endDate = document.getElementById('fdEndDate').value;
+      const reason = document.getElementById('fdReason').value;
+      const documents = document.getElementById('documents').files;
+      
+      const resultDiv = document.getElementById('formDataResult');
+      
+      try {
+        resultDiv.innerHTML = 'Submitting...';
+        
+        // Calculate number of days
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const numberOfDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        
+        const formData = new FormData();
+        formData.append('employee', employeeId);
+        formData.append('leaveType', leaveType);
+        formData.append('startDate', startDate);
+        formData.append('endDate', endDate);
+        formData.append('numberOfDays', numberOfDays);
+        formData.append('reason', reason);
+        formData.append('isMedical', leaveType === 'Congé médical');
+        
+        // Add documents if any
+        for (let i = 0; i < documents.length; i++) {
+          formData.append('documents', documents[i]);
+        }
+        
+        console.log('Sending FormData request with employee ID:', employeeId);
+        
+        const response = await fetch(`http://localhost:5002/api/test-conges?employee=${employeeId}`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="success">Leave request submitted successfully</div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">Error: ${data.error}</div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Error: ${error.message}</div>
+        `;
+      }
+    });
+    
+    // View requests
+    document.getElementById('viewRequests').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('requestsResult');
+      
+      try {
+        resultDiv.innerHTML = 'Loading...';
+        
+        const response = await fetch('http://localhost:5002/api/test-conges');
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="success">Retrieved ${data.length} leave requests</div>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">Error: ${data.error}</div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">Error: ${error.message}</div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

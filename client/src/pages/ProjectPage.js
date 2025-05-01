@@ -155,13 +155,29 @@ const ProjectPage = () => {
           label="Nom du projet *"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+              },
+              '&:hover fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+              },
+              '& .MuiInputBase-input': {
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+            }
+          }}
           disabled={loading}
           required
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Assignment color="primary" />
+                <Assignment color={localStorage.getItem("themeMode") === "dark" ? "info" : "primary"} />
               </InputAdornment>
             ),
           }}
@@ -186,13 +202,29 @@ const ProjectPage = () => {
               label="Chef de projet *"
               variant="outlined"
               required
-              sx={{ mb: 3 }}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                  },
+                  '& .MuiInputBase-input': {
+                    color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                }
+              }}
               InputProps={{
                 ...params.InputProps,
                 startAdornment: (
                   <>
                     <InputAdornment position="start">
-                      <Person color="primary" />
+                      <Person color={localStorage.getItem("themeMode") === "dark" ? "info" : "primary"} />
                     </InputAdornment>
                     {params.InputProps.startAdornment}
                   </>
@@ -212,16 +244,34 @@ const ProjectPage = () => {
           fullWidth
           type="date"
           label="Date d'échéance *"
-          InputLabelProps={{ shrink: true }}
+          InputLabelProps={{
+            shrink: true,
+            sx: {
+              color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+            }
+          }}
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+              },
+              '&:hover fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+              },
+              '& .MuiInputBase-input': {
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+              }
+            }
+          }}
           disabled={loading}
           required
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <CalendarToday color="primary" />
+                <CalendarToday color={localStorage.getItem("themeMode") === "dark" ? "info" : "primary"} />
               </InputAdornment>
             ),
           }}
@@ -234,19 +284,51 @@ const ProjectPage = () => {
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+              },
+              '&:hover fieldset': {
+                borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+              },
+              '& .MuiInputBase-input': {
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+            }
+          }}
           disabled={loading}
           required
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Description color="primary" />
+                <Description color={localStorage.getItem("themeMode") === "dark" ? "info" : "primary"} />
               </InputAdornment>
             ),
           }}
         />
 
-        <FormControl fullWidth sx={{ mb: 3 }}>
+        <FormControl fullWidth sx={{
+          mb: 3,
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': {
+              borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+            },
+            '&:hover fieldset': {
+              borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+            },
+            '& .MuiInputBase-input': {
+              color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+            }
+          },
+          '& .MuiInputLabel-root': {
+            color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+          }
+        }}>
           <InputLabel id="priority-label">Priorité *</InputLabel>
           <Select
             labelId="priority-label"
@@ -257,13 +339,61 @@ const ProjectPage = () => {
             required
             startAdornment={
               <InputAdornment position="start">
-                <Flag color="primary" />
+                <Flag color={localStorage.getItem("themeMode") === "dark" ? "info" : "primary"} />
               </InputAdornment>
             }
           >
-            <MenuItem value="low">Faible</MenuItem>
-            <MenuItem value="medium">Moyenne</MenuItem>
-            <MenuItem value="high">Haute</MenuItem>
+            <MenuItem
+              value="low"
+              sx={{
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                '&:hover': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.08)' : undefined
+                },
+                '&.Mui-selected': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.15)' : undefined,
+                  '&:hover': {
+                    backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.25)' : undefined
+                  }
+                }
+              }}
+            >
+              Faible
+            </MenuItem>
+            <MenuItem
+              value="medium"
+              sx={{
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                '&:hover': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.08)' : undefined
+                },
+                '&.Mui-selected': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.15)' : undefined,
+                  '&:hover': {
+                    backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.25)' : undefined
+                  }
+                }
+              }}
+            >
+              Moyenne
+            </MenuItem>
+            <MenuItem
+              value="high"
+              sx={{
+                color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                '&:hover': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.08)' : undefined
+                },
+                '&.Mui-selected': {
+                  backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.15)' : undefined,
+                  '&:hover': {
+                    backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.25)' : undefined
+                  }
+                }
+              }}
+            >
+              Haute
+            </MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -272,7 +402,16 @@ const ProjectPage = () => {
 
   return (
     <Container maxWidth="md">
-      <Paper sx={{ mt: 4, p: { xs: 2, md: 4 }, background: "white", borderRadius: 2, boxShadow: 2 }}>
+      <Paper sx={{
+        mt: 4,
+        p: { xs: 2, md: 4 },
+        background: localStorage.getItem("themeMode") === "dark"
+          ? 'linear-gradient(135deg, rgba(66, 66, 66, 0.95), rgba(33, 33, 33, 0.9))'
+          : 'white',
+        color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
+        borderRadius: 2,
+        boxShadow: 2
+      }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
           Créer un nouveau projet
         </Typography>
@@ -296,8 +435,21 @@ const ProjectPage = () => {
                 minWidth: 180,
                 py: 1.2,
                 borderRadius: 2,
-                background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-                boxShadow: '0 4px 10px rgba(25, 118, 210, 0.3)'
+                background: localStorage.getItem("themeMode") === "dark"
+                  ? 'linear-gradient(45deg, rgba(25, 118, 210, 0.9) 30%, rgba(66, 165, 245, 0.9) 90%)'
+                  : 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+                boxShadow: '0 4px 10px rgba(25, 118, 210, 0.3)',
+                '&:hover': {
+                  background: localStorage.getItem("themeMode") === "dark"
+                    ? 'linear-gradient(45deg, rgba(25, 118, 210, 1) 30%, rgba(66, 165, 245, 1) 90%)'
+                    : 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)',
+                  boxShadow: '0 6px 12px rgba(25, 118, 210, 0.4)'
+                },
+                '&.Mui-disabled': {
+                  background: localStorage.getItem("themeMode") === "dark"
+                    ? 'rgba(25, 118, 210, 0.3)'
+                    : undefined
+                }
               }}
             >
               {loading ? "Création en cours..." : "Créer le projet"}

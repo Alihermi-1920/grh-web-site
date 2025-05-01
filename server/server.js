@@ -10,11 +10,20 @@ dotenv.config();
 
 // Create Express app
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5003; // Use a different port
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
+
+// Custom middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  console.log('Query params:', req.query);
+  console.log('Body:', req.body);
+  next();
+});
 
 // Create uploads directories
 const serverUploadsDir = path.join(__dirname, 'uploads');
@@ -58,7 +67,7 @@ const projectRoutes = require("./routes/projects");
 const qcmRoutes = require("./routes/QCM");
 const taskRoutes = require("./routes/taskRoutes");
 const notificationRoutes = require("./routes/notification");
-const congeRoutes = require("./routes/conges");
+const congeRoutes = require("./routes/finalCongeRoutes");
 const evaluationResultatRoutes = require("./routes/evaluationresultat");
 const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
@@ -88,7 +97,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("Connected to MongoDB");
-    
+
     // Start server
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);

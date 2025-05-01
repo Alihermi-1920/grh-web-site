@@ -37,7 +37,7 @@ import {
   FormControlLabel,
   FormControl,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
 import { format, addDays, subDays } from "date-fns";
 import {
   CheckCircle as CheckCircleIcon,
@@ -120,16 +120,20 @@ const Attendance = () => {
       });
   }, []);
 
-  // Au montage, récupérer les présences
+  // Récupérer les présences quand les employés changent ou au montage
   useEffect(() => {
-    fetchAttendance();
-  }, []);
+    if (employees.length > 0) {
+      fetchAttendance();
+    }
+  }, [employees]);
 
-  // Régénérer le rapport quand la date change
+  // Régénérer le rapport quand la date ou les enregistrements de présence changent
   useEffect(() => {
-    console.log("Date changed, regenerating report:", format(selectedDate, "yyyy-MM-dd"));
-    generateReport();
-  }, [selectedDate]);
+    console.log("Date or attendance records changed, regenerating report:", format(selectedDate, "yyyy-MM-dd"));
+    if (employees.length > 0) {
+      generateReport();
+    }
+  }, [selectedDate, attendanceRecords]);
 
   // Fonction utilitaire pour comparer les dates sans tenir compte de l'heure
   const isSameDay = (date1, date2) => {
@@ -188,8 +192,7 @@ const Attendance = () => {
         return res.json();
       })
       .then(() => {
-        // Utiliser setLastAction pour déclencher le changement d'onglet via l'effet
-        setLastAction({ type, employeeId: employee._id });
+        // Ne pas changer d'onglet automatiquement
         // Recharger les données
         fetchAttendance();
         setLoading(false);
@@ -202,29 +205,8 @@ const Attendance = () => {
       });
   };
 
-  // Effet pour changer l'onglet après une action
-  useEffect(() => {
-    if (lastAction.type && lastAction.employeeId) {
-      switch (lastAction.type) {
-        case 'present':
-          setActiveTab(1); // Onglet Présents
-          break;
-        case 'late':
-          setActiveTab(2); // Onglet Retards
-          break;
-        case 'absent':
-          setActiveTab(3); // Onglet Absents
-          break;
-        case 'ropo':
-          setActiveTab(4); // Onglet Congés
-          break;
-        default:
-          break;
-      }
-      // Réinitialiser l'action
-      setLastAction({ type: null, employeeId: null });
-    }
-  }, [attendanceRecords, lastAction]);
+  // Nous avons supprimé l'effet qui changeait automatiquement l'onglet après une action
+  // pour permettre à l'utilisateur de rester sur l'onglet "Tous les employés"
 
   // Gestion du check‑out
   const handleCheckOut = (recordId) => {
@@ -243,8 +225,7 @@ const Attendance = () => {
       .then((data) => {
         // Recharger les données
         fetchAttendance();
-        // Changer l'onglet directement car c'est une action spécifique
-        setActiveTab(5); // Changer vers l'onglet Check-out
+        // Ne pas changer l'onglet automatiquement
         setLoading(false);
         showSnackbar("Check-out enregistré avec succès", "success");
       })
@@ -797,33 +778,49 @@ const Attendance = () => {
             </Box>
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={3}>
-                <Card>
+                <Card sx={{
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent>
-                    <Typography variant="h6">Présents</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Présents</Typography>
                     <Typography variant="h4">{reportData?.present || 0}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={3}>
-                <Card>
+                <Card sx={{
+                  bgcolor: 'warning.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent>
-                    <Typography variant="h6">Retards</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Retards</Typography>
                     <Typography variant="h4">{reportData?.late || 0}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={3}>
-                <Card>
+                <Card sx={{
+                  bgcolor: 'info.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent>
-                    <Typography variant="h6">Congés</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Congés</Typography>
                     <Typography variant="h4">{reportData?.ropo || 0}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={3}>
-                <Card>
+                <Card sx={{
+                  bgcolor: 'error.main',
+                  color: 'white',
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
+                }}>
                   <CardContent>
-                    <Typography variant="h6">Absents</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Absents</Typography>
                     <Typography variant="h4">{reportData?.absent || 0}</Typography>
                   </CardContent>
                 </Card>
@@ -934,11 +931,15 @@ const Attendance = () => {
                 >
                   Hier
                 </Button>
-                <DatePicker
+                <TextField
                   label="Date"
-                  value={selectedDate}
-                  onChange={(newValue) => setSelectedDate(newValue)}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
+                  type="date"
+                  value={format(selectedDate, "yyyy-MM-dd")}
+                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                  fullWidth
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
                 />
                 <Button
                   variant="outlined"

@@ -2,11 +2,11 @@
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { 
-  TextField, 
-  Button, 
-  Typography, 
-  Box, 
+import {
+  TextField,
+  Button,
+  Typography,
+  Box,
   CssBaseline,
   FormControl,
   FormControlLabel,
@@ -14,13 +14,13 @@ import {
   Stack,
   IconButton,
   styled,
-  ThemeProvider,
-  createTheme
+  ThemeProvider
 } from "@mui/material";
 import MuiCard from '@mui/material/Card';
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import { AuthContext } from "../context/AuthContext";
+import { createAppTheme } from "../theme";
 
 const ADMIN_CREDENTIALS = {
   email: "admin@grh.com",
@@ -44,7 +44,7 @@ const Card = styled(MuiCard)(({ theme }) => ({
 const SignInContainer = styled(Stack)(({ theme }) => ({
   height: '100vh',
   padding: theme.spacing(2),
-  background: theme.palette.mode === 'light' 
+  background: theme.palette.mode === 'light'
     ? 'radial-gradient(ellipse at 50% 50%, hsl(210, 100%, 97%), hsl(0, 0%, 100%))'
     : 'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
 }));
@@ -60,45 +60,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
 
-  const theme = createTheme({
-    typography: {
-      fontFamily: 'Inter, sans-serif',
-    },
-    palette: {
-      mode: mode,
-      primary: {
-        main: "#1976d2",
-      },
-      background: {
-        default: mode === 'light' ? '#f5f5f5' : '#121212',
-        paper: mode === 'light' ? '#ffffff' : 'hsl(220, 30%, 5%)',
-      }
-    },
-    components: {
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            borderRadius: '12px',
-          }
-        }
-      },
-      MuiTextField: {
-        styleOverrides: {
-          root: {
-            '& .MuiInput-underline:before': {
-              borderBottomColor: mode === 'light' ? 'rgba(0, 0, 0, 0.42)' : 'rgba(255, 255, 255, 0.7)',
-            },
-            '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
-              borderBottomColor: mode === 'light' ? '#000' : '#fff',
-            },
-            '& .MuiInput-underline:after': {
-              borderBottomColor: "#1976d2",
-            },
-          }
-        }
-      }
-    }
-  });
+  const theme = createAppTheme(mode);
 
   const toggleTheme = () => {
     const newMode = mode === "light" ? "dark" : "light";
@@ -132,7 +94,7 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     if (!validateInputs()) return;
 
     // Gestion de la connexion admin
@@ -164,28 +126,28 @@ const Login = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SignInContainer direction="column" justifyContent="center">
-        <IconButton 
+        <IconButton
           onClick={toggleTheme}
           sx={{ position: 'fixed', top: '1rem', right: '1rem' }}
           color="inherit"
         >
           {mode === "light" ? <Brightness4Icon /> : <Brightness7Icon />}
         </IconButton>
-        
+
         <Card variant="outlined">
           <Box display="flex" flexDirection="column" alignItems="flex-start" mb={4}>
-            <img 
-              src="/logo.png" 
-              alt="GRH Logo" 
-              style={{ 
-                width: 80, 
+            <img
+              src="/logo.png"
+              alt="GRH Logo"
+              style={{
+                width: 80,
                 marginBottom: 16,
               }}
             />
-            <Typography 
+            <Typography
               component="h1"
               variant="h5"
-              sx={{ 
+              sx={{
                 fontSize: 'clamp(2rem, 10vw, 2.15rem)',
                 fontWeight: 600,
                 letterSpacing: '-0.02em',
@@ -245,7 +207,7 @@ const Login = () => {
               fullWidth
               variant="contained"
               size="large"
-              sx={{ 
+              sx={{
                 mb: 2,
                 backgroundColor: '#000',
                 color: '#fff',

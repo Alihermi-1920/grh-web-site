@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Typography, Paper, Alert, Tabs, Tab } from "@mui/material";
 import { Bar, Line } from "react-chartjs-2";
+import WelcomeBanner from "../components/WelcomeBanner";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -193,28 +194,33 @@ const DashboardHomeChef = () => {
   };
 
   return (
-    <Paper sx={{ p: 3, borderRadius: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }}>
-      <Typography variant="h5" gutterBottom>
-        Dashboard Chef - Résultats des Évaluations
-      </Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Tabs value={tabIndex} onChange={handleTabChange}>
-        <Tab label="Graphique en Barres" />
-        <Tab label="Graphique en Lignes" />
-      </Tabs>
-      <Box sx={{ mt: 3 }}>
-        {tabIndex === 0 && (
-          <Box sx={{ position: "relative", height: 400 }}>
-            <Bar data={barData} options={barOptions} />
-          </Box>
-        )}
-        {tabIndex === 1 && (
-          <Box>
-            <EmployeeLineChart />
-          </Box>
-        )}
-      </Box>
-    </Paper>
+    <Box>
+      {/* Bannière de bienvenue */}
+      <WelcomeBanner />
+
+      <Paper sx={{ p: 3, borderRadius: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.06)", mt: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Résultats des Évaluations
+        </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Tabs value={tabIndex} onChange={handleTabChange}>
+          <Tab label="Graphique en Barres" />
+          <Tab label="Graphique en Lignes" />
+        </Tabs>
+        <Box sx={{ mt: 3 }}>
+          {tabIndex === 0 && (
+            <Box sx={{ position: "relative", height: 400 }}>
+              <Bar data={barData} options={barOptions} />
+            </Box>
+          )}
+          {tabIndex === 1 && (
+            <Box>
+              <EmployeeLineChart />
+            </Box>
+          )}
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 

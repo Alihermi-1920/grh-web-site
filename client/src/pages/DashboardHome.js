@@ -5,6 +5,7 @@ import { PeopleAlt, Assignment, Business } from '@mui/icons-material';
 import DashboardChart from '../components/DashboardChart';
 import PieChart from '../components/PieChart';
 import MonthlyRecruitmentChart from '../components/MonthlyRecruitmentChart';
+import WelcomeBanner from '../components/WelcomeBanner';
 
 const DashboardHome = ({
   employeeCount,
@@ -20,7 +21,10 @@ const DashboardHome = ({
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" color="primary" gutterBottom>
+      {/* Bannière de bienvenue */}
+      <WelcomeBanner />
+
+      <Typography variant="h4" fontWeight="bold" color="primary" sx={{ mt: 4, mb: 2 }}>
         Tableau de bord
       </Typography>
 
@@ -29,7 +33,7 @@ const DashboardHome = ({
           <Paper
             elevation={2}
             sx={{
-              p: 3,
+              p: 2,
               textAlign: 'center',
               borderRadius: 4,
               height: '100%',
@@ -42,9 +46,9 @@ const DashboardHome = ({
                 : '0 8px 16px rgba(98,0,234,0.2)'
             }}
           >
-            <PeopleAlt sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
-            <Typography variant="h6" sx={{ opacity: 0.9 }}>Total des Employés</Typography>
-            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+            <PeopleAlt sx={{ fontSize: 36, opacity: 0.8, mb: 0.5 }} />
+            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>Total des Employés</Typography>
+            <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
               {employeeCount}
             </Typography>
           </Paper>
@@ -54,7 +58,7 @@ const DashboardHome = ({
           <Paper
             elevation={2}
             sx={{
-              p: 3,
+              p: 2,
               textAlign: 'center',
               borderRadius: 4,
               height: '100%',
@@ -67,9 +71,9 @@ const DashboardHome = ({
                 : '0 8px 16px rgba(3,218,198,0.2)'
             }}
           >
-            <Assignment sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
-            <Typography variant="h6" sx={{ opacity: 0.9 }}>Projets Actifs</Typography>
-            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+            <Assignment sx={{ fontSize: 36, opacity: 0.8, mb: 0.5 }} />
+            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>Projets Actifs</Typography>
+            <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
               {projectCount}
             </Typography>
           </Paper>
@@ -79,7 +83,7 @@ const DashboardHome = ({
           <Paper
             elevation={2}
             sx={{
-              p: 3,
+              p: 2,
               textAlign: 'center',
               borderRadius: 4,
               height: '100%',
@@ -92,9 +96,9 @@ const DashboardHome = ({
                 : '0 8px 16px rgba(0,137,123,0.2)'
             }}
           >
-            <Business sx={{ fontSize: 48, opacity: 0.8, mb: 1 }} />
-            <Typography variant="h6" sx={{ opacity: 0.9 }}>Départements</Typography>
-            <Typography variant="h3" fontWeight="bold" sx={{ mt: 2 }}>
+            <Business sx={{ fontSize: 36, opacity: 0.8, mb: 0.5 }} />
+            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>Départements</Typography>
+            <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
               {departmentCount}
             </Typography>
           </Paper>

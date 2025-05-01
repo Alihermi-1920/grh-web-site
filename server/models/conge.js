@@ -1,19 +1,44 @@
 // models/conge.js
 const mongoose = require("mongoose");
 
+// Schéma pour les documents justificatifs
+const DocumentSchema = new mongoose.Schema({
+  originalName: { type: String, required: true },
+  filePath: { type: String, required: true },
+  fileType: { type: String },
+  fileSize: { type: Number },
+  uploadDate: { type: Date, default: Date.now }
+});
+
 const congeSchema = new mongoose.Schema(
   {
-    employee: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Employee", 
-      required: true 
+    employee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+      required: true
     },
-    leaveType: { type: String, required: true },
-    leaveDate: { type: Date, required: true },
+    chef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee"
+    },
+    leaveType: {
+      type: String,
+      required: true,
+      enum: ["Congé payé", "Congé sans solde", "Congé médical", "Congé personnel"]
+    },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
     numberOfDays: { type: Number, required: true },
     reason: { type: String, required: true },
-    status: { type: String, enum: ["Pending", "Accepted", "Rejected"], default: "Pending" },
-    adminJustification: { type: String },
+    status: {
+      type: String,
+      enum: ["En attente", "Approuvé", "Rejeté"],
+      default: "En attente"
+    },
+    chefJustification: { type: String },
+    isMedical: { type: Boolean, default: false },
+    documents: [DocumentSchema],
+    deductFromBalance: { type: Boolean, default: true }
   },
   { timestamps: true }
 );

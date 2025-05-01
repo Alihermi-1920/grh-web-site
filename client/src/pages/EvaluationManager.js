@@ -94,8 +94,8 @@ const EvaluationManager = () => {
   };
 
   // Filter questions based on search term
-  const filteredQuestions = questions.filter(q => 
-    q.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredQuestions = questions.filter(q =>
+    q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
     q.chapter.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -247,16 +247,16 @@ const EvaluationManager = () => {
     doc.setFontSize(16);
     doc.setTextColor(40, 40, 40);
     doc.text("HRMS - Evaluation Questions", 14, 20);
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-    
+
     // Table data
     const tableColumn = ["#", "Chapter", "Question", "Options", "Max Score"];
-    
+
     let yPos = 40;
-    
+
     // Group by chapter in PDF
     Object.entries(groupedQuestions).forEach(([chapter, chapterQuestions]) => {
       // Add chapter heading
@@ -265,7 +265,7 @@ const EvaluationManager = () => {
       yPos += 10;
       doc.text(`Chapter: ${chapter}`, 14, yPos);
       yPos += 5;
-      
+
       // Create table for this chapter
       const tableRows = chapterQuestions.map((q, index) => {
         const optionsText = (q.options || [])
@@ -274,7 +274,7 @@ const EvaluationManager = () => {
         const maxNote = 5; // Maximum possible score
         return [index + 1, chapter, q.question, optionsText, maxNote];
       });
-      
+
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
@@ -283,10 +283,10 @@ const EvaluationManager = () => {
         headStyles: { fillColor: [66, 66, 166] },
         margin: { top: 10 },
       });
-      
+
       yPos = doc.lastAutoTable.finalY + 15;
     });
-    
+
     doc.save("evaluation_questions.pdf");
 
     setFeedback({
@@ -319,12 +319,12 @@ const EvaluationManager = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Breadcrumbs navigation */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 1, 
-          mb: 3, 
-          background: "transparent", 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1,
+          mb: 3,
+          background: "transparent",
           display: "flex",
           alignItems: "center"
         }}
@@ -341,12 +341,15 @@ const EvaluationManager = () => {
       </Paper>
 
       {/* Main content */}
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
           borderRadius: 2,
-          background: 'linear-gradient(to right, #ffffff, #f8f9fa)'
+          background: localStorage.getItem("themeMode") === "dark"
+            ? 'linear-gradient(135deg, rgba(66, 66, 66, 0.95), rgba(33, 33, 33, 0.9))'
+            : 'linear-gradient(135deg, #ffffff, #f8f9fa)',
+          color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
         }}
       >
         {/* Header section */}
@@ -366,11 +369,11 @@ const EvaluationManager = () => {
               Manage, edit, and organize evaluation questions for employee assessments
             </Typography>
           </Box>
-          
+
           <Stack direction="row" spacing={2}>
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
+              color="primary"
               startIcon={<MoreVert />}
               onClick={handleMenuOpen}
             >
@@ -397,15 +400,15 @@ const EvaluationManager = () => {
 
         {/* Feedback alert */}
         {feedback && (
-          <Snackbar 
-            open={feedback !== null} 
-            autoHideDuration={6000} 
+          <Snackbar
+            open={feedback !== null}
+            autoHideDuration={6000}
             onClose={() => setFeedback(null)}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <Alert 
-              onClose={() => setFeedback(null)} 
-              severity={feedback.type} 
+            <Alert
+              onClose={() => setFeedback(null)}
+              severity={feedback.type}
               sx={{ width: '100%' }}
               action={
                 <IconButton
@@ -424,15 +427,20 @@ const EvaluationManager = () => {
         )}
 
         {/* Search and filter section */}
-        <Paper 
-          elevation={1} 
-          sx={{ 
-            p: 2, 
-            mb: 4, 
-            display: "flex", 
+        <Paper
+          elevation={1}
+          sx={{
+            p: 2,
+            mb: 4,
+            display: "flex",
             alignItems: "center",
             borderRadius: 2,
-            bgcolor: alpha('#f5f5f5', 0.8)
+            bgcolor: localStorage.getItem("themeMode") === "dark"
+              ? 'rgba(55, 55, 55, 0.5)'
+              : alpha('#f5f5f5', 0.8),
+            border: `1px solid ${localStorage.getItem("themeMode") === "dark"
+              ? 'rgba(66, 66, 66, 0.9)'
+              : 'rgba(0, 0, 0, 0.05)'}`
           }}
         >
           <TextField
@@ -456,20 +464,27 @@ const EvaluationManager = () => {
                 </InputAdornment>
               )
             }}
-            sx={{ 
-              backgroundColor: "#ffffff",
+            sx={{
+              backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.9)' : "#ffffff",
               borderRadius: 1,
+              color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#e0e0e0',
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : '#e0e0e0',
                 },
                 '&:hover fieldset': {
-                  borderColor: 'primary.light',
+                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : 'primary.light',
                 },
+                '& .MuiInputBase-input': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
+                },
+                '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                  color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : 'inherit',
+                }
               },
             }}
           />
-          
+
           <Box ml={2} sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary" mr={1}>
               {filteredQuestions.length} questions
@@ -483,14 +498,15 @@ const EvaluationManager = () => {
             <CircularProgress />
           </Box>
         ) : noQuestionsFound ? (
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: 4, 
-              textAlign: 'center', 
-              bgcolor: '#f9f9f9',
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(55, 55, 55, 0.5)' : '#f9f9f9',
               borderRadius: 2,
-              border: '1px dashed #ccc'
+              border: `1px dashed ${localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : '#ccc'}`,
+              color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
             }}
           >
             <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -503,14 +519,16 @@ const EvaluationManager = () => {
         ) : (
           <Box sx={{ mb: 4 }}>
             {Object.entries(groupedQuestions).map(([chapter, chapterQuestions]) => (
-              <Accordion 
-                key={chapter} 
+              <Accordion
+                key={chapter}
                 expanded={expandedChapter === chapter}
                 onChange={handleAccordionChange(chapter)}
-                sx={{ 
-                  mb: 2, 
+                sx={{
+                  mb: 2,
                   boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
                   borderRadius: '8px !important',
+                  bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.9)' : 'white',
+                  color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
                   '&:before': {
                     display: 'none',
                   },
@@ -518,10 +536,17 @@ const EvaluationManager = () => {
                 }}
               >
                 <AccordionSummary
-                  expandIcon={<ExpandMore />}
+                  expandIcon={<ExpandMore sx={{
+                    color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined
+                  }} />}
                   sx={{
-                    backgroundColor: alpha('#e3f2fd', 0.5),
-                    borderBottom: expandedChapter === chapter ? '1px solid #e0e0e0' : 'none'
+                    backgroundColor: localStorage.getItem("themeMode") === "dark"
+                      ? 'rgba(25, 118, 210, 0.15)'
+                      : alpha('#e3f2fd', 0.5),
+                    borderBottom: expandedChapter === chapter
+                      ? `1px solid ${localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.1)' : '#e0e0e0'}`
+                      : 'none',
+                    color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -532,10 +557,10 @@ const EvaluationManager = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Chip 
-                        label={`${chapterQuestions.length} questions`} 
-                        size="small" 
-                        color="primary" 
+                      <Chip
+                        label={`${chapterQuestions.length} questions`}
+                        size="small"
+                        color="primary"
                         variant="outlined"
                         sx={{ mr: 2 }}
                       />
@@ -559,10 +584,12 @@ const EvaluationManager = () => {
                     <Grid container spacing={2}>
                       {chapterQuestions.map((q) => (
                         <Grid item xs={12} key={q._id}>
-                          <Card 
-                            sx={{ 
+                          <Card
+                            sx={{
                               borderRadius: 2,
                               transition: 'all 0.3s',
+                              bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(55, 55, 55, 0.7)' : 'white',
+                              color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
                               '&:hover': {
                                 boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
                               }
@@ -606,21 +633,27 @@ const EvaluationManager = () => {
                                 </>
                               )}
                             </CardContent>
-                            <CardActions sx={{ justifyContent: 'flex-end', p: 1, bgcolor: alpha('#f5f5f5', 0.5) }}>
+                            <CardActions sx={{
+                              justifyContent: 'flex-end',
+                              p: 1,
+                              bgcolor: localStorage.getItem("themeMode") === "dark"
+                                ? 'rgba(45, 45, 45, 0.7)'
+                                : alpha('#f5f5f5', 0.5)
+                            }}>
                               {editingQuestionId === q._id ? (
                                 <>
-                                  <Button 
-                                    startIcon={<Save />} 
-                                    onClick={() => saveEditing(q._id)} 
+                                  <Button
+                                    startIcon={<Save />}
+                                    onClick={() => saveEditing(q._id)}
                                     color="primary"
                                     variant="contained"
                                     size="small"
                                   >
                                     Save
                                   </Button>
-                                  <Button 
-                                    startIcon={<Cancel />} 
-                                    onClick={cancelEditing} 
+                                  <Button
+                                    startIcon={<Cancel />}
+                                    onClick={cancelEditing}
                                     color="inherit"
                                     variant="outlined"
                                     size="small"
@@ -660,14 +693,19 @@ const EvaluationManager = () => {
         )}
 
         {/* Add new question section */}
-        <Paper 
-          elevation={2} 
-          sx={{ 
-            p: 3, 
-            borderRadius: 2, 
+        <Paper
+          elevation={2}
+          sx={{
+            p: 3,
+            borderRadius: 2,
             mt: 4,
-            bgcolor: alpha('#e3f2fd', 0.3),
-            border: '1px solid #e3f2fd'
+            bgcolor: localStorage.getItem("themeMode") === "dark"
+              ? 'rgba(25, 118, 210, 0.15)'
+              : alpha('#e3f2fd', 0.3),
+            border: `1px solid ${localStorage.getItem("themeMode") === "dark"
+              ? 'rgba(25, 118, 210, 0.3)'
+              : '#e3f2fd'}`,
+            color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
           }}
           id="addQuestionSection"
         >
@@ -687,9 +725,27 @@ const EvaluationManager = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Book fontSize="small" />
+                      <Book fontSize="small" sx={{
+                        color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined
+                      }} />
                     </InputAdornment>
                   ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                    },
+                    '& .MuiInputBase-input': {
+                      color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  }
                 }}
               />
             </Grid>
@@ -703,23 +759,57 @@ const EvaluationManager = () => {
                 multiline
                 rows={2}
                 placeholder="Enter your question here..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
+                    },
+                    '& .MuiInputBase-input': {
+                      color: localStorage.getItem("themeMode") === "dark" ? 'white' : undefined,
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button 
+                <Button
                   variant="outlined"
                   onClick={clearForm}
                   startIcon={<Cancel />}
+                  sx={{
+                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                    color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.9)' : undefined,
+                    '&:hover': {
+                      borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.5)' : undefined,
+                      backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.05)' : undefined
+                    }
+                  }}
                 >
                   Clear
                 </Button>
-                <Button 
-                  variant="contained" 
+                <Button
+                  variant="contained"
                   onClick={addNewQuestion}
                   startIcon={<Add />}
                   color="primary"
                   disabled={newChapter.trim() === "" || newQuestionText.trim() === ""}
+                  sx={{
+                    backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.9)' : undefined,
+                    '&:hover': {
+                      backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 1)' : undefined
+                    },
+                    '&.Mui-disabled': {
+                      backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(25, 118, 210, 0.3)' : undefined,
+                      color: localStorage.getItem("themeMode") === "dark" ? 'rgba(255, 255, 255, 0.3)' : undefined
+                    }
+                  }}
                 >
                   Add Question
                 </Button>
@@ -738,6 +828,13 @@ const EvaluationManager = () => {
         onClose={() => setDeleteDialogOpen(false)}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: {
+            bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.95)' : 'white',
+            color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
+            borderRadius: 2
+          }
+        }}
       >
         <DialogTitle id="alert-dialog-title">
           {"Confirm Question Deletion"}
@@ -748,10 +845,23 @@ const EvaluationManager = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            color="primary"
+            sx={{
+              color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            autoFocus
+            sx={{
+              color: localStorage.getItem("themeMode") === "dark" ? 'rgba(244, 67, 54, 0.8)' : undefined
+            }}
+          >
             Delete
           </Button>
         </DialogActions>

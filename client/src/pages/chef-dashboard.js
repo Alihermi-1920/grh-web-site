@@ -46,18 +46,23 @@ import {
   Menu,
   LightMode,
   DarkMode,
+  Assessment,
+  Forum,
+  Chat,
 } from "@mui/icons-material";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import EmployeeList from "./EmployeeList";
+import { ThemeProvider } from "@mui/material/styles";
+import ChefEmployeeList from "./ChefEmployeeList";
 import Evaluation from "./Evaluation";
+import EvaluationResults from "./EvaluationResults";
 import ChefProjectPage from "./ChefProjectPage";
-import Attendance from "./Attendance";
-import AttendanceCalendar from "./AttendanceCalendar";
-import TaskManager from "./TaskManager";
-import LeaveManagement from "./LeaveManagement";
-import LeaveHistory from "./LeaveHistory";
+import ChefAttendance from "./ChefAttendance";
+import ChefAttendanceCalendar from "./ChefAttendanceCalendar";
+import ChefMessaging from "./ChefMessaging";
+import ChefLeaveManagement from "./ChefLeaveManagement"; // Nouveau composant de gestion des congés
 import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
 import { AuthContext } from "../context/AuthContext";
+import { createAppTheme } from "../theme";
+import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
 
 const ChefDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -67,79 +72,10 @@ const ChefDashboard = () => {
   const [notificationsList, setNotificationsList] = useState([]);
   const [openAttendanceSubmenu, setOpenAttendanceSubmenu] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
 
-  // Thème dynamique
-  const theme = createTheme({
-    palette: {
-      mode: darkMode ? "dark" : "light",
-      primary: {
-        main: "#1a237e",
-        light: "#534bae",
-        dark: "#000051",
-      },
-      secondary: {
-        main: "#3949ab",
-        light: "#6f74dd",
-        dark: "#00227b",
-      },
-      background: {
-        default: darkMode ? "#121212" : "#f5f7fa",
-        paper: darkMode ? "#1e1e1e" : "#ffffff",
-      },
-      text: {
-        primary: darkMode ? "#ffffff" : "#333333",
-        secondary: darkMode ? "#b0b0b0" : "#666666",
-      },
-    },
-    typography: {
-      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h4: { fontWeight: 700, letterSpacing: "-0.5px" },
-      h6: { fontWeight: 600 },
-      button: { textTransform: "none", fontWeight: 600 },
-    },
-    shape: { borderRadius: 12 },
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 8,
-            boxShadow: darkMode
-              ? "0 4px 14px 0 rgba(26, 35, 126, 0.3)"
-              : "0 4px 14px 0 rgba(26, 35, 126, 0.2)",
-          },
-        },
-      },
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            borderRadius: 16,
-            boxShadow: darkMode
-              ? "0 5px 22px 0 rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.05)"
-              : "0 5px 22px 0 rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)",
-          },
-        },
-      },
-      MuiListItemButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 8,
-            margin: "4px 0",
-            "&.Mui-selected": {
-              backgroundColor: darkMode
-                ? "rgba(255,255,255,0.1)"
-                : "rgba(26, 35, 126, 0.1)",
-              "&:hover": {
-                backgroundColor: darkMode
-                  ? "rgba(255,255,255,0.15)"
-                  : "rgba(26, 35, 126, 0.15)",
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  // Create theme based on dark mode state
+  const theme = createAppTheme(darkMode ? "dark" : "light");
 
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const drawerWidth = 280;
@@ -187,7 +123,42 @@ const ChefDashboard = () => {
 
   const handleAttendanceClick = () => setOpenAttendanceSubmenu(!openAttendanceSubmenu);
   const toggleDrawer = () => setDrawerOpen(!drawerOpen);
-  const handleThemeToggle = () => setDarkMode(!darkMode);
+  const handleThemeToggle = () => {
+    const newMode = darkMode ? "light" : "dark";
+    setDarkMode(!darkMode);
+    localStorage.setItem("themeMode", newMode);
+  };
+
+  // Function to generate consistent menu item styles
+  const getMenuItemStyles = (isSelected) => ({
+    py: 1.2,
+    transition: 'all 0.2s ease-in-out',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      transform: 'translateX(5px)'
+    },
+    '&.Mui-selected': {
+      backgroundColor: 'rgba(25, 118, 210, 0.25)',
+      borderLeft: '4px solid #1976d2',
+      paddingLeft: '12px'
+    }
+  });
+
+  // Function to generate consistent icon styles
+  const getIconStyles = (isSelected) => ({
+    minWidth: 40,
+    color: "inherit",
+    transition: 'transform 0.2s ease-in-out',
+    transform: isSelected ? 'scale(1.2)' : 'scale(1)'
+  });
+
+  // Function to generate consistent text styles
+  const getTextStyles = (isSelected) => ({
+    fontWeight: isSelected ? 600 : 500,
+    transition: 'all 0.2s ease-in-out',
+    fontSize: '0.95rem',
+    letterSpacing: 0.3
+  });
 
   const Sidebar = () => (
     <Drawer
@@ -201,138 +172,124 @@ const ChefDashboard = () => {
           width: drawerWidth,
           boxSizing: "border-box",
           background: darkMode
-            ? "linear-gradient(165deg, #000051 0%, #1a237e 100%)"
-            : "linear-gradient(165deg, #1a237e 0%, #3949ab 100%)",
-          color: "white",
-          borderRight: "none",
-          overflow: "auto",
-          "&::-webkit-scrollbar": { width: "8px" },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(255,255,255,0.2)",
-            borderRadius: "4px",
-          },
+            ? "radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))"
+            : "#f8f9fa",
+          color: darkMode ? "white" : "#333333",
+          borderRight: `1px solid ${darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
+          overflow: "hidden",
         },
       }}
     >
-      {/* Profil */}
-      <Stack
-        alignItems="center"
-        spacing={2}
-        sx={{ p: 4, borderBottom: "1px solid rgba(255,255,255,0.12)" }}
-      >
-        {user?.photo ? (
-          <Avatar
-            src={`/${user.photo.split(/(\\|\/)/g).pop()}`}
-            alt={`${user.firstName} ${user.lastName}`}
-            sx={{
-              width: 80,
-              height: 80,
-              bgcolor: "white",
-              border: "4px solid rgba(255,255,255,0.2)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+      {/* Logo & App Name */}
+      <Box sx={{
+        p: 3,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+      }}>
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <img
+            src="/logo.png"
+            alt="GRH Logo"
+            style={{
+              width: 100,
+              marginBottom: 10,
             }}
           />
-        ) : (
-          <Avatar
-            sx={{
-              width: 80,
-              height: 80,
-              bgcolor: "white",
-              border: "4px solid rgba(255,255,255,0.2)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
-            }}
-          >
-            <AdminPanelSettings sx={{ fontSize: 40, color: "primary.main" }} />
-          </Avatar>
-        )}
-        <Box sx={{ textAlign: "center" }}>
-          <Typography variant="h6" fontWeight="600">
+          <Typography variant="h6" component="div" sx={{
+            fontWeight: 700,
+            letterSpacing: 1,
+            color: darkMode ? 'white' : '#333',
+          }}>
+            HRMS
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Profil */}
+      <Box sx={{
+        p: 3,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+      }}>
+        <Avatar
+          src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
+          sx={{
+            width: 50,
+            height: 50,
+            bgcolor: darkMode ? '#1976d2' : '#1976d2',
+            transition: "all 0.3s ease",
+            "&:hover": {
+              transform: "scale(1.05)",
+            }
+          }}
+        >
+          {!user?.photo && (user ? `${user.firstName[0]}${user.lastName[0]}` : "CD")}
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle1" fontWeight="600" sx={{
+            color: darkMode ? 'white' : '#333',
+          }}>
             {user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"}
           </Typography>
           <Typography
             variant="caption"
             sx={{
-              backgroundColor: "rgba(255,255,255,0.12)",
-              px: 2,
-              py: 0.5,
-              borderRadius: 4,
+              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
               fontWeight: 500,
-              display: "inline-block",
-              mt: 0.5,
             }}
           >
             {user?.role || "Chef de service"}
+            {user?.department && ` - ${user.department}`}
           </Typography>
-          {user?.department && (
-            <Typography
-              variant="caption"
-              sx={{
-                display: "block",
-                mt: 1,
-                backgroundColor: "rgba(255,255,255,0.12)",
-                px: 2,
-                py: 0.5,
-                borderRadius: 4,
-                fontWeight: 500,
-              }}
-            >
-              {user.department}
-            </Typography>
-          )}
         </Box>
-      </Stack>
+      </Box>
 
-      <List sx={{ px: 2, py: 3 }}>
+      <List sx={{
+        px: 2,
+        py: 3,
+        height: 'calc(100vh - 280px)',
+        overflowY: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '0px',
+          background: 'transparent'
+        }
+      }}>
         {/* Dashboard */}
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => setActiveView("dashboardHomeChef")}
             selected={activeView === "dashboardHomeChef"}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(activeView === "dashboardHomeChef")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={getIconStyles(activeView === "dashboardHomeChef")}>
               <DashboardIcon />
             </ListItemIcon>
             <ListItemText
               primary="Dashboard"
-              primaryTypographyProps={{
-                fontWeight: activeView === "dashboardHomeChef" ? 600 : 500,
-              }}
+              primaryTypographyProps={getTextStyles(activeView === "dashboardHomeChef")}
             />
           </ListItemButton>
         </ListItem>
 
-        {/* Section Équipe */}
-        <Box sx={{ my: 2 }}>
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: "rgba(255,255,255,0.6)",
-              px: 2,
-              py: 1,
-              display: "block",
-            }}
-          >
-            GESTION D'ÉQUIPE
-          </Typography>
-        </Box>
+
 
         {/* Employés */}
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => setActiveView("employeeList")}
             selected={activeView === "employeeList"}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(activeView === "employeeList")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={getIconStyles(activeView === "employeeList")}>
               <People />
             </ListItemIcon>
             <ListItemText
               primary="Mes Employés"
-              primaryTypographyProps={{
-                fontWeight: activeView === "employeeList" ? 600 : 500,
-              }}
+              primaryTypographyProps={getTextStyles(activeView === "employeeList")}
             />
           </ListItemButton>
         </ListItem>
@@ -342,16 +299,31 @@ const ChefDashboard = () => {
           <ListItemButton
             onClick={() => setActiveView("evaluation")}
             selected={activeView === "evaluation"}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(activeView === "evaluation")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={getIconStyles(activeView === "evaluation")}>
               <RateReview />
             </ListItemIcon>
             <ListItemText
               primary="Évaluation"
-              primaryTypographyProps={{
-                fontWeight: activeView === "evaluation" ? 600 : 500,
-              }}
+              primaryTypographyProps={getTextStyles(activeView === "evaluation")}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Résultats d'évaluations */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("evaluationResults")}
+            selected={activeView === "evaluationResults"}
+            sx={getMenuItemStyles(activeView === "evaluationResults")}
+          >
+            <ListItemIcon sx={getIconStyles(activeView === "evaluationResults")}>
+              <Assessment />
+            </ListItemIcon>
+            <ListItemText
+              primary="Résultats d'évaluations"
+              primaryTypographyProps={getTextStyles(activeView === "evaluationResults")}
             />
           </ListItemButton>
         </ListItem>
@@ -361,53 +333,33 @@ const ChefDashboard = () => {
           <ListItemButton
             onClick={() => setActiveView("projectList")}
             selected={activeView === "projectList"}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(activeView === "projectList")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={getIconStyles(activeView === "projectList")}>
               <Assignment />
             </ListItemIcon>
             <ListItemText
               primary="Mes Projets"
-              primaryTypographyProps={{
-                fontWeight: activeView === "projectList" ? 600 : 500,
-              }}
+              primaryTypographyProps={getTextStyles(activeView === "projectList")}
             />
           </ListItemButton>
         </ListItem>
 
-        {/* Section Présence et Congés */}
-        <Box sx={{ my: 2 }}>
-          <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: "rgba(255,255,255,0.6)",
-              px: 2,
-              py: 1,
-              display: "block",
-            }}
-          >
-            PRÉSENCE & CONGÉS
-          </Typography>
-        </Box>
+
 
         {/* Présence avec sous-menu */}
         <ListItem disablePadding>
           <ListItemButton
             onClick={handleAttendanceClick}
             selected={["attendance", "attendanceCalendar"].includes(activeView)}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(["attendance", "attendanceCalendar"].includes(activeView))}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={getIconStyles(["attendance", "attendanceCalendar"].includes(activeView))}>
               <EventNote />
             </ListItemIcon>
             <ListItemText
               primary="Présence"
-              primaryTypographyProps={{
-                fontWeight: ["attendance", "attendanceCalendar"].includes(activeView)
-                  ? 600
-                  : 500,
-              }}
+              primaryTypographyProps={getTextStyles(["attendance", "attendanceCalendar"].includes(activeView))}
             />
             {openAttendanceSubmenu ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
@@ -418,9 +370,26 @@ const ChefDashboard = () => {
               <ListItemButton
                 onClick={() => setActiveView("attendance")}
                 selected={activeView === "attendance"}
-                sx={{ pl: 5, py: 1 }}
+                sx={{
+                  pl: 5,
+                  py: 1,
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    transform: 'translateX(5px)'
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.15)',
+                    borderLeft: '3px solid #1976d2',
+                  }
+                }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: "inherit",
+                  transition: 'transform 0.2s ease-in-out',
+                  transform: activeView === "attendance" ? 'scale(1.2)' : 'scale(1)'
+                }}>
                   <ListAlt fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -428,6 +397,8 @@ const ChefDashboard = () => {
                   primaryTypographyProps={{
                     fontWeight: activeView === "attendance" ? 600 : 500,
                     fontSize: 14,
+                    transition: 'all 0.2s ease-in-out',
+                    letterSpacing: 0.3
                   }}
                 />
               </ListItemButton>
@@ -436,9 +407,26 @@ const ChefDashboard = () => {
               <ListItemButton
                 onClick={() => setActiveView("attendanceCalendar")}
                 selected={activeView === "attendanceCalendar"}
-                sx={{ pl: 5, py: 1 }}
+                sx={{
+                  pl: 5,
+                  py: 1,
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    transform: 'translateX(5px)'
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.15)',
+                    borderLeft: '3px solid #1976d2',
+                  }
+                }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: "inherit",
+                  transition: 'transform 0.2s ease-in-out',
+                  transform: activeView === "attendanceCalendar" ? 'scale(1.2)' : 'scale(1)'
+                }}>
                   <CalendarMonth fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -446,6 +434,8 @@ const ChefDashboard = () => {
                   primaryTypographyProps={{
                     fontWeight: activeView === "attendanceCalendar" ? 600 : 500,
                     fontSize: 14,
+                    transition: 'all 0.2s ease-in-out',
+                    letterSpacing: 0.3
                   }}
                 />
               </ListItemButton>
@@ -458,73 +448,40 @@ const ChefDashboard = () => {
           <ListItemButton
             onClick={() => setActiveView("leaveManagement")}
             selected={activeView === "leaveManagement"}
-            sx={{ py: 1.2 }}
+            sx={getMenuItemStyles(activeView === "leaveManagement")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <Assignment />
+            <ListItemIcon sx={getIconStyles(activeView === "leaveManagement")}>
+              <EventNote />
             </ListItemIcon>
             <ListItemText
-              primary="Nouvelle demande de congé"
-              primaryTypographyProps={{
-                fontWeight: activeView === "leaveManagement" ? 600 : 500,
-              }}
-            />
-          </ListItemButton>
-        </ListItem>
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("leaveHistory")}
-            selected={activeView === "leaveHistory"}
-            sx={{ py: 1.2 }}
-          >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <ListAlt />
-            </ListItemIcon>
-            <ListItemText
-              primary="Historique des congés"
-              primaryTypographyProps={{
-                fontWeight: activeView === "leaveHistory" ? 600 : 500,
-              }}
+              primary="Gestion des Congés"
+              primaryTypographyProps={getTextStyles(activeView === "leaveManagement")}
             />
           </ListItemButton>
         </ListItem>
 
-        {/* Tâches */}
+
+
+        {/* Messagerie */}
         <ListItem disablePadding>
           <ListItemButton
-            onClick={() => setActiveView("taskManager")}
-            selected={activeView === "taskManager"}
-            sx={{ py: 1.2 }}
+            onClick={() => setActiveView("messaging")}
+            selected={activeView === "messaging"}
+            sx={getMenuItemStyles(activeView === "messaging")}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
-              <ListAlt />
+            <ListItemIcon sx={getIconStyles(activeView === "messaging")}>
+              <Chat />
             </ListItemIcon>
             <ListItemText
-              primary="Gestion des tâches"
-              primaryTypographyProps={{
-                fontWeight: activeView === "taskManager" ? 600 : 500,
-              }}
+              primary="Messagerie"
+              primaryTypographyProps={getTextStyles(activeView === "messaging")}
             />
           </ListItemButton>
         </ListItem>
       </List>
 
-      {/* Boutons bas de sidebar */}
+      {/* Bouton de déconnexion */}
       <Box sx={{ mt: "auto", p: 3 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          startIcon={darkMode ? <LightMode /> : <DarkMode />}
-          sx={{
-            mb: 2,
-            py: 1.2,
-            backgroundColor: "rgba(255,255,255,0.18)",
-            "&:hover": { backgroundColor: "rgba(255,255,255,0.25)" },
-          }}
-          onClick={handleThemeToggle}
-        >
-          {darkMode ? "Mode Clair" : "Mode Sombre"}
-        </Button>
         <Button
           variant="contained"
           fullWidth
@@ -532,8 +489,9 @@ const ChefDashboard = () => {
           startIcon={<ExitToApp />}
           sx={{
             py: 1.2,
-            backgroundColor: "rgba(255,255,255,0.12)",
-            "&:hover": { backgroundColor: "rgba(255,255,255,0.2)" },
+            backgroundColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+            color: darkMode ? "white" : "rgba(0,0,0,0.87)",
+            "&:hover": { backgroundColor: darkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)" },
           }}
         >
           Déconnexion
@@ -582,9 +540,8 @@ const ChefDashboard = () => {
                   {activeView === "evaluation" && "Évaluation"}
                   {activeView === "attendance" && "Liste de Présences"}
                   {activeView === "attendanceCalendar" && "Calendrier de Présence"}
-                  {activeView === "leaveManagement" && "Demande de Congé"}
-                  {activeView === "leaveHistory" && "Historique des Congés"}
-                  {activeView === "taskManager" && "Gestion des Tâches"}
+                  {activeView === "leaveManagement" && "Gestion des Congés"}
+                  {activeView === "messaging" && "Messagerie"}
                   {!activeView && "Tableau de Bord Chef"}
                 </Typography>
               </Box>
@@ -645,14 +602,14 @@ const ChefDashboard = () => {
             <Fade in timeout={800}>
               <Box>
                 {activeView === "dashboardHomeChef" && <DashboardHomeChef />}
-                {activeView === "employeeList" && <EmployeeList />}
+                {activeView === "employeeList" && <ChefEmployeeList />}
                 {activeView === "projectList" && <ChefProjectPage />}
                 {activeView === "evaluation" && <Evaluation />}
-                {activeView === "attendance" && <Attendance />}
-                {activeView === "attendanceCalendar" && <AttendanceCalendar />}
-                {activeView === "leaveManagement" && <LeaveManagement />}
-                {activeView === "leaveHistory" && <LeaveHistory />}
-                {activeView === "taskManager" && <TaskManager />}
+                {activeView === "evaluationResults" && <EvaluationResults />}
+                {activeView === "attendance" && <ChefAttendance />}
+                {activeView === "attendanceCalendar" && <ChefAttendanceCalendar />}
+                {activeView === "leaveManagement" && <ChefLeaveManagement />}
+                {activeView === "messaging" && <ChefMessaging />}
                 {!activeView && (
                   <Box
                     sx={{

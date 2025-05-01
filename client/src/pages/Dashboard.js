@@ -7,6 +7,7 @@ import EmployeeListPage from "./EmployeeList";
 import ProjectPage from "./ProjectPage";
 import ProjectListPage from "./ProjectListPage";
 import EvaluationManager from "./EvaluationManager";
+import EvaluationResults from "./EvaluationResults";
 import DashboardHome from "./DashboardHome";
 import LeaveApproval from "./LeaveApproval";
 import AttendanceCalendar from "./AttendanceCalendar";
@@ -27,13 +28,12 @@ import {
   ExitToApp,
   Business,
   Groups,
-  Menu,
   NotificationsNone,
   LightMode,
   DarkMode,
-  Search,
   Settings,
-  Help
+  Help,
+  Assessment
 } from "@mui/icons-material";
 
 import {
@@ -60,316 +60,30 @@ import {
   useMediaQuery,
   IconButton,
   Fade,
-  TextField,
-  InputAdornment,
   Menu as MuiMenu,
   MenuItem,
   Zoom,
   alpha,
-  Paper,
 } from "@mui/material";
-import { createTheme } from "@mui/material/styles";
 import { motion } from "framer-motion";
+import { createAppTheme } from "../theme";
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState("dashboardHome");
   const [openEmployeeSubmenu, setOpenEmployeeSubmenu] = useState(false);
   const [openProjectSubmenu, setOpenProjectSubmenu] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(true);
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
   const [notifications] = useState(3);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [notificationsAnchor, setNotificationsAnchor] = useState(null);
-  const [searchValue, setSearchValue] = useState("");
 
-  // Enhanced theme with more sophisticated palette and component styles
-  const theme = createTheme({
-    palette: {
-      mode: darkMode ? 'dark' : 'light',
-      primary: {
-        main: "#6200ea",
-        light: "#9e47ff",
-        dark: "#0a00b6",
-        contrastText: "#ffffff"
-      },
-      secondary: {
-        main: "#03dac6",
-        light: "#66fff8",
-        dark: "#00a896",
-        contrastText: "#000000"
-      },
-      error: {
-        main: "#CF6679",
-        light: "#ff95a2",
-        dark: "#9b374d",
-      },
-      warning: {
-        main: "#ffd600",
-        light: "#ffff52",
-        dark: "#c7a500",
-      },
-      info: {
-        main: "#2196f3",
-        light: "#6ec6ff",
-        dark: "#0069c0",
-      },
-      success: {
-        main: "#00c853",
-        light: "#5efc82",
-        dark: "#009624",
-      },
-      background: {
-        default: darkMode ? "#121212" : "#f8f9fa",
-        paper: darkMode ? "#1e1e1e" : "#ffffff",
-        elevated: darkMode ? "#2d2d2d" : "#ffffff",
-      },
-      text: {
-        primary: darkMode ? "#ffffff" : "#333333",
-        secondary: darkMode ? "#b0b0b0" : "#666666",
-        disabled: darkMode ? "#6e6e6e" : "#9e9e9e",
-      },
-      action: {
-        active: darkMode ? "#ffffff" : "#6200ea",
-        hover: darkMode ? "rgba(255,255,255,0.1)" : "rgba(98,0,234,0.08)",
-        selected: darkMode ? "rgba(255,255,255,0.16)" : "rgba(98,0,234,0.16)",
-      },
-      divider: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-    },
-    typography: {
-      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: { fontWeight: 700, letterSpacing: "-1.5px" },
-      h2: { fontWeight: 700, letterSpacing: "-1px" },
-      h3: { fontWeight: 700, letterSpacing: "-0.5px" },
-      h4: { fontWeight: 700, letterSpacing: "-0.5px" },
-      h5: { fontWeight: 600, letterSpacing: "-0.3px" },
-      h6: { fontWeight: 600, letterSpacing: "-0.2px" },
-      subtitle1: { fontWeight: 500, letterSpacing: "0px" },
-      subtitle2: { fontWeight: 500, letterSpacing: "0px" },
-      body1: { fontWeight: 400, letterSpacing: "0px" },
-      body2: { fontWeight: 400, letterSpacing: "0px" },
-      button: { textTransform: "none", fontWeight: 600, letterSpacing: "0.2px" },
-      caption: { fontWeight: 400, letterSpacing: "0.2px" },
-      overline: { fontWeight: 500, letterSpacing: "1px", textTransform: "uppercase" },
-    },
-    shape: { borderRadius: 16 },
-    shadows: [
-      "none",
-      darkMode ? "0 2px 4px 0 rgba(0,0,0,0.4)" : "0 2px 4px 0 rgba(0,0,0,0.05)",
-      darkMode ? "0 4px 8px 0 rgba(0,0,0,0.4)" : "0 4px 8px 0 rgba(0,0,0,0.1)",
-      darkMode ? "0 6px 12px 0 rgba(0,0,0,0.4)" : "0 6px 12px 0 rgba(0,0,0,0.1)",
-      darkMode ? "0 8px 16px 0 rgba(0,0,0,0.4)" : "0 8px 16px 0 rgba(0,0,0,0.1)",
-      // ... rest of shadows similar to Material UI default with adjustments for dark mode
-    ],
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 12,
-            padding: "8px 16px",
-            boxShadow: darkMode
-              ? "0 4px 14px 0 rgba(98, 0, 234, 0.3)"
-              : "0 4px 14px 0 rgba(98, 0, 234, 0.15)",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            "&:hover": {
-              transform: "translateY(-2px)",
-              boxShadow: darkMode
-                ? "0 6px 20px 0 rgba(98, 0, 234, 0.4)"
-                : "0 6px 20px 0 rgba(98, 0, 234, 0.25)",
-            }
-          },
-          contained: {
-            "&.Mui-disabled": {
-              backgroundColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
-              color: darkMode ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)",
-            }
-          },
-          outlined: {
-            borderWidth: 2,
-            "&:hover": {
-              borderWidth: 2,
-            }
-          },
-          containedPrimary: {
-            background: `linear-gradient(45deg, ${darkMode ? "#4a00e0" : "#6200ea"} 0%, ${darkMode ? "#7c1eff" : "#9e47ff"} 100%)`,
-            "&:hover": {
-              background: `linear-gradient(45deg, ${darkMode ? "#5000f3" : "#7517ff"} 0%, ${darkMode ? "#8a3aff" : "#aa66ff"} 100%)`,
-            }
-          },
-          containedSecondary: {
-            background: `linear-gradient(45deg, ${darkMode ? "#00bba9" : "#03dac6"} 0%, ${darkMode ? "#00ecd5" : "#66fff8"} 100%)`,
-            color: "#000000",
-            "&:hover": {
-              background: `linear-gradient(45deg, ${darkMode ? "#00d2be" : "#00f0da"} 0%, ${darkMode ? "#1afff0" : "#80fffa"} 100%)`,
-            }
-          }
-        }
-      },
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            borderRadius: 24,
-            overflow: "hidden",
-            boxShadow: darkMode
-              ? "0 8px 32px 0 rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)"
-              : "0 8px 32px 0 rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02)",
-            transition: "transform 0.3s ease, box-shadow 0.3s ease",
-            "&:hover": {
-              transform: "translateY(-4px)",
-              boxShadow: darkMode
-                ? "0 12px 48px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08)"
-                : "0 12px 48px 0 rgba(98,0,234,0.12), 0 0 0 1px rgba(0,0,0,0.02)",
-            }
-          }
-        }
-      },
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            backgroundImage: "none",
-          },
-          elevation1: {
-            boxShadow: darkMode
-              ? "0 2px 8px 0 rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)"
-              : "0 2px 8px 0 rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.01)",
-          },
-          elevation2: {
-            boxShadow: darkMode
-              ? "0 4px 16px 0 rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)"
-              : "0 4px 16px 0 rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.01)",
-          }
-        }
-      },
-      MuiListItemButton: {
-        styleOverrides: {
-          root: {
-            borderRadius: 12,
-            margin: "4px 0",
-            padding: "10px 16px",
-            transition: "all 0.2s ease",
-            "&.Mui-selected": {
-              backgroundColor: darkMode
-                ? "rgba(255,255,255,0.1)"
-                : "rgba(98, 0, 234, 0.12)",
-              "&:hover": {
-                backgroundColor: darkMode
-                  ? "rgba(255,255,255,0.15)"
-                  : "rgba(98, 0, 234, 0.18)",
-              }
-            },
-            "&:hover": {
-              backgroundColor: darkMode
-                ? "rgba(255,255,255,0.05)"
-                : "rgba(98, 0, 234, 0.06)",
-              transform: "translateX(4px)",
-            }
-          }
-        }
-      },
-      MuiListItemIcon: {
-        styleOverrides: {
-          root: {
-            minWidth: 44,
-          }
-        }
-      },
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            boxShadow: darkMode
-              ? "0 4px 20px rgba(0,0,0,0.3)"
-              : "0 4px 20px rgba(0,0,0,0.05)",
-          }
-        }
-      },
-      MuiDrawer: {
-        styleOverrides: {
-          paper: {
-            transition: "width 0.3s ease-in-out"
-          }
-        }
-      },
-      MuiInputBase: {
-        styleOverrides: {
-          root: {
-            transition: "background-color 0.3s ease, box-shadow 0.3s ease",
-            "&.Mui-focused": {
-              boxShadow: darkMode
-                ? `0 0 0 2px ${alpha('#6200ea', 0.4)}`
-                : `0 0 0 2px ${alpha('#6200ea', 0.2)}`
-            }
-          }
-        }
-      },
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: {
-            borderRadius: 12,
-            "&:hover .MuiOutlinedInput-notchedOutline": {
-              borderColor: darkMode ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)",
-            },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: '#6200ea',
-              borderWidth: 2,
-            }
-          },
-          notchedOutline: {
-            transition: "border-color 0.3s ease",
-          }
-        }
-      },
-      MuiDivider: {
-        styleOverrides: {
-          root: {
-            borderColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-          }
-        }
-      },
-      MuiAvatar: {
-        styleOverrides: {
-          root: {
-            transition: "transform 0.3s ease, box-shadow 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.1)",
-              boxShadow: darkMode
-                ? "0 4px 12px rgba(0,0,0,0.4)"
-                : "0 4px 12px rgba(98,0,234,0.3)",
-            }
-          }
-        }
-      },
-      MuiMenu: {
-        styleOverrides: {
-          paper: {
-            borderRadius: 16,
-            boxShadow: darkMode
-              ? "0 8px 32px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)"
-              : "0 8px 32px 0 rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.02)",
-          }
-        }
-      },
-      MuiTooltip: {
-        styleOverrides: {
-          tooltip: {
-            borderRadius: 8,
-            padding: "8px 12px",
-            backgroundColor: darkMode ? "rgba(255,255,255,0.9)" : "rgba(33,33,33,0.9)",
-            color: darkMode ? "rgba(0,0,0,0.87)" : "rgba(255,255,255,0.87)",
-            fontSize: 12,
-            fontWeight: 500,
-            boxShadow: darkMode
-              ? "0 4px 16px rgba(0,0,0,0.3)"
-              : "0 4px 16px rgba(0,0,0,0.1)",
-          }
-        }
-      }
-    }
-  });
+  // Create theme based on dark mode state
+  const theme = createAppTheme(darkMode ? "dark" : "light");
 
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+
 
   // Handle menu open/close
   const handleUserMenuOpen = (event) => setUserMenuAnchor(event.currentTarget);
@@ -377,10 +91,7 @@ const Dashboard = () => {
   const handleNotificationsOpen = (event) => setNotificationsAnchor(event.currentTarget);
   const handleNotificationsClose = () => setNotificationsAnchor(null);
 
-  // Fermer le drawer sur mobile
-  useEffect(() => {
-    if (isMobile) setDrawerOpen(false);
-  }, [isMobile]);
+
 
   // Chargement des départements
   useEffect(() => {
@@ -436,16 +147,16 @@ const Dashboard = () => {
     }).length
   );
 
-  const handleThemeToggle = () => setDarkMode(!darkMode);
+  const handleThemeToggle = () => {
+    const newMode = darkMode ? "light" : "dark";
+    setDarkMode(!darkMode);
+    localStorage.setItem("themeMode", newMode);
+  };
   const handleLogout = () => { console.log("Déconnexion"); window.location.href = "/login"; };
   const handleEmployeeClick = () => setOpenEmployeeSubmenu(!openEmployeeSubmenu);
   const handleProjectClick = () => setOpenProjectSubmenu(!openProjectSubmenu);
-  const toggleDrawer = () => setDrawerOpen(!drawerOpen);
 
-  const handleSearch = (e) => {
-    setSearchValue(e.target.value);
-    // Implement search functionality here
-  };
+
 
   // Animation variants for page transitions
   const pageTransitionVariants = {
@@ -480,123 +191,104 @@ const Dashboard = () => {
 
   const Sidebar = () => (
     <Drawer
-      variant={isMobile ? "temporary" : "permanent"}
-      open={drawerOpen}
-      onClose={toggleDrawer}
+      variant="permanent"
       sx={{
         width: drawerWidth,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          background: darkMode
-            ? "linear-gradient(165deg, #2a0066 0%, #4a00b6 100%)"
-            : "linear-gradient(165deg, #5900d9 0%, #7726ff 100%)",
-          color: "white",
-          borderRight: "none",
-          overflow: "auto",
-          transition: "all 0.3s ease",
-          "&::-webkit-scrollbar": { width: "6px" },
-          "&::-webkit-scrollbar-track": { background: "transparent" },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(255,255,255,0.2)",
-            borderRadius: "3px",
-            "&:hover": { backgroundColor: "rgba(255,255,255,0.3)" }
-          }
+          background: darkMode ? "#121212" : "#f8f9fa",
+          color: darkMode ? "#e0e0e0" : "#333333",
+          borderRight: `1px solid ${darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
+          overflow: "hidden",
+          transition: "all 0.3s ease"
         },
       }}
     >
       {/* Logo & App Name */}
-      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="h5" component="div" sx={{
-          fontWeight: 700,
-          letterSpacing: 1,
-          background: 'linear-gradient(45deg, #ffffff, #e0e0ff)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          textShadow: '0 2px 10px rgba(255,255,255,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <AdminPanelSettings sx={{ fontSize: 28 }} /> HRMS
-        </Typography>
+      <Box sx={{
+        p: 3,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+      }}>
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <img
+            src="/logo.png"
+            alt="GRH Logo"
+            style={{
+              width: 100,
+              marginBottom: 10,
+            }}
+          />
+          <Typography variant="h5" component="div" sx={{
+            fontWeight: 700,
+            letterSpacing: 1,
+            color: darkMode ? 'white' : '#333',
+          }}>
+            HRMS
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Profil */}
+      {/* Profile - Simplified for the new design */}
       <Box
         component={motion.div}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
+        sx={{
+          p: 3,
+          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
+        }}
       >
-        <Stack
-          alignItems="center"
-          spacing={2}
+        <Avatar
           sx={{
-            p: 4,
-            borderBottom: "1px solid rgba(255,255,255,0.12)",
-            position: 'relative'
+            width: 50,
+            height: 50,
+            bgcolor: darkMode ? '#1976d2' : '#1976d2',
+            transition: "all 0.3s ease",
+            "&:hover": {
+              transform: "scale(1.05)",
+            }
           }}
         >
-          {/* Background decorative elements */}
-          <Box sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '100%',
-            opacity: 0.05,
-            backgroundImage: `radial-gradient(circle at 70% 30%, rgba(255,255,255,0.8) 0%, transparent 70%)`,
-            zIndex: 0
-          }} />
-
-          <Avatar
+          <AdminPanelSettings sx={{ fontSize: 28, color: "white" }} />
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle1" fontWeight="600" sx={{
+            color: darkMode ? 'white' : '#333',
+          }}>
+            Admin Dupont
+          </Typography>
+          <Typography
+            variant="caption"
             sx={{
-              width: 90,
-              height: 90,
-              bgcolor: "white",
-              border: "4px solid rgba(255,255,255,0.2)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "scale(1.05)",
-                boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
-              }
+              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
+              fontWeight: 500,
             }}
           >
-            <AdminPanelSettings sx={{ fontSize: 45, color: "primary.main" }} />
-          </Avatar>
-          <Box sx={{ textAlign: "center", position: 'relative', zIndex: 1 }}>
-            <Typography variant="h6" fontWeight="600" sx={{
-              textShadow: '0 2px 10px rgba(0,0,0,0.2)',
-              mb: 0.5,
-              letterSpacing: 0.5
-            }}>
-              Admin Dupont
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.4))`,
-                px: 2,
-                py: 0.7,
-                borderRadius: 10,
-                fontWeight: 500,
-                display: "inline-block",
-                backdropFilter: "blur(8px)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                border: "1px solid rgba(255,255,255,0.15)"
-              }}
-            >
-              Super Administrateur
-            </Typography>
-          </Box>
-        </Stack>
+            Super Administrateur
+          </Typography>
+        </Box>
       </Box>
 
       <List
-        sx={{ px: 2, py: 3 }}
+        sx={{
+          px: 2,
+          py: 3,
+          height: 'calc(100vh - 180px)',
+          overflowY: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '0px',
+            background: 'transparent'
+          }
+        }}
         component={motion.div}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -607,9 +299,29 @@ const Dashboard = () => {
           <ListItemButton
             onClick={() => setActiveView("dashboardHome")}
             selected={activeView === "dashboardHome"}
-            sx={{ py: 1.2 }}
+            sx={{
+              py: 1.2,
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "dashboardHome" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "dashboardHome" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "dashboardHome" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
+            }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "dashboardHome" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <DashboardIcon />
             </ListItemIcon>
             <ListItemText
@@ -621,23 +333,7 @@ const Dashboard = () => {
           </ListItemButton>
         </ListItem>
 
-        {/* Section RH */}
-        <Box sx={{ my: 2 }}>
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'rgba(255,255,255,0.7)',
-              px: 2,
-              py: 1,
-              display: 'block',
-              fontWeight: 600,
-              letterSpacing: 1
-            }}
-          >
-            RESSOURCES HUMAINES
-          </Typography>
-        </Box>
+
 
         {/* Employés */}
         <ListItem disablePadding sx={{ mb: 0.5 }}>
@@ -646,23 +342,27 @@ const Dashboard = () => {
             selected={['addEmployee', 'employeeList'].includes(activeView)}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": ['addEmployee', 'employeeList'].includes(activeView) ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: ['addEmployee', 'employeeList'].includes(activeView) ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: ['addEmployee', 'employeeList'].includes(activeView) ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: ['addEmployee', 'employeeList'].includes(activeView) ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: ['addEmployee', 'employeeList'].includes(activeView) ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <People />
             </ListItemIcon>
             <ListItemText
@@ -683,21 +383,27 @@ const Dashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  position: 'relative',
-                  "&::before": activeView === "addEmployee" ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: '24px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    backgroundColor: 'white'
-                  } : {}
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "addEmployee" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "addEmployee" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+                  '&:hover': {
+                    backgroundColor: activeView === "addEmployee" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+                  }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: activeView === "addEmployee" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+                }}>
                   <PersonAdd fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -716,21 +422,27 @@ const Dashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  position: 'relative',
-                  "&::before": activeView === "employeeList" ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: '24px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    backgroundColor: 'white'
-                  } : {}
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "employeeList" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "employeeList" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+                  '&:hover': {
+                    backgroundColor: activeView === "employeeList" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+                  }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: activeView === "employeeList" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+                }}>
                   <Groups fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -752,23 +464,27 @@ const Dashboard = () => {
             selected={activeView === "attendance"}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": activeView === "attendance" ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "attendance" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "attendance" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "attendance" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "attendance" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <EventNote />
             </ListItemIcon>
             <ListItemText
@@ -786,23 +502,27 @@ const Dashboard = () => {
             selected={activeView === "attendanceCalendar"}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": activeView === "attendanceCalendar" ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "attendanceCalendar" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "attendanceCalendar" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "attendanceCalendar" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "attendanceCalendar" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <CalendarMonth />
             </ListItemIcon>
             <ListItemText
@@ -814,23 +534,7 @@ const Dashboard = () => {
           </ListItemButton>
         </ListItem>
 
-        {/* Section Département */}
-        <Box sx={{ my: 2 }}>
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'rgba(255,255,255,0.7)',
-              px: 2,
-              py: 1,
-              display: 'block',
-              fontWeight: 600,
-              letterSpacing: 1
-            }}
-          >
-            DÉPARTEMENTS & PROJETS
-          </Typography>
-        </Box>
+
 
         {/* Gestion des départements */}
         <ListItem disablePadding sx={{ mb: 0.5 }}>
@@ -839,23 +543,27 @@ const Dashboard = () => {
             selected={activeView === "addDepartment"}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": activeView === "addDepartment" ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "addDepartment" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "addDepartment" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "addDepartment" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "addDepartment" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <AddBusiness />
             </ListItemIcon>
             <ListItemText
@@ -874,23 +582,27 @@ const Dashboard = () => {
             selected={['projectPage', 'projectList'].includes(activeView)}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": ['projectPage', 'projectList'].includes(activeView) ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: ['projectPage', 'projectList'].includes(activeView) ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: ['projectPage', 'projectList'].includes(activeView) ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: ['projectPage', 'projectList'].includes(activeView) ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: ['projectPage', 'projectList'].includes(activeView) ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <Business />
             </ListItemIcon>
             <ListItemText
@@ -911,21 +623,27 @@ const Dashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  position: 'relative',
-                  "&::before": activeView === "projectPage" ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: '24px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    backgroundColor: 'white'
-                  } : {}
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "projectPage" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "projectPage" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+                  '&:hover': {
+                    backgroundColor: activeView === "projectPage" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+                  }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: activeView === "projectPage" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+                }}>
                   <Assignment fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -944,21 +662,27 @@ const Dashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  position: 'relative',
-                  "&::before": activeView === "projectList" ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: '24px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    backgroundColor: 'white'
-                  } : {}
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "projectList" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "projectList" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+                  '&:hover': {
+                    backgroundColor: activeView === "projectList" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+                  }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 36, color: "inherit" }}>
+                <ListItemIcon sx={{
+                  minWidth: 36,
+                  color: activeView === "projectList" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+                }}>
                   <Business fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
@@ -973,23 +697,7 @@ const Dashboard = () => {
           </List>
         </Collapse>
 
-        {/* Section Évaluations */}
-        <Box sx={{ my: 2 }}>
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'rgba(255,255,255,0.7)',
-              px: 2,
-              py: 1,
-              display: 'block',
-              fontWeight: 600,
-              letterSpacing: 1
-            }}
-          >
-            GESTION AVANCÉE
-          </Typography>
-        </Box>
+
 
         {/* Évaluations */}
         <ListItem disablePadding sx={{ mb: 0.5 }}>
@@ -998,29 +706,72 @@ const Dashboard = () => {
             selected={activeView === "evaluationManager"}
             sx={{
               py: 1.2,
-              position: 'relative',
-              overflow: 'hidden',
-              "&::after": activeView === "evaluationManager" ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                backgroundColor: 'white',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)'
-              } : {}
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "evaluationManager" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "evaluationManager" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "evaluationManager" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "evaluationManager" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
               <Quiz />
             </ListItemIcon>
             <ListItemText
               primary="Évaluations"
               primaryTypographyProps={{
                 fontWeight: activeView === "evaluationManager" ? 600 : 500
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Résultats d'évaluations */}
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("evaluationResults")}
+            selected={activeView === "evaluationResults"}
+            sx={{
+              py: 1.2,
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "evaluationResults" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "evaluationResults" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "evaluationResults" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "evaluationResults" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
+              <Assessment />
+            </ListItemIcon>
+            <ListItemText
+              primary="Résultats d'évaluations"
+              primaryTypographyProps={{
+                fontWeight: activeView === "evaluationResults" ? 600 : 500
               }}
             />
           </ListItemButton>
@@ -1063,21 +814,26 @@ const Dashboard = () => {
 
         {/* Déconnexion */}
         <Box sx={{ mt: 'auto', pt: 4 }}>
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', my: 2 }} />
+          <Divider sx={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)', my: 2 }} />
           <ListItem disablePadding>
             <ListItemButton
               onClick={handleLogout}
               sx={{
                 py: 1.2,
-                color: 'rgba(255,255,255,0.8)',
+                borderRadius: 1,
+                mb: 0.5,
+                color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  color: 'white',
+                  backgroundColor: darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)',
+                  color: darkMode ? 'white' : '#333',
                 }
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>
+              <ListItemIcon sx={{
+                minWidth: 40,
+                color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
+              }}>
                 <ExitToApp />
               </ListItemIcon>
               <ListItemText primary="Déconnexion" />
@@ -1118,50 +874,7 @@ const Dashboard = () => {
             }}
           >
             <Toolbar>
-              <IconButton
-                color="inherit"
-                aria-label="open drawer"
-                onClick={toggleDrawer}
-                edge="start"
-                sx={{ mr: 2 }}
-              >
-                <Menu />
-              </IconButton>
 
-              {/* Search field */}
-              <Fade in={true} timeout={800}>
-                <Paper
-                  component="form"
-                  elevation={0}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    flex: { xs: 1, md: 0.4 },
-                    mx: { xs: 1, md: 2 },
-                    borderRadius: 2,
-                    backgroundColor: darkMode
-                      ? alpha(theme.palette.background.paper, 0.6)
-                      : alpha(theme.palette.grey[100], 0.8),
-                    border: `1px solid ${theme.palette.divider}`,
-                    px: 2,
-                    py: 0.5
-                  }}
-                >
-                  <InputAdornment position="start">
-                    <Search sx={{ color: 'text.secondary', ml: -0.5 }} />
-                  </InputAdornment>
-                  <TextField
-                    fullWidth
-                    value={searchValue}
-                    onChange={handleSearch}
-                    placeholder="Rechercher..."
-                    variant="standard"
-                    InputProps={{
-                      disableUnderline: true,
-                    }}
-                  />
-                </Paper>
-              </Fade>
 
               <Box sx={{ flexGrow: 1 }} />
 
@@ -1405,6 +1118,7 @@ const Dashboard = () => {
               {activeView === "projectPage" && <ProjectPage departments={departments} employees={employees} />}
               {activeView === "projectList" && <ProjectListPage projects={projects} employees={employees} />}
               {activeView === "evaluationManager" && <EvaluationManager employees={employees} />}
+              {activeView === "evaluationResults" && <EvaluationResults />}
               {activeView === "leaveApproval" && <LeaveApproval employees={employees} />}
             </Box>
           </Container>
