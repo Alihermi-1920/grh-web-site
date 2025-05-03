@@ -17,6 +17,8 @@ import ProjectList from './pages/ProjectList';
 import AddProject from './pages/AddProject';
 import SimpleLeaveRequest from './pages/SimpleLeaveRequest';
 import FinalLeaveRequest from './pages/FinalLeaveRequest';
+import EmployeeProjects from './pages/EmployeeProjects';
+import TestFileUpload from './pages/TestFileUpload';
 import PrivateRoute from './components/PrivateRoute'; // Private route pour protéger l'accès
 import theme from './theme'; // Import our custom theme with Inter font
 import GlobalStyles from './components/GlobalStyles'; // Import our global styles
@@ -88,6 +90,20 @@ root.render(
                 <PrivateRoute>
                   <FinalLeaveRequest />
                 </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employee-projects"
+              element={
+                <PrivateRoute>
+                  <EmployeeProjects />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/test-upload"
+              element={
+                <TestFileUpload />
               }
             />
           </Routes>

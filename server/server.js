@@ -10,7 +10,7 @@ dotenv.config();
 
 // Create Express app
 const app = express();
-const port = process.env.PORT || 5003; // Use a different port
+const port = process.env.PORT || 5000; // Default port
 
 // Middleware
 app.use(cors());
@@ -30,6 +30,7 @@ const serverUploadsDir = path.join(__dirname, 'uploads');
 const serverProjectsDir = path.join(serverUploadsDir, 'projects');
 const clientUploadsDir = path.join(__dirname, '../client/public/uploads');
 const clientProjectsDir = path.join(clientUploadsDir, 'projects');
+const clientCongesDir = path.join(clientUploadsDir, 'conges');
 
 // Create server-side upload directories
 if (!fs.existsSync(serverUploadsDir)) {
@@ -53,6 +54,12 @@ if (!fs.existsSync(clientProjectsDir)) {
   console.log('Created client projects uploads directory');
 }
 
+// Create client-side conges directory
+if (!fs.existsSync(clientCongesDir)) {
+  fs.mkdirSync(clientCongesDir, { recursive: true });
+  console.log('Created client conges uploads directory');
+}
+
 // Serve static files
 app.use('/uploads', express.static('uploads'));
 app.use('/uploads', express.static(path.join(__dirname, '../client/public/uploads')));
@@ -71,6 +78,7 @@ const congeRoutes = require("./routes/finalCongeRoutes");
 const evaluationResultatRoutes = require("./routes/evaluationresultat");
 const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
+const fileUploadRoutes = require("./routes/fileUploadRoutes");
 
 // Register routes
 app.use("/api/auth", authRoutes);
@@ -86,6 +94,7 @@ app.use("/api/conges", congeRoutes);
 app.use("/api/evaluationresultat", evaluationResultatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/files", fileUploadRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {
@@ -115,6 +124,7 @@ mongoose
       console.log("- /api/evaluationresultat");
       console.log("- /api/upload");
       console.log("- /api/comments");
+      console.log("- /api/files");
       console.log("- /api/test");
     });
   })

@@ -8,7 +8,12 @@ const DocumentSchema = new mongoose.Schema({
   fileType: { type: String },
   fileSize: { type: Number },
   uploadDate: { type: Date, default: Date.now }
-});
+}, { _id: true }); // Ensure each document gets its own ID
+
+// Add a toString method for debugging
+DocumentSchema.methods.toString = function() {
+  return `Document: ${this.originalName}, Path: ${this.filePath}, Type: ${this.fileType}, Size: ${this.fileSize}`;
+};
 
 const congeSchema = new mongoose.Schema(
   {

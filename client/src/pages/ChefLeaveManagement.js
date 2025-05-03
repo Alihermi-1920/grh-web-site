@@ -37,7 +37,11 @@ import {
   Download,
   Close,
   ThumbUp,
-  ThumbDown
+  ThumbDown,
+  AttachFileOutlined,
+  InfoOutlined,
+  Image,
+  PictureAsPdf
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -66,17 +70,99 @@ const ChefLeaveManagement = () => {
       console.log("Fetching leave requests for chef:", user._id);
 
       // Make sure we're using the correct parameter name (chef instead of chefId)
-      const response = await fetch("http://localhost:5005/api/conges?chef=" + user._id);
+      const response = await fetch("http://localhost:5000/api/conges?chef=" + user._id);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error("Erreur lors de la récupération des demandes de congé");
+        let errorMessage = "Erreur lors de la récupération des demandes de congé";
+        try {
+          // Try to parse as JSON first
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // If not JSON, get text
+            const errorText = await response.text();
+            console.error("Server returned non-JSON response:", errorText);
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("Error parsing success response:", parseError);
+        // Use empty array if parsing fails
+        data = [];
+      }
       console.log("Leave requests data:", data);
-      setLeaves(data);
+
+      // Process each leave request to ensure documents are properly handled
+      const processedData = await Promise.all(data.map(async (leave) => {
+        // Always fetch documents directly from the dedicated endpoint
+        try {
+          console.log(`Fetching documents for leave request ${leave._id}`);
+          const documentsResponse = await fetch(`http://localhost:5000/api/conges/${leave._id}/documents`);
+
+          if (documentsResponse.ok) {
+            const documentsData = await documentsResponse.json();
+            console.log(`Documents for leave request ${leave._id}:`, documentsData.documents);
+
+            if (documentsData.documents && documentsData.documents.length > 0) {
+              leave.documents = documentsData.documents;
+              console.log(`Updated leave request ${leave._id} with ${leave.documents.length} documents`);
+
+              // Log each document for debugging
+              leave.documents.forEach((doc, index) => {
+                console.log(`Document ${index + 1}:`, doc.originalName, doc.filePath);
+              });
+            } else {
+              leave.documents = [];
+              console.log(`No documents found for leave request ${leave._id}`);
+            }
+          } else {
+            console.error(`Failed to fetch documents for leave request ${leave._id}`);
+            leave.documents = [];
+          }
+        } catch (error) {
+          console.error(`Error fetching documents for leave request ${leave._id}:`, error);
+          leave.documents = [];
+        }
+
+        // Ensure documents is always an array
+        if (!Array.isArray(leave.documents)) {
+          leave.documents = [];
+        }
+
+        return leave;
+      }));
+
+      // Debug document information
+      processedData.forEach((leave, index) => {
+        console.log(`Leave ${index + 1} (${leave._id}):`);
+        console.log(`- Employee: ${leave.employee?.firstName} ${leave.employee?.lastName}`);
+        console.log(`- Status: ${leave.status}`);
+        console.log(`- Documents: ${leave.documents.length}`);
+
+        if (leave.documents.length === 0) {
+          console.log('  - No documents attached to this leave request');
+        } else {
+          leave.documents.forEach((doc, docIndex) => {
+            console.log(`  - Document ${docIndex + 1}:`);
+            console.log(`    Name: ${doc.originalName || 'No name'}`);
+            console.log(`    Path: ${doc.filePath || 'No path'}`);
+            console.log(`    Type: ${doc.fileType || 'No type'}`);
+            console.log(`    Size: ${doc.fileSize || 'No size'}`);
+          });
+        }
+      });
+
+      // Use the processed data with properly handled documents
+      setLeaves(processedData);
     } catch (error) {
       console.error("Erreur:", error);
       setFeedback({ type: "error", message: error.message });
@@ -126,7 +212,7 @@ const ChefLeaveManagement = () => {
 
     setActionLoading(true);
     try {
-      const response = await fetch("http://localhost:5005/api/conges/" + selectedLeave._id + "/status", {
+      const response = await fetch("http://localhost:5000/api/conges/" + selectedLeave._id + "/status", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -137,7 +223,24 @@ const ChefLeaveManagement = () => {
         }),
       });
 
-      if (!response.ok) throw new Error("Erreur lors de la mise à jour du statut");
+      if (!response.ok) {
+        let errorMessage = "Erreur lors de la mise à jour du statut";
+        try {
+          // Try to parse as JSON first
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // If not JSON, get text
+            const errorText = await response.text();
+            console.error("Server returned non-JSON response:", errorText);
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        throw new Error(errorMessage);
+      }
 
       setFeedback({
         type: "success",
@@ -157,7 +260,56 @@ const ChefLeaveManagement = () => {
 
   // Prévisualiser un document
   const handlePreviewDocument = (document) => {
-    setPreviewDocument(document);
+    console.log('Preview document:', document);
+
+    if (!document) {
+      console.error('Document is null or undefined');
+      setFeedback({
+        type: 'error',
+        message: 'Document invalide'
+      });
+      return;
+    }
+
+    console.log('Document path:', document.filePath);
+
+    // Ensure document has all required properties
+    const enhancedDocument = {
+      ...document,
+      // Make sure filePath exists and is properly formatted
+      filePath: document.filePath || '',
+      // Make sure originalName exists
+      originalName: document.originalName || `Document ${Math.floor(Math.random() * 1000)}`,
+      // Make sure fileType exists
+      fileType: document.fileType || 'application/octet-stream',
+      // Make sure fileSize exists
+      fileSize: document.fileSize || 0
+    };
+
+    console.log('Enhanced document:', enhancedDocument);
+
+    // Determine the full URL
+    let fullUrl;
+    if (!enhancedDocument.filePath) {
+      console.error('Document has no file path');
+      fullUrl = '';
+    } else if (enhancedDocument.filePath.startsWith('/uploads')) {
+      fullUrl = enhancedDocument.filePath;
+      console.log('Using relative path:', fullUrl);
+    } else if (enhancedDocument.filePath.startsWith('http')) {
+      fullUrl = enhancedDocument.filePath;
+      console.log('Using absolute URL:', fullUrl);
+    } else {
+      fullUrl = "http://localhost:5000" + enhancedDocument.filePath;
+      console.log('Using server URL:', fullUrl);
+    }
+
+    console.log('Full URL for preview:', fullUrl);
+
+    // Update the document with the full URL for easier access in the preview dialog
+    enhancedDocument.fullUrl = fullUrl;
+
+    setPreviewDocument(enhancedDocument);
     setPreviewOpen(true);
   };
 
@@ -169,7 +321,75 @@ const ChefLeaveManagement = () => {
 
   // Télécharger un document
   const handleDownloadDocument = (document) => {
-    window.open("http://localhost:5005" + document.filePath, "_blank");
+    if (!document) {
+      console.error('Invalid document');
+      setFeedback({
+        type: 'error',
+        message: 'Document invalide'
+      });
+      return;
+    }
+
+    if (!document.filePath && !document.fullUrl) {
+      console.error('Missing file path');
+      setFeedback({
+        type: 'error',
+        message: 'Impossible de télécharger le document: chemin de fichier manquant'
+      });
+      return;
+    }
+
+    // Use the fullUrl if available, otherwise determine the URL from filePath
+    let url = document.fullUrl;
+
+    if (!url) {
+      if (document.filePath.startsWith('/uploads')) {
+        // If the path starts with /uploads, use it directly
+        url = document.filePath;
+      } else if (document.filePath.startsWith('http')) {
+        // If it's already a full URL, use it as is
+        url = document.filePath;
+      } else {
+        // Otherwise, prepend the server URL
+        url = "http://localhost:5000" + document.filePath;
+      }
+    }
+
+    console.log('Download URL:', url);
+
+    try {
+      // Create a temporary link element
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+
+      // Set download attribute with filename if available
+      if (document.originalName) {
+        link.download = document.originalName;
+      }
+
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      setFeedback({
+        type: 'error',
+        message: 'Erreur lors du téléchargement du document'
+      });
+
+      // Fallback to window.open
+      try {
+        window.open(url, "_blank");
+      } catch (fallbackError) {
+        console.error('Fallback error:', fallbackError);
+        setFeedback({
+          type: 'error',
+          message: 'Erreur lors de l\'ouverture du document'
+        });
+      }
+    }
   };
 
   // Obtenir la couleur du statut
@@ -345,24 +565,60 @@ const ChefLeaveManagement = () => {
                         </Typography>
                       </Box>
 
-                      {leave.documents && leave.documents.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                            Documents joints:
+                      {leave.documents && Array.isArray(leave.documents) && leave.documents.length > 0 ? (
+                        <Box sx={{ mt: 2, p: 1.5, bgcolor: 'primary.main', borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                          <Typography variant="subtitle2" color="white" fontWeight="bold" display="flex" alignItems="center" gutterBottom>
+                            <AttachFileOutlined sx={{ mr: 1 }} />
+                            Documents joints ({leave.documents.length}):
                           </Typography>
-                          <Stack direction="row" spacing={1}>
-                            {leave.documents.map((doc, index) => (
-                              <Tooltip key={index} title={doc.originalName}>
-                                <IconButton
-                                  size="small"
-                                  color="primary"
-                                  onClick={() => handlePreviewDocument(doc)}
-                                >
-                                  <Visibility fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            ))}
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                            {leave.documents.map((doc, index) => {
+                              // Log document for debugging
+                              console.log(`Rendering document ${index + 1}:`, doc);
+
+                              // Determine icon based on file type
+                              let icon = <Description fontSize="small" />;
+                              if (doc.fileType?.includes('image')) {
+                                icon = <Image fontSize="small" />;
+                              } else if (doc.fileType?.includes('pdf')) {
+                                icon = <PictureAsPdf fontSize="small" />;
+                              }
+
+                              // Ensure document has a name
+                              const docName = doc.originalName || `Document ${index + 1}`;
+                              const displayName = docName.length > 10 ? docName.substring(0, 10) + '...' : docName;
+
+                              return (
+                                <Tooltip key={index} title={docName}>
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={icon}
+                                    onClick={() => handlePreviewDocument(doc)}
+                                    sx={{
+                                      color: 'white',
+                                      textTransform: 'none',
+                                      bgcolor: 'rgba(255,255,255,0.2)',
+                                      '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.3)',
+                                      },
+                                      mb: 1
+                                    }}
+                                  >
+                                    {displayName}
+                                  </Button>
+                                </Tooltip>
+                              );
+                            })}
                           </Stack>
+                        </Box>
+                      ) : (
+                        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+                          <InfoOutlined fontSize="small" sx={{ mr: 1 }} />
+                          <Typography variant="body2" color="text.secondary">
+                            Aucun document joint
+                          </Typography>
                         </Box>
                       )}
                     </Stack>
@@ -439,48 +695,169 @@ const ChefLeaveManagement = () => {
       </Dialog>
 
       {/* Prévisualisation de document */}
-      <Dialog open={previewOpen} onClose={handleClosePreview} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h6" component="div">
-            {previewDocument?.originalName}
-          </Typography>
-          <IconButton onClick={handleClosePreview} size="small">
+      <Dialog
+        open={previewOpen}
+        onClose={handleClosePreview}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            bgcolor: 'primary.main',
+            color: 'white',
+            py: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {previewDocument?.fileType?.includes("image") ? (
+              <Box sx={{ position: 'relative', width: 40, height: 40, mr: 2, borderRadius: 1, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.3)' }}>
+                <img
+                  src={previewDocument?.fullUrl || previewDocument?.filePath}
+                  alt="Thumbnail"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    console.error('Error loading thumbnail image');
+                    e.target.src = '/uploads/placeholder.png';
+                  }}
+                />
+              </Box>
+            ) : previewDocument?.fileType?.includes("pdf") ? (
+              <PictureAsPdf sx={{ fontSize: 32, mr: 2, color: 'rgba(255,255,255,0.9)' }} />
+            ) : (
+              <Description sx={{ fontSize: 32, mr: 2, color: 'rgba(255,255,255,0.9)' }} />
+            )}
+            <Box>
+              <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+                {previewDocument?.originalName || "Document"}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                {previewDocument?.fileType?.split('/')[1]?.toUpperCase() || 'Document'}
+                {previewDocument?.fileSize && ` • ${Math.round(previewDocument.fileSize / 1024)} KB`}
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton
+            onClick={handleClosePreview}
+            size="medium"
+            sx={{
+              color: 'white',
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.2)'
+              }
+            }}
+          >
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent>
-          {previewDocument?.fileType.includes("image") ? (
-            <Box sx={{ textAlign: "center" }}>
+        <DialogContent sx={{ p: 0, position: 'relative' }}>
+          {previewDocument?.fileType?.includes("image") ? (
+            <Box sx={{
+              textAlign: "center",
+              p: 2,
+              bgcolor: '#f5f5f5',
+              height: '70vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative'
+            }}>
               <img
-                src={previewDocument?.filePath}
+                src={previewDocument?.fullUrl || previewDocument?.filePath}
                 alt={previewDocument?.originalName}
-                style={{ maxWidth: "100%", maxHeight: "70vh" }}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: 'contain',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                  borderRadius: 4
+                }}
+                onError={(e) => {
+                  console.error('Error loading preview image');
+                  e.target.src = '/uploads/placeholder.png';
+                  setFeedback({
+                    type: 'error',
+                    message: 'Erreur lors du chargement de l\'image'
+                  });
+                }}
               />
             </Box>
-          ) : previewDocument?.fileType.includes("pdf") ? (
-            <Box sx={{ height: "70vh" }}>
+          ) : previewDocument?.fileType?.includes("pdf") ? (
+            <Box sx={{ height: "70vh", position: 'relative' }}>
               <iframe
-                src={previewDocument?.filePath}
+                src={previewDocument?.fullUrl || previewDocument?.filePath}
                 width="100%"
                 height="100%"
                 title={previewDocument?.originalName}
                 style={{ border: "none" }}
+                onError={() => {
+                  console.error('Error loading PDF');
+                  setFeedback({
+                    type: 'error',
+                    message: 'Erreur lors du chargement du PDF'
+                  });
+                }}
               />
             </Box>
           ) : (
-            <Typography>
-              Ce type de fichier ne peut pas être prévisualisé. Veuillez le télécharger.
-            </Typography>
+            <Box sx={{ p: 5, textAlign: 'center', height: '50vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <Box sx={{
+                p: 3,
+                borderRadius: '50%',
+                bgcolor: theme.palette.grey[100],
+                display: 'inline-flex',
+                mb: 3
+              }}>
+                <Description sx={{ fontSize: 80, color: theme.palette.primary.main }} />
+              </Box>
+              <Typography variant="h5" gutterBottom fontWeight="bold" color="primary.main">
+                Ce type de fichier ne peut pas être prévisualisé
+              </Typography>
+              <Typography color="text.secondary" paragraph sx={{ maxWidth: 500 }}>
+                Le fichier "{previewDocument?.originalName}" ne peut pas être affiché dans le navigateur.
+                Veuillez le télécharger pour le consulter.
+              </Typography>
+              <Button
+                onClick={() => handleDownloadDocument(previewDocument)}
+                color="primary"
+                variant="contained"
+                size="large"
+                startIcon={<Download />}
+                sx={{ mt: 2 }}
+              >
+                Télécharger le fichier
+              </Button>
+            </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #eee', justifyContent: 'space-between' }}>
           <Button
-            onClick={() => handleDownloadDocument(previewDocument)}
-            color="primary"
-            startIcon={<Download />}
+            onClick={handleClosePreview}
+            color="inherit"
+            startIcon={<Close />}
           >
-            Télécharger
+            Fermer
           </Button>
+          {(previewDocument?.fileType?.includes("image") || previewDocument?.fileType?.includes("pdf")) && (
+            <Button
+              onClick={() => handleDownloadDocument(previewDocument)}
+              color="primary"
+              variant="contained"
+              startIcon={<Download />}
+            >
+              Télécharger
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

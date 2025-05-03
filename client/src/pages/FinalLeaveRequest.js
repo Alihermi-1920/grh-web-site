@@ -36,7 +36,9 @@ import {
   MobileStepper,
   useMediaQuery,
   Backdrop,
-  LinearProgress
+  LinearProgress,
+  FormControl,
+  Select
 } from '@mui/material';
 import {
   CalendarMonth,
@@ -242,14 +244,40 @@ const FinalLeaveRequest = () => {
 
       console.log('Fetching leave balance for employee:', employeeId);
 
-      const response = await fetch(`http://localhost:5005/api/conges/balance/${employeeId}`);
+      const response = await fetch(`http://localhost:5000/api/conges/balance/${employeeId}`);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la récupération du solde de congés');
+        let errorMessage = 'Erreur lors de la récupération du solde de congés';
+        try {
+          // Try to parse as JSON first
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // If not JSON, get text
+            const errorText = await response.text();
+            console.error('Server returned non-JSON response:', errorText);
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing success response:', parseError);
+        // Use default values if parsing fails
+        data = {
+          totalDays: 30,
+          usedDays: 0,
+          remainingDays: 30,
+          medicalDays: 0
+        };
+      }
       console.log('Leave balance data:', data);
 
       setLeaveBalance({
@@ -280,14 +308,35 @@ const FinalLeaveRequest = () => {
 
       console.log('Fetching leave history for employee:', employeeId);
 
-      const response = await fetch(`http://localhost:5005/api/conges?employee=${employeeId}`);
+      const response = await fetch(`http://localhost:5000/api/conges?employee=${employeeId}`);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la récupération de l\'historique des congés');
+        let errorMessage = 'Erreur lors de la récupération de l\'historique des congés';
+        try {
+          // Try to parse as JSON first
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // If not JSON, get text
+            const errorText = await response.text();
+            console.error('Server returned non-JSON response:', errorText);
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing success response:', parseError);
+        // Use empty array if parsing fails
+        data = [];
+      }
       console.log('Leave history data:', data);
 
       // Sort by date (newest first)
@@ -358,7 +407,7 @@ const FinalLeaveRequest = () => {
 
   // Download document
   const handleDownloadDocument = (document) => {
-    window.open(`http://localhost:5005${document.filePath}`, '_blank');
+    window.open(`http://localhost:5000${document.filePath}`, '_blank');
   };
 
   // Stepper navigation functions
@@ -424,7 +473,42 @@ const FinalLeaveRequest = () => {
   // Handle file change
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setDocuments(files);
+
+    // Validate files
+    const validFiles = files.filter(file => {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setFeedback({
+          type: 'error',
+          message: `Le fichier "${file.name}" est trop volumineux. La taille maximale est de 10MB.`
+        });
+        return false;
+      }
+
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf',
+                          'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type)) {
+        setFeedback({
+          type: 'error',
+          message: `Le type de fichier "${file.name}" n'est pas pris en charge. Types acceptés: JPG, PNG, GIF, PDF, DOC, DOCX.`
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    // Update documents state
+    setDocuments(prevDocs => [...prevDocs, ...validFiles]);
+
+    // Show success message
+    if (validFiles.length > 0) {
+      setFeedback({
+        type: 'success',
+        message: `${validFiles.length} fichier(s) ajouté(s) avec succès. N'oubliez pas de soumettre votre demande.`
+      });
+    }
   };
 
   // Submit leave request
@@ -455,58 +539,105 @@ const FinalLeaveRequest = () => {
 
       console.log('Request data:', requestData);
 
-      let response;
+      // Improved approach - handle files properly
+      console.log('Using improved approach with file support');
 
+      let response = null;
+
+      // Create a URL with employee ID in query params
+      const url = new URL('http://localhost:5000/api/conges');
+
+      // Add employee ID to query params
+      url.searchParams.append('employee', employeeId);
+
+      console.log('Request URL with query params:', url.toString());
+
+      // If there are documents, use FormData to submit everything at once
       if (documents.length > 0) {
-        // Use FormData for file uploads
-        console.log('Using FormData approach for file upload');
+        console.log(`Using FormData to submit leave request with ${documents.length} documents`);
+
+        // Create FormData
         const formData = new FormData();
 
-        // Add employee ID multiple times for redundancy
+        // Add all request data fields
         formData.append('employee', employeeId);
-        formData.append('employeeId', employeeId);
-
-        // Add other fields
         formData.append('leaveType', leaveType);
         formData.append('startDate', startDate.toISOString());
         formData.append('endDate', endDate.toISOString());
-        formData.append('numberOfDays', numberOfDays);
+        formData.append('numberOfDays', numberOfDays.toString());
         formData.append('reason', reason);
-        formData.append('isMedical', leaveType === 'Congé médical');
+        formData.append('isMedical', (leaveType === 'Congé médical').toString());
 
-        // Add documents
-        documents.forEach(file => {
+        // Add all documents
+        documents.forEach((file, index) => {
+          console.log(`Adding document ${index + 1}:`, file.name, file.type, file.size);
           formData.append('documents', file);
         });
 
-        // Log all form data for debugging
+        // Log FormData contents
+        console.log('FormData contents:');
         for (let [key, value] of formData.entries()) {
-          console.log(`${key}: ${value}`);
+          console.log(`${key}: ${value instanceof File ? value.name : value}`);
         }
 
-        // Send request with query parameter for redundancy
-        response = await fetch(`http://localhost:5005/api/conges?employee=${employeeId}`, {
+        // Send request
+        response = await fetch(url.toString(), {
           method: 'POST',
           body: formData
         });
+
+        console.log('Response status from FormData request:', response.status);
       } else {
-        // Use JSON for requests without files
-        console.log('Using JSON approach (no files)');
-        response = await fetch('http://localhost:5005/api/conges/json', {
+        // If no documents, use JSON
+        console.log('No documents, using JSON request');
+
+        response = await fetch(url.toString(), {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Employee-ID': employeeId
           },
           body: JSON.stringify(requestData)
         });
+
+        console.log('Response status from JSON request:', response.status);
       }
+
+      console.log('Response status:', response.status);
+
+      // Log the final response for debugging
+      console.log('Final response status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la soumission de la demande');
+        let errorMessage = 'Erreur lors de la soumission de la demande';
+        try {
+          // Try to parse as JSON first
+          const contentType = response.headers.get('content-type');
+          console.log('Response content type:', contentType);
+
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            console.log('Error data:', errorData);
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            // If not JSON, get text
+            const errorText = await response.text();
+            console.error('Server returned non-JSON response:', errorText);
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        console.error('Final error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing success response:', parseError);
+        responseData = { message: 'Demande soumise, mais la réponse du serveur est invalide' };
+      }
       console.log('Leave request submitted successfully:', responseData);
 
       // Show success dialog instead of snackbar
@@ -616,11 +747,21 @@ const FinalLeaveRequest = () => {
             </Fade>
 
             <Fade in={successDialogOpen} timeout={1300}>
-              <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+              <Typography variant="body1" sx={{ mb: 2, opacity: 0.9 }}>
                 Votre demande de congé a été soumise et est en attente d'approbation par votre responsable.
                 Vous pouvez suivre son statut dans l'onglet "Historique".
               </Typography>
             </Fade>
+
+            {documents.length > 0 && (
+              <Fade in={successDialogOpen} timeout={1500}>
+                <Alert severity="info" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.15)', color: 'white' }}>
+                  <Typography variant="body2">
+                    <strong>Documents joints ({documents.length}):</strong> Vos documents ont été enregistrés avec votre demande.
+                  </Typography>
+                </Alert>
+              </Fade>
+            )}
 
             <Button
               variant="contained"
