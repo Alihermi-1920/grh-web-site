@@ -18,7 +18,11 @@ import AddProject from './pages/AddProject';
 import SimpleLeaveRequest from './pages/SimpleLeaveRequest';
 import FinalLeaveRequest from './pages/FinalLeaveRequest';
 import EmployeeProjects from './pages/EmployeeProjects';
+import EmployeeProjectDetail from './pages/EmployeeProjectDetail';
 import TestFileUpload from './pages/TestFileUpload';
+import ChefTaskManagement from './pages/ChefTaskManagement';
+import ChefTaskDetail from './pages/ChefTaskDetail';
+import EmployeeTaskPage from './pages/EmployeeTaskPage';
 import PrivateRoute from './components/PrivateRoute'; // Private route pour protéger l'accès
 import theme from './theme'; // Import our custom theme with Inter font
 import GlobalStyles from './components/GlobalStyles'; // Import our global styles
@@ -101,9 +105,41 @@ root.render(
               }
             />
             <Route
+              path="/employee-project/:projectId"
+              element={
+                <PrivateRoute>
+                  <EmployeeProjectDetail />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/test-upload"
               element={
                 <TestFileUpload />
+              }
+            />
+            <Route
+              path="/chef-tasks"
+              element={
+                <PrivateRoute>
+                  <ChefTaskManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/mes-taches"
+              element={
+                <PrivateRoute>
+                  <EmployeeTaskPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/chef-task/:taskId"
+              element={
+                <PrivateRoute>
+                  <ChefTaskDetail />
+                </PrivateRoute>
               }
             />
           </Routes>

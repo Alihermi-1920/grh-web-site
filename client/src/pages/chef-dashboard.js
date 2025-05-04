@@ -1,5 +1,6 @@
 // src/pages/chef-dashboard.js
 import React, { useState, useContext, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   CssBaseline,
   Drawer,
@@ -49,6 +50,7 @@ import {
   Assessment,
   Forum,
   Chat,
+  AssignmentTurnedIn,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import ChefEmployeeList from "./ChefEmployeeList";
@@ -60,13 +62,36 @@ import ChefAttendanceCalendar from "./ChefAttendanceCalendar";
 import ChefMessaging from "./ChefMessaging";
 import ChefLeaveManagement from "./ChefLeaveManagement"; // Nouveau composant de gestion des congés
 import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
+import ChefTaskManagement from "./ChefTaskManagement"; // Composant de gestion des tâches
+import ChefTaskDetail from "./ChefTaskDetail"; // Composant de détail des tâches
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
 
 const ChefDashboard = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const [activeView, setActiveView] = useState("dashboardHomeChef");
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+
+  // Handle location state for navigation
+  useEffect(() => {
+    if (location.state?.activeView) {
+      console.log("Navigation state received:", location.state);
+      setActiveView(location.state.activeView);
+
+      // If we have a taskId, set it
+      if (location.state.activeView === "taskDetail" && location.state.taskId) {
+        console.log("Setting task ID from navigation:", location.state.taskId);
+        setSelectedTaskId(location.state.taskId);
+      }
+    }
+  }, [location.state]);
+
+  // Debug selected task ID changes
+  useEffect(() => {
+    console.log("Selected task ID updated:", selectedTaskId);
+  }, [selectedTaskId]);
   const [newProjectNotifications, setNewProjectNotifications] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
@@ -345,6 +370,23 @@ const ChefDashboard = () => {
           </ListItemButton>
         </ListItem>
 
+        {/* Gestion des tâches */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("taskManagement")}
+            selected={activeView === "taskManagement"}
+            sx={getMenuItemStyles(activeView === "taskManagement")}
+          >
+            <ListItemIcon sx={getIconStyles(activeView === "taskManagement")}>
+              <AssignmentTurnedIn />
+            </ListItemIcon>
+            <ListItemText
+              primary="Gestion des tâches"
+              primaryTypographyProps={getTextStyles(activeView === "taskManagement")}
+            />
+          </ListItemButton>
+        </ListItem>
+
 
 
         {/* Présence avec sous-menu */}
@@ -542,6 +584,8 @@ const ChefDashboard = () => {
                   {activeView === "attendanceCalendar" && "Calendrier de Présence"}
                   {activeView === "leaveManagement" && "Gestion des Congés"}
                   {activeView === "messaging" && "Messagerie"}
+                  {activeView === "taskManagement" && "Gestion des Tâches"}
+                  {activeView === "taskDetail" && "Détail de la Tâche"}
                   {!activeView && "Tableau de Bord Chef"}
                 </Typography>
               </Box>
@@ -610,6 +654,8 @@ const ChefDashboard = () => {
                 {activeView === "attendanceCalendar" && <ChefAttendanceCalendar />}
                 {activeView === "leaveManagement" && <ChefLeaveManagement />}
                 {activeView === "messaging" && <ChefMessaging />}
+                {activeView === "taskManagement" && <ChefTaskManagement />}
+                {activeView === "taskDetail" && selectedTaskId && <ChefTaskDetail taskId={selectedTaskId} />}
                 {!activeView && (
                   <Box
                     sx={{

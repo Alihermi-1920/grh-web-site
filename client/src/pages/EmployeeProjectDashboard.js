@@ -1,5 +1,6 @@
 // src/pages/EmployeeProjectDashboard.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 import {
   Box,
   Container,
@@ -55,31 +56,28 @@ import { useNavigate } from "react-router-dom";
 
 const EmployeeProjectDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
-  
-  // Cet ID devrait venir de votre contexte d'authentification
-  // Pour l'instant, nous utilisons une valeur codée en dur pour la démonstration
-  const currentEmployeeId = "employeeId123"; // Remplacer par l'ID réel de l'employé connecté
-  
+
   // État pour stocker les données
   const [myProjects, setMyProjects] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
-  
+
   // États pour les modales
   const [taskDetailOpen, setTaskDetailOpen] = useState(false);
   const [updateTaskOpen, setUpdateTaskOpen] = useState(false);
   const [taskProgressOpen, setTaskProgressOpen] = useState(false);
-  
+
   // État pour le formulaire de mise à jour des tâches
   const [taskForm, setTaskForm] = useState({
     status: "",
     completionPercentage: 0,
     comment: "",
   });
-  
+
   // État pour les messages de succès/erreur
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -90,33 +88,102 @@ const EmployeeProjectDashboard = () => {
   // Charger les projets et les tâches de l'employé au chargement
   useEffect(() => {
     const fetchEmployeeData = async () => {
+      if (!user || !user._id) return;
+
       setLoading(true);
+      setError(null);
+
       try {
-        // Récupérer les projets de l'employé
-        const projectResponse = await fetch(`http://localhost:5000/api/projects/employee/${currentEmployeeId}`);
-        if (!projectResponse.ok) {
+        console.log("Fetching data for employee:", user._id);
+
+        // First try to get all projects and filter on the client side as a fallback
+        const allProjectsResponse = await fetch(`http://localhost:5000/api/projects`);
+        if (!allProjectsResponse.ok) {
           throw new Error("Erreur lors de la récupération des projets");
         }
-        const projectData = await projectResponse.json();
-        setMyProjects(projectData);
-        
-        // Récupérer les tâches de l'employé
-        const taskResponse = await fetch(`http://localhost:5000/api/tasks/employee/${currentEmployeeId}`);
-        if (!taskResponse.ok) {
-          throw new Error("Erreur lors de la récupération des tâches");
+
+        const allProjects = await allProjectsResponse.json();
+        console.log(`Fetched ${allProjects.length} total projects`);
+
+        // Try the employee-specific endpoint
+        try {
+          console.log(`Calling employee projects endpoint for ${user._id}`);
+          const projectResponse = await fetch(`http://localhost:5000/api/projects/employee/${user._id}`);
+
+          if (projectResponse.ok) {
+            const projectData = await projectResponse.json();
+            console.log(`Received ${projectData.length} projects from employee endpoint`);
+            setMyProjects(projectData);
+          } else {
+            console.warn("Employee project endpoint failed, falling back to client-side filtering");
+
+            // Filter projects on the client side where the employee is in the team
+            const filteredProjects = allProjects.filter(project => {
+              if (!project.team) return false;
+
+              return project.team.some(member => {
+                // Check if the member is an object with _id property
+                if (typeof member === 'object' && member._id) {
+                  return member._id === user._id;
+                }
+                // Check if the member is a string ID
+                return String(member) === String(user._id);
+              });
+            });
+
+            console.log(`Filtered ${filteredProjects.length} projects on client side`);
+            console.log("Projects found:", filteredProjects.map(p => p.projectName));
+            setMyProjects(filteredProjects);
+          }
+        } catch (endpointError) {
+          console.error("Error calling employee projects endpoint:", endpointError);
+
+          // Filter projects on the client side as a fallback
+          const filteredProjects = allProjects.filter(project => {
+            if (!project.team) return false;
+
+            // Log the team for debugging
+            console.log(`Project ${project.projectName} team:`, project.team);
+
+            return project.team.some(member => {
+              const memberId = typeof member === 'object' ? member._id : member;
+              const result = String(memberId) === String(user._id);
+              if (result) console.log(`Match found in project ${project.projectName}`);
+              return result;
+            });
+          });
+
+          console.log(`Filtered ${filteredProjects.length} projects on client side after error`);
+          setMyProjects(filteredProjects);
         }
-        const taskData = await taskResponse.json();
-        setMyTasks(taskData);
+
+        // Récupérer les tâches de l'employé
+        try {
+          const taskResponse = await fetch(`http://localhost:5000/api/tasks/employee/${user._id}`);
+          if (taskResponse.ok) {
+            const taskData = await taskResponse.json();
+            console.log(`Received ${taskData.length} tasks for employee`);
+            setMyTasks(taskData);
+          } else {
+            console.warn("Failed to fetch tasks, setting empty array");
+            setMyTasks([]);
+          }
+        } catch (taskError) {
+          console.error("Error fetching tasks:", taskError);
+          setMyTasks([]);
+        }
       } catch (err) {
-        console.error("Erreur:", err);
+        console.error("Error in overall fetch:", err);
         setError(err.message);
+        setMyProjects([]);
+        setMyTasks([]);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchEmployeeData();
-  }, [currentEmployeeId]);
+  }, [user]);
 
   // Gestion du changement d'onglet
   const handleTabChange = (event, newValue) => {
@@ -133,7 +200,7 @@ const EmployeeProjectDashboard = () => {
   const getStatusChip = (status) => {
     let color = "default";
     let label = "Inconnu";
-    
+
     switch (status) {
       case "pending":
         color = "warning";
@@ -162,7 +229,7 @@ const EmployeeProjectDashboard = () => {
       default:
         break;
     }
-    
+
     return <Chip label={label} color={color} size="small" />;
   };
 
@@ -170,7 +237,7 @@ const EmployeeProjectDashboard = () => {
   const getPriorityChip = (priority) => {
     let color = "default";
     let label = "Moyenne";
-    
+
     switch (priority) {
       case "low":
         color = "success";
@@ -187,7 +254,7 @@ const EmployeeProjectDashboard = () => {
       default:
         break;
     }
-    
+
     return <Chip label={label} color={color} size="small" />;
   };
 
@@ -205,13 +272,13 @@ const EmployeeProjectDashboard = () => {
   // Ouvrir le modal de mise à jour de statut
   const handleUpdateTaskOpen = () => {
     if (!selectedTask) return;
-    
+
     setTaskForm({
       status: selectedTask.status || "pending",
       completionPercentage: selectedTask.completionPercentage || 0,
       comment: "",
     });
-    
+
     setUpdateTaskOpen(true);
     setTaskDetailOpen(false);
   };
@@ -224,12 +291,12 @@ const EmployeeProjectDashboard = () => {
   // Ouvrir le modal de mise à jour de progression
   const handleProgressDialogOpen = () => {
     if (!selectedTask) return;
-    
+
     setTaskForm({
       ...taskForm,
       completionPercentage: selectedTask.completionPercentage || 0,
     });
-    
+
     setTaskProgressOpen(true);
     setUpdateTaskOpen(false);
   };
@@ -271,7 +338,7 @@ const EmployeeProjectDashboard = () => {
       }
 
       const updatedTask = await response.json();
-      
+
       // Si un commentaire est fourni, l'ajouter
       if (taskForm.comment.trim()) {
         await fetch(`http://localhost:5000/api/tasks/${selectedTask._id}/comments`, {
@@ -281,29 +348,29 @@ const EmployeeProjectDashboard = () => {
           },
           body: JSON.stringify({
             content: taskForm.comment,
-            authorId: currentEmployeeId,
+            authorId: user._id,
           }),
         });
       }
-      
+
       // Mettre à jour les listes locales
-      setMyTasks(myTasks.map(task => 
+      setMyTasks(myTasks.map(task =>
         task._id === selectedTask._id ? updatedTask : task
       ));
-      
+
       // Mettre à jour les projets si nécessaire (pour la progression)
       setMyProjects(myProjects.map(project => {
         if (project._id === updatedTask.project._id || project._id === updatedTask.project) {
           // Recalculer la progression du projet (simplifié)
-          const projectTasks = myTasks.filter(t => 
-            (t.project._id === project._id || t.project === project._id) && 
+          const projectTasks = myTasks.filter(t =>
+            (t.project._id === project._id || t.project === project._id) &&
             t._id !== selectedTask._id
           );
-          
+
           const allTasks = [...projectTasks, updatedTask];
           const totalPercentage = allTasks.reduce((sum, t) => sum + (t.completionPercentage || 0), 0);
           const averagePercentage = Math.round(totalPercentage / allTasks.length);
-          
+
           return {
             ...project,
             completionPercentage: averagePercentage,
@@ -311,13 +378,13 @@ const EmployeeProjectDashboard = () => {
         }
         return project;
       }));
-      
+
       setSnackbar({
         open: true,
         message: "Tâche mise à jour avec succès",
         severity: "success",
       });
-      
+
       setUpdateTaskOpen(false);
       setTaskProgressOpen(false);
     } catch (error) {
@@ -335,7 +402,7 @@ const EmployeeProjectDashboard = () => {
     if (!taskForm.comment.trim()) {
       return;
     }
-    
+
     try {
       const response = await fetch(`http://localhost:5000/api/tasks/${selectedTask._id}/comments`, {
         method: "POST",
@@ -344,7 +411,7 @@ const EmployeeProjectDashboard = () => {
         },
         body: JSON.stringify({
           content: taskForm.comment,
-          authorId: currentEmployeeId,
+          authorId: user._id,
         }),
       });
 
@@ -353,20 +420,20 @@ const EmployeeProjectDashboard = () => {
       }
 
       const updatedTask = await response.json();
-      
+
       // Mettre à jour la liste de tâches locale
-      setMyTasks(myTasks.map(task => 
+      setMyTasks(myTasks.map(task =>
         task._id === selectedTask._id ? updatedTask : task
       ));
-      
+
       setSelectedTask(updatedTask);
-      
+
       // Réinitialiser le champ de commentaire
       setTaskForm({
         ...taskForm,
         comment: "",
       });
-      
+
       setSnackbar({
         open: true,
         message: "Commentaire ajouté avec succès",
@@ -392,7 +459,13 @@ const EmployeeProjectDashboard = () => {
 
   // Afficher les détails d'un projet
   const handleProjectClick = (projectId) => {
-    navigate(`/projects/${projectId}`);
+    // Set the active view in the dashboard to projectDetail with the selected project ID
+    navigate("/employee-dashboard", {
+      state: {
+        activeView: "projectDetail",
+        projectId: projectId
+      }
+    });
   };
 
   // Filtrer les tâches en fonction de l'onglet sélectionné
@@ -432,9 +505,9 @@ const EmployeeProjectDashboard = () => {
         <Alert severity="error">
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          color="primary" 
+        <Button
+          variant="contained"
+          color="primary"
           sx={{ mt: 2 }}
           onClick={() => window.location.reload()}
         >
@@ -450,13 +523,13 @@ const EmployeeProjectDashboard = () => {
         <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
         Mon espace de travail
       </Typography>
-      
+
       <Box sx={{ mb: 4 }}>
         <Typography variant="h5" gutterBottom>
           <WorkOutline sx={{ mr: 1, verticalAlign: 'middle' }} />
           Mes projets assignés
         </Typography>
-        
+
         {myProjects.length === 0 ? (
           <Paper sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="body1">Vous n'avez aucun projet assigné pour le moment.</Typography>
@@ -465,10 +538,10 @@ const EmployeeProjectDashboard = () => {
           <Grid container spacing={3}>
             {myProjects.map((project) => (
               <Grid item xs={12} md={6} lg={4} key={project._id}>
-                <Card 
-                  sx={{ 
-                    height: '100%', 
-                    display: 'flex', 
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
                     flexDirection: 'column',
                     transition: 'transform 0.2s, box-shadow 0.2s',
                     '&:hover': {
@@ -482,12 +555,12 @@ const EmployeeProjectDashboard = () => {
                   <CardHeader
                     avatar={
                       <Avatar sx={{ bgcolor: project.status === 'completed' ? 'success.main' : 'primary.main' }}>
-                        {project.name.charAt(0).toUpperCase()}
+                        {project.projectName ? project.projectName.charAt(0).toUpperCase() : 'P'}
                       </Avatar>
                     }
                     title={
                       <Typography variant="h6" component="div">
-                        {project.name}
+                        {project.projectName || "Projet sans nom"}
                       </Typography>
                     }
                     subheader={`Créé le ${formatDate(project.createdAt)}`}
@@ -495,11 +568,11 @@ const EmployeeProjectDashboard = () => {
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {project.description.length > 100
+                      {project.description && project.description.length > 100
                         ? project.description.substring(0, 100) + "..."
-                        : project.description}
+                        : project.description || "Aucune description disponible"}
                     </Typography>
-                    
+
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Typography variant="body2">
                         <CalendarToday fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
@@ -510,15 +583,15 @@ const EmployeeProjectDashboard = () => {
                         {formatDate(project.deadline)}
                       </Typography>
                     </Box>
-                    
+
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
                         Progression: {project.completionPercentage || 0}%
                       </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={project.completionPercentage || 0} 
-                        sx={{ 
+                      <LinearProgress
+                        variant="determinate"
+                        value={project.completionPercentage || 0}
+                        sx={{
                           height: 8,
                           borderRadius: 5,
                           backgroundColor: '#e0e0e0',
@@ -529,24 +602,24 @@ const EmployeeProjectDashboard = () => {
                         }}
                       />
                     </Box>
-                    
+
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                      <Chip 
-                        icon={<Assignment />} 
-                        label={`${myTasks.filter(task => 
-                          task.project === project._id || 
+                      <Chip
+                        icon={<Assignment />}
+                        label={`${myTasks.filter(task =>
+                          task.project === project._id ||
                           (task.project && task.project._id === project._id)
-                        ).length} Tâches`} 
-                        size="small" 
-                        variant="outlined" 
+                        ).length} Tâches`}
+                        size="small"
+                        variant="outlined"
                       />
-                      <Chip 
-                        icon={<Flag />} 
-                        label={`Priorité: ${project.priority ? project.priority.charAt(0).toUpperCase() + project.priority.slice(1) : 'Medium'}`} 
-                        size="small" 
-                        variant="outlined" 
+                      <Chip
+                        icon={<Flag />}
+                        label={`Priorité: ${project.priority ? project.priority.charAt(0).toUpperCase() + project.priority.slice(1) : 'Medium'}`}
+                        size="small"
+                        variant="outlined"
                         color={
-                          project.priority === 'high' ? 'error' : 
+                          project.priority === 'high' ? 'error' :
                           project.priority === 'medium' ? 'warning' : 'success'
                         }
                       />
@@ -558,174 +631,9 @@ const EmployeeProjectDashboard = () => {
           </Grid>
         )}
       </Box>
-      
-      <Box sx={{ width: '100%', mt: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          <Assignment sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Mes tâches
-        </Typography>
-        
-        <Paper sx={{ width: '100%', mb: 2 }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            indicatorColor="primary"
-            textColor="primary"
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab 
-              icon={<Assignment />} 
-              label={`Toutes (${myTasks.length})`} 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<Schedule />} 
-              label={`En attente (${myTasks.filter(task => task.status === "pending").length})`} 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<WorkOutline />} 
-              label={`En cours (${myTasks.filter(task => task.status === "in-progress").length})`} 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<CheckCircle />} 
-              label={`Terminées (${myTasks.filter(task => task.status === "completed").length})`} 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<Flag />} 
-              label={`Bloquées (${myTasks.filter(task => task.status === "blocked" || task.status === "on-hold").length})`} 
-              iconPosition="start"
-            />
-          </Tabs>
-          
-          <Divider />
-          
-          {getFilteredTasks().length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body1">Aucune tâche dans cette catégorie.</Typography>
-            </Box>
-          ) : (
-            <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-              {getFilteredTasks().map((task) => (
-                <React.Fragment key={task._id}>
-                  <ListItem 
-                    alignItems="flex-start" 
-                    button 
-                    onClick={() => handleTaskDetailOpen(task)}
-                    sx={{
-                      transition: 'background-color 0.2s',
-                      '&:hover': {
-                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                      }
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: 
-                            task.status === 'completed' ? 'success.main' : 
-                            task.status === 'in-progress' ? 'info.main' : 
-                            task.status === 'blocked' ? 'error.main' : 
-                            'warning.main'
-                        }}
-                      >
-                        {task.status === 'completed' ? 
-                          <AssignmentTurnedIn /> : 
-                          <Assignment />
-                        }
-                      </Avatar>
-                    </ListItemAvatar>
-                    
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="subtitle1" component="span" fontWeight="bold">
-                            {task.title}
-                          </Typography>
-                          <Box>
-                            {getStatusChip(task.status)}
-                            <Typography variant="caption" sx={{ ml: 1 }}>
-                              {formatDate(task.deadline)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      }
-                      secondary={
-                        <React.Fragment>
-                          <Typography
-                            variant="body2"
-                            color="text.primary"
-                            sx={{ 
-                              display: 'block',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}
-                          >
-                            {task.description || "Aucune description"}
-                          </Typography>
-                          
-                          <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                              <Chip 
-                                size="small" 
-                                variant="outlined"
-                                icon={<WorkOutline fontSize="small" />}
-                                label={task.project ? task.project.name || "Projet inconnu" : "Projet inconnu"} 
-                                sx={{ mr: 1 }}
-                              />
-                              {getPriorityChip(task.priority)}
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Box sx={{ width: 100, mr: 1 }}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={task.completionPercentage || 0} 
-                                  sx={{ 
-                                    height: 6, 
-                                    borderRadius: 5,
-                                    backgroundColor: 'rgba(0,0,0,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                      borderRadius: 5
-                                    }
-                                  }}
-                                />
-                              </Box>
-                              <Typography variant="caption">
-                                {task.completionPercentage || 0}%
-                              </Typography>
-                              
-                              {task.comments && task.comments.length > 0 && (
-                                <Tooltip title={`${task.comments.length} commentaires`}>
-                                  <Badge 
-                                    badgeContent={task.comments.length} 
-                                    color="secondary"
-                                    sx={{ ml: 2 }}
-                                  >
-                                    <InsertComment fontSize="small" />
-                                  </Badge>
-                                </Tooltip>
-                              )}
-                            </Box>
-                          </Box>
-                        </React.Fragment>
-                      }
-                    />
-                  </ListItem>
-                  <Divider variant="inset" component="li" />
-                </React.Fragment>
-              ))}
-            </List>
-          )}
-        </Paper>
-      </Box>
-      
+
+      {/* Task section removed - now available in the dedicated "Mes Tâches" page */}
+
       {/* Modal de détail de tâche */}
       <Dialog
         open={taskDetailOpen}
@@ -754,16 +662,16 @@ const EmployeeProjectDashboard = () => {
                       {selectedTask.description || "Aucune description fournie."}
                     </Typography>
                   </Paper>
-                  
+
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="subtitle1" gutterBottom>
                       Progression
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Box sx={{ width: '100%', mr: 1 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={selectedTask.completionPercentage || 0} 
+                        <LinearProgress
+                          variant="determinate"
+                          value={selectedTask.completionPercentage || 0}
                           sx={{ height: 10, borderRadius: 5 }}
                         />
                       </Box>
@@ -774,11 +682,11 @@ const EmployeeProjectDashboard = () => {
                       </Box>
                     </Box>
                   </Box>
-                  
+
                   <Typography variant="subtitle1" gutterBottom>
                     Commentaires ({selectedTask.comments ? selectedTask.comments.length : 0})
                   </Typography>
-                  
+
                   {(!selectedTask.comments || selectedTask.comments.length === 0) ? (
                     <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="body2" color="text.secondary">
@@ -792,8 +700,8 @@ const EmployeeProjectDashboard = () => {
                           <ListItem alignItems="flex-start">
                             <ListItemAvatar>
                               <Avatar>
-                                {comment.author ? 
-                                  comment.author.firstName.charAt(0) + comment.author.lastName.charAt(0) : 
+                                {comment.author ?
+                                  comment.author.firstName.charAt(0) + comment.author.lastName.charAt(0) :
                                   "U"
                                 }
                               </Avatar>
@@ -802,8 +710,8 @@ const EmployeeProjectDashboard = () => {
                               primary={
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                   <Typography variant="subtitle2">
-                                    {comment.author ? 
-                                      `${comment.author.firstName} ${comment.author.lastName}` : 
+                                    {comment.author ?
+                                      `${comment.author.firstName} ${comment.author.lastName}` :
                                       "Utilisateur inconnu"
                                     }
                                   </Typography>
@@ -831,7 +739,7 @@ const EmployeeProjectDashboard = () => {
                       ))}
                     </List>
                   )}
-                  
+
                   <Box sx={{ mt: 3, display: 'flex' }}>
                     <TextField
                       fullWidth
@@ -843,9 +751,9 @@ const EmployeeProjectDashboard = () => {
                       value={taskForm.comment}
                       onChange={handleFormChange}
                     />
-                    <IconButton 
-                      color="primary" 
-                      sx={{ ml: 1 }} 
+                    <IconButton
+                      color="primary"
+                      sx={{ ml: 1 }}
                       onClick={handleAddComment}
                       disabled={!taskForm.comment.trim()}
                     >
@@ -853,7 +761,7 @@ const EmployeeProjectDashboard = () => {
                     </IconButton>
                   </Box>
                 </Grid>
-                
+
                 <Grid item xs={12} md={4}>
                   <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
                     <Typography variant="subtitle2" gutterBottom>
@@ -870,7 +778,7 @@ const EmployeeProjectDashboard = () => {
                           {selectedTask.project ? selectedTask.project.name || "Non défini" : "Non défini"}
                         </Typography>
                       </Grid>
-                      
+
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Date de début:
@@ -881,7 +789,7 @@ const EmployeeProjectDashboard = () => {
                           {formatDate(selectedTask.startDate)}
                         </Typography>
                       </Grid>
-                      
+
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Date d'échéance:
@@ -892,7 +800,7 @@ const EmployeeProjectDashboard = () => {
                           {formatDate(selectedTask.deadline)}
                         </Typography>
                       </Grid>
-                      
+
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Priorité:
@@ -901,7 +809,7 @@ const EmployeeProjectDashboard = () => {
                       <Grid item xs={6}>
                         {getPriorityChip(selectedTask.priority)}
                       </Grid>
-                      
+
                       <Grid item xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Assigné le:
@@ -912,7 +820,7 @@ const EmployeeProjectDashboard = () => {
                           {formatDate(selectedTask.createdAt)}
                         </Typography>
                       </Grid>
-                      
+
                       {selectedTask.completedAt && (
                         <>
                           <Grid item xs={6}>
@@ -929,21 +837,21 @@ const EmployeeProjectDashboard = () => {
                       )}
                     </Grid>
                   </Paper>
-                  
-                  <Button 
-                    variant="contained" 
-                    color="primary" 
-                    fullWidth 
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
                     sx={{ mb: 2 }}
                     startIcon={<WorkOutline />}
                     onClick={handleUpdateTaskOpen}
                   >
                     Mettre à jour le statut
                   </Button>
-                  
-                  <Button 
-                    variant="outlined" 
-                    color="secondary" 
+
+                  <Button
+                    variant="outlined"
+                    color="secondary"
                     fullWidth
                     onClick={handleTaskDetailClose}
                   >
@@ -955,7 +863,7 @@ const EmployeeProjectDashboard = () => {
           </>
         )}
       </Dialog>
-      
+
       {/* Modal de mise à jour de tâche */}
       <Dialog
         open={updateTaskOpen}
@@ -973,7 +881,7 @@ const EmployeeProjectDashboard = () => {
               {selectedTask?.description}
             </Typography>
           </Box>
-          
+
           <FormControl fullWidth sx={{ mb: 3 }}>
             <InputLabel id="status-select-label">Statut</InputLabel>
             <Select
@@ -991,27 +899,27 @@ const EmployeeProjectDashboard = () => {
               <MenuItem value="on-hold">En pause</MenuItem>
             </Select>
           </FormControl>
-          
+
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2">
                 Progression: {taskForm.completionPercentage}%
               </Typography>
-              <Button 
-                size="small" 
-                variant="outlined" 
+              <Button
+                size="small"
+                variant="outlined"
                 onClick={handleProgressDialogOpen}
               >
                 Modifier
               </Button>
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={parseInt(taskForm.completionPercentage)} 
+            <LinearProgress
+              variant="determinate"
+              value={parseInt(taskForm.completionPercentage)}
               sx={{ height: 10, borderRadius: 5 }}
             />
           </Box>
-          
+
           <TextField
             fullWidth
             label="Commentaire (optionnel)"
@@ -1032,7 +940,7 @@ const EmployeeProjectDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Modal de la barre de progression */}
       <Dialog
         open={taskProgressOpen}

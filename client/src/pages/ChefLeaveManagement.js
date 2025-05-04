@@ -31,9 +31,7 @@ import {
   AccessTime,
   CalendarMonth,
   EventAvailable,
-  Person,
   Description,
-  Visibility,
   Download,
   Close,
   ThumbUp,
@@ -102,53 +100,55 @@ const ChefLeaveManagement = () => {
       console.log("Leave requests data:", data);
 
       // Process each leave request to ensure documents are properly handled
-      const processedData = await Promise.all(data.map(async (leave) => {
-        // Always fetch documents directly from the dedicated endpoint
+      const processedData = [];
+
+      for (const leave of data) {
         try {
-          console.log(`Fetching documents for leave request ${leave._id}`);
-          const documentsResponse = await fetch(`http://localhost:5000/api/conges/${leave._id}/documents`);
+          // Make a direct request for each leave to get complete data including documents
+          const detailResponse = await fetch(`http://localhost:5000/api/conges/${leave._id}`);
 
-          if (documentsResponse.ok) {
-            const documentsData = await documentsResponse.json();
-            console.log(`Documents for leave request ${leave._id}:`, documentsData.documents);
+          if (detailResponse.ok) {
+            const detailData = await detailResponse.json();
+            console.log(`Detailed data for leave request ${leave._id}:`, detailData);
 
-            if (documentsData.documents && documentsData.documents.length > 0) {
-              leave.documents = documentsData.documents;
-              console.log(`Updated leave request ${leave._id} with ${leave.documents.length} documents`);
-
-              // Log each document for debugging
-              leave.documents.forEach((doc, index) => {
-                console.log(`Document ${index + 1}:`, doc.originalName, doc.filePath);
-              });
-            } else {
-              leave.documents = [];
-              console.log(`No documents found for leave request ${leave._id}`);
+            // Ensure documents is always an array
+            if (!Array.isArray(detailData.documents)) {
+              detailData.documents = [];
             }
+
+            // Log document information
+            console.log(`Documents for leave request ${leave._id}: ${detailData.documents.length}`);
+            detailData.documents.forEach((doc, index) => {
+              console.log(`Document ${index + 1}:`, doc.originalName, doc.filePath);
+            });
+
+            processedData.push(detailData);
           } else {
-            console.error(`Failed to fetch documents for leave request ${leave._id}`);
-            leave.documents = [];
+            console.error(`Failed to fetch detailed data for leave request ${leave._id}`);
+            // Fall back to original data
+            if (!Array.isArray(leave.documents)) {
+              leave.documents = [];
+            }
+            processedData.push(leave);
           }
         } catch (error) {
-          console.error(`Error fetching documents for leave request ${leave._id}:`, error);
-          leave.documents = [];
+          console.error(`Error processing leave request ${leave._id}:`, error);
+          // Fall back to original data
+          if (!Array.isArray(leave.documents)) {
+            leave.documents = [];
+          }
+          processedData.push(leave);
         }
-
-        // Ensure documents is always an array
-        if (!Array.isArray(leave.documents)) {
-          leave.documents = [];
-        }
-
-        return leave;
-      }));
+      }
 
       // Debug document information
       processedData.forEach((leave, index) => {
         console.log(`Leave ${index + 1} (${leave._id}):`);
         console.log(`- Employee: ${leave.employee?.firstName} ${leave.employee?.lastName}`);
         console.log(`- Status: ${leave.status}`);
-        console.log(`- Documents: ${leave.documents.length}`);
+        console.log(`- Documents: ${leave.documents ? leave.documents.length : 0}`);
 
-        if (leave.documents.length === 0) {
+        if (!leave.documents || leave.documents.length === 0) {
           console.log('  - No documents attached to this leave request');
         } else {
           leave.documents.forEach((doc, docIndex) => {
@@ -612,6 +612,16 @@ const ChefLeaveManagement = () => {
                               );
                             })}
                           </Stack>
+                        </Box>
+                      ) : leave.leaveType === "Congé médical" ? (
+                        <Box sx={{ mt: 2, p: 1.5, bgcolor: '#e91e63', borderRadius: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                          <Typography variant="subtitle2" color="white" fontWeight="bold" display="flex" alignItems="center">
+                            <InfoOutlined sx={{ mr: 1 }} />
+                            Justificatif médical requis
+                          </Typography>
+                          <Typography variant="caption" color="white" sx={{ opacity: 0.9, display: 'block', mt: 0.5 }}>
+                            L'employé doit fournir un justificatif médical pour cette demande.
+                          </Typography>
                         </Box>
                       ) : (
                         <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', color: 'text.secondary' }}>

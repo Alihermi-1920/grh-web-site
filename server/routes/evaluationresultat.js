@@ -145,6 +145,60 @@ router.get("/evaluated-employees", async (req, res) => {
   }
 });
 
+// Get evaluations for employees under a specific chef
+router.get("/chef/:chefId", async (req, res) => {
+  try {
+    const { chefId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(chefId)) {
+      return res.status(400).json({ message: "ID de chef invalide" });
+    }
+
+    // Get all employees for this chef
+    const Employee = require("../models/Employee");
+    const chefEmployees = await Employee.find({ chefId });
+
+    if (chefEmployees.length === 0) {
+      return res.status(200).json([]); // No employees, return empty array
+    }
+
+    const employeeIds = chefEmployees.map(emp => emp._id);
+
+    // Get evaluations for these employees
+    const evaluations = await EvaluationResultat.find({
+      employeeId: { $in: employeeIds }
+    })
+    .sort({ date: -1 }) // Most recent first
+    .populate('employeeId', 'firstName lastName email photo department position');
+
+    res.status(200).json(evaluations);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des évaluations par chef:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// Get evaluations for a specific employee
+router.get("/employee/:employeeId", async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+      return res.status(400).json({ message: "ID d'employé invalide" });
+    }
+
+    // Get evaluations for this employee
+    const evaluations = await EvaluationResultat.find({ employeeId })
+      .sort({ date: -1 }) // Most recent first
+      .populate('employeeId', 'firstName lastName email photo department position');
+
+    res.status(200).json(evaluations);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des évaluations par employé:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
 // Delete an evaluation result
 router.delete("/:id", async (req, res) => {
   try {

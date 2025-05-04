@@ -62,7 +62,8 @@ import {
   AttachFileOutlined,
   CheckCircleOutline,
   Celebration,
-  PictureAsPdf
+  PictureAsPdf,
+  InfoOutlined
 } from '@mui/icons-material';
 import { downloadLeavePDF } from '../utils/pdfGenerator';
 import { format, differenceInCalendarDays, addDays } from 'date-fns';
@@ -534,7 +535,8 @@ const FinalLeaveRequest = () => {
         endDate: endDate.toISOString(),
         numberOfDays,
         reason,
-        isMedical: leaveType === 'Congé médical'
+        isMedical: leaveType === 'Congé médical',
+        isUnpaid: leaveType === 'Congé sans solde'
       };
 
       console.log('Request data:', requestData);
@@ -559,7 +561,7 @@ const FinalLeaveRequest = () => {
         // Create FormData
         const formData = new FormData();
 
-        // Add all request data fields
+        // Add all request data fields - IMPORTANT: Convert all values to strings
         formData.append('employee', employeeId);
         formData.append('leaveType', leaveType);
         formData.append('startDate', startDate.toISOString());
@@ -567,6 +569,9 @@ const FinalLeaveRequest = () => {
         formData.append('numberOfDays', numberOfDays.toString());
         formData.append('reason', reason);
         formData.append('isMedical', (leaveType === 'Congé médical').toString());
+
+        // Add special flag for unpaid leave
+        formData.append('isUnpaid', (leaveType === 'Congé sans solde').toString());
 
         // Add all documents
         documents.forEach((file, index) => {
@@ -580,25 +585,111 @@ const FinalLeaveRequest = () => {
           console.log(`${key}: ${value instanceof File ? value.name : value}`);
         }
 
-        // Send request
-        response = await fetch(url.toString(), {
-          method: 'POST',
-          body: formData
-        });
+        // Use a direct approach with multiple ways to pass the employee ID
+        const formDataUrl = new URL('http://localhost:5000/api/conges');
+        formDataUrl.searchParams.append('employee', employeeId);
+
+        // For medical leave with documents, use a completely different approach
+        if (leaveType === 'Congé médical') {
+          console.log('Using completely new approach for medical leave with documents');
+
+          // First, create the leave request without documents
+          const jsonResponse = await fetch('http://localhost:5000/api/conges', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Employee-ID': employeeId
+            },
+            body: JSON.stringify({
+              employee: employeeId,
+              leaveType: leaveType,
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              numberOfDays: numberOfDays,
+              reason: reason,
+              isMedical: true
+            })
+          });
+
+          console.log('JSON response status:', jsonResponse.status);
+
+          if (!jsonResponse.ok) {
+            throw new Error('Failed to create medical leave request');
+          }
+
+          const leaveData = await jsonResponse.json();
+          console.log('Created leave request:', leaveData);
+
+          // Now upload the documents separately if needed
+          if (documents.length > 0) {
+            const docFormData = new FormData();
+            documents.forEach(file => {
+              docFormData.append('documents', file);
+            });
+
+            // Upload documents to the created leave request
+            const docResponse = await fetch(`http://localhost:5000/api/conges/${leaveData._id}/documents?employee=${employeeId}`, {
+              method: 'POST',
+              headers: {
+                'X-Employee-ID': employeeId
+              },
+              body: docFormData
+            });
+
+            console.log('Document upload response:', docResponse.status);
+
+            if (!docResponse.ok) {
+              console.warn('Failed to upload documents, but leave request was created');
+            }
+          }
+
+          response = jsonResponse;
+        } else {
+          // For non-medical leave, use the normal approach
+          response = await fetch(formDataUrl.toString(), {
+            method: 'POST',
+            headers: {
+              'X-Employee-ID': employeeId
+            },
+            body: formData
+          });
+        }
 
         console.log('Response status from FormData request:', response.status);
       } else {
         // If no documents, use JSON
         console.log('No documents, using JSON request');
 
-        response = await fetch(url.toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Employee-ID': employeeId
-          },
-          body: JSON.stringify(requestData)
-        });
+        // For unpaid leave, add special handling
+        if (leaveType === 'Congé sans solde') {
+          console.log('Using special approach for unpaid leave');
+
+          // Make sure the isUnpaid flag is set
+          const unpaidRequestData = {
+            ...requestData,
+            isUnpaid: true,
+            deductFromBalance: false
+          };
+
+          response = await fetch(url.toString(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Employee-ID': employeeId
+            },
+            body: JSON.stringify(unpaidRequestData)
+          });
+        } else {
+          // For other types of leave without documents
+          response = await fetch(url.toString(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Employee-ID': employeeId
+            },
+            body: JSON.stringify(requestData)
+          });
+        }
 
         console.log('Response status from JSON request:', response.status);
       }
@@ -853,23 +944,23 @@ const FinalLeaveRequest = () => {
                 ) : (
                   <Box sx={{ mt: 2 }}>
                     <Grid container spacing={2}>
+                      {/* Paid Leave Section */}
                       <Grid item xs={12}>
+                        <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
+                          Congés Payés
+                        </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <EventAvailable sx={{ mr: 1, color: theme.palette.primary.main }} />
                           <Typography variant="body1">
                             Total annuel: <strong>{leaveBalance.totalDays} jours</strong>
                           </Typography>
                         </Box>
-                      </Grid>
-                      <Grid item xs={12}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <CalendarMonth sx={{ mr: 1, color: theme.palette.error.main }} />
                           <Typography variant="body1">
                             Utilisés: <strong>{leaveBalance.usedDays} jours</strong>
                           </Typography>
                         </Box>
-                      </Grid>
-                      <Grid item xs={12}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Description sx={{ mr: 1, color: theme.palette.success.main }} />
                           <Typography variant="body1" fontWeight="bold">
@@ -877,16 +968,38 @@ const FinalLeaveRequest = () => {
                           </Typography>
                         </Box>
                       </Grid>
-                      {leaveBalance.medicalDays > 0 && (
-                        <Grid item xs={12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <MedicalServices sx={{ mr: 1, color: theme.palette.info.main }} />
-                            <Typography variant="body1">
-                              Congés médicaux: <strong>{leaveBalance.medicalDays} jours</strong>
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      )}
+
+                      {/* Medical Leave Section */}
+                      <Grid item xs={12} sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" color="#e91e63" fontWeight="bold" gutterBottom>
+                          Congés Médicaux
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <MedicalServices sx={{ mr: 1, color: "#e91e63" }} />
+                          <Typography variant="body1">
+                            Utilisés: <strong>{leaveBalance.medicalDays || 0} jours</strong>
+                            <Tooltip title="Les congés médicaux ne sont pas déduits de votre solde annuel">
+                              <InfoOutlined sx={{ ml: 1, fontSize: 16, color: 'text.secondary' }} />
+                            </Tooltip>
+                          </Typography>
+                        </Box>
+                      </Grid>
+
+                      {/* Unpaid Leave Section */}
+                      <Grid item xs={12} sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" color="#9c27b0" fontWeight="bold" gutterBottom>
+                          Congés Sans Solde
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CalendarMonth sx={{ mr: 1, color: "#9c27b0" }} />
+                          <Typography variant="body1">
+                            Utilisés: <strong>{leaveHistory.filter(leave => leave.leaveType === 'Congé sans solde' && leave.status === 'Approuvé').reduce((total, leave) => total + leave.numberOfDays, 0)} jours</strong>
+                            <Tooltip title="Les congés sans solde ne sont pas déduits de votre solde annuel">
+                              <InfoOutlined sx={{ ml: 1, fontSize: 16, color: 'text.secondary' }} />
+                            </Tooltip>
+                          </Typography>
+                        </Box>
+                      </Grid>
                     </Grid>
                   </Box>
                 )}
@@ -1137,7 +1250,7 @@ const FinalLeaveRequest = () => {
                               {numberOfDays} {numberOfDays > 1 ? 'jours' : 'jour'}
                             </Typography>
 
-                            {leaveType !== 'Congé médical' &&
+                            {leaveType === 'Congé payé' &&
                              leaveBalance &&
                              numberOfDays > leaveBalance.remainingDays && (
                               <Alert
@@ -1434,7 +1547,7 @@ const FinalLeaveRequest = () => {
                             </Grid>
                           )}
 
-                          {leaveType !== 'Congé médical' &&
+                          {leaveType === 'Congé payé' &&
                            leaveBalance &&
                            numberOfDays > leaveBalance.remainingDays && (
                             <Grid item xs={12}>
@@ -1485,7 +1598,7 @@ const FinalLeaveRequest = () => {
                       variant="contained"
                       color="success"
                       disabled={loading ||
-                               (leaveType !== 'Congé médical' &&
+                               (leaveType === 'Congé payé' &&
                                 leaveBalance &&
                                 numberOfDays > leaveBalance.remainingDays) ||
                                (leaveType === 'Congé médical' && documents.length === 0)}

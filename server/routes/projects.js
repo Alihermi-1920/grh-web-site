@@ -126,21 +126,80 @@ router.get("/", async (req, res) => {
 router.get("/employee/:employeeId", async (req, res) => {
   try {
     const { employeeId } = req.params;
+    console.log("Fetching projects for employee:", employeeId);
 
     // Validate employeeId
     if (!mongoose.Types.ObjectId.isValid(employeeId)) {
       return res.status(400).json({ message: "ID d'employé invalide" });
     }
 
-    // Find projects where this employee is the project leader
-    const projects = await Project.find({ projectLeader: employeeId })
-      .populate("projectLeader", "firstName lastName email photo")
-      .populate("team", "firstName lastName email photo role")
-      .sort({ createdAt: -1 });
+    // Get employee to check role
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employé non trouvé" });
+    }
+
+    console.log(`Employee found: ${employee.firstName} ${employee.lastName}, role: ${employee.role}`);
+
+    let projects = [];
+
+    if (employee.role === "Chef") {
+      // If employee is a chef, find projects where they are the project leader
+      projects = await Project.find({ projectLeader: employeeId })
+        .populate("projectLeader", "firstName lastName email photo")
+        .populate("team", "firstName lastName email photo role")
+        .sort({ createdAt: -1 });
+
+      console.log(`Found ${projects.length} projects where employee is leader`);
+    } else {
+      // If employee is not a chef, find projects where they are in the team
+      // Use $in operator to handle both ObjectId and string comparisons
+      projects = await Project.find({
+        team: { $in: [employeeId, mongoose.Types.ObjectId(employeeId)] }
+      })
+        .populate("projectLeader", "firstName lastName email photo")
+        .populate("team", "firstName lastName email photo role")
+        .sort({ createdAt: -1 });
+
+      console.log(`Found ${projects.length} projects where employee is in team`);
+
+      // If no projects found, try a more flexible approach
+      if (projects.length === 0) {
+        console.log("No projects found with direct match, trying alternative approach");
+
+        // Get all projects and manually filter
+        const allProjects = await Project.find()
+          .populate("projectLeader", "firstName lastName email photo")
+          .populate("team", "firstName lastName email photo role")
+          .sort({ createdAt: -1 });
+
+        projects = allProjects.filter(project => {
+          if (!project.team || !Array.isArray(project.team)) return false;
+
+          return project.team.some(member => {
+            // Check if member is an object with _id
+            if (member && typeof member === 'object' && member._id) {
+              return member._id.toString() === employeeId.toString();
+            }
+            // Check if member is a string ID
+            if (typeof member === 'string' || member instanceof mongoose.Types.ObjectId) {
+              return member.toString() === employeeId.toString();
+            }
+            return false;
+          });
+        });
+
+        console.log(`Found ${projects.length} projects after manual filtering`);
+      }
+    }
+
+    // Log project names for debugging
+    console.log("Projects found:", projects.map(p => p.projectName));
 
     res.status(200).json(projects);
   } catch (error) {
     console.error("Erreur lors de la récupération des projets par employé:", error);
+    console.error(error.stack);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });

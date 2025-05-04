@@ -79,6 +79,7 @@ const evaluationResultatRoutes = require("./routes/evaluationresultat");
 const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
 const fileUploadRoutes = require("./routes/fileUploadRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 // Register routes
 app.use("/api/auth", authRoutes);
@@ -95,6 +96,7 @@ app.use("/api/evaluationresultat", evaluationResultatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/files", fileUploadRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {
@@ -125,7 +127,56 @@ mongoose
       console.log("- /api/upload");
       console.log("- /api/comments");
       console.log("- /api/files");
+      console.log("- /api/dashboard");
       console.log("- /api/test");
+
+      // Update all project progress values
+      console.log("Updating all project progress values...");
+      const Project = require('./models/Project');
+      const Task = require('./models/Task');
+
+      // Define the updateProjectProgress function
+      async function updateAllProjectsProgress() {
+        try {
+          // Get all projects
+          const projects = await Project.find({});
+
+          let updatedCount = 0;
+
+          // Update progress for each project
+          for (const project of projects) {
+            // Get all tasks for this project
+            const tasks = await Task.find({ project: project._id });
+
+            if (tasks.length === 0) {
+              // If no tasks, set progress to 0
+              await Project.findByIdAndUpdate(
+                project._id,
+                { completionPercentage: 0 }
+              );
+            } else {
+              // Calculate average progress
+              const totalPercentage = tasks.reduce((sum, task) => sum + (task.completionPercentage || 0), 0);
+              const averagePercentage = Math.round(totalPercentage / tasks.length);
+
+              // Update project progress
+              await Project.findByIdAndUpdate(
+                project._id,
+                { completionPercentage: averagePercentage }
+              );
+            }
+
+            updatedCount++;
+          }
+
+          console.log(`Updated progress for ${updatedCount} projects`);
+        } catch (error) {
+          console.error("Error updating project progress:", error);
+        }
+      }
+
+      // Call the function
+      updateAllProjectsProgress();
     });
   })
   .catch((err) => {

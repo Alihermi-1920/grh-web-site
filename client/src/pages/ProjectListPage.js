@@ -124,6 +124,7 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { AuthContext } from "../context/AuthContext";
+import ProjectTaskManager from "../components/ProjectTaskManager";
 
 const ProjectListPage = () => {
   // Navigation
@@ -3490,6 +3491,30 @@ const ProjectListPage = () => {
                       Aucun fichier pour ce projet.
                     </Typography>
                   )}
+                </Paper>
+
+                {/* Task Manager Section */}
+                <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+                  <ProjectTaskManager
+                    projectId={selectedProjectDetail._id}
+                    projectTeam={selectedProjectDetail.team || []}
+                    refreshProject={() => {
+                      // Refresh project details after task changes
+                      const fetchProjectDetails = async () => {
+                        try {
+                          const response = await fetch(`http://localhost:5000/api/projects/${selectedProjectDetail._id}`);
+                          if (!response.ok) {
+                            throw new Error(`Error ${response.status}: Unable to fetch project details`);
+                          }
+                          const data = await response.json();
+                          setSelectedProjectDetail(data);
+                        } catch (error) {
+                          console.error("Error fetching project details:", error);
+                        }
+                      };
+                      fetchProjectDetails();
+                    }}
+                  />
                 </Paper>
               </Grid>
 

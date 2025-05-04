@@ -1,5 +1,6 @@
 // src/pages/EmployeeDashboard.js
 import React, { useState, useContext, useEffect } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   CssBaseline,
   Drawer,
@@ -34,6 +35,7 @@ import {
   Dashboard as DashboardIcon,
   Forum,
   Chat,
+  AssignmentTurnedIn,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import EmployeeTaskChat from "./EmployeeTaskChat"; // Composant pour la communication des tâches
@@ -41,13 +43,34 @@ import EmployeeMessaging from "./EmployeeMessaging"; // Composant pour la messag
 import EmployeeProjectDashboard from "./EmployeeProjectDashboard"; // Import du tableau de bord des projets
 import EmployeeLeaveRequest from "./EmployeeLeaveRequest"; // Ancien composant de demande de congé
 import FinalLeaveRequest from "./FinalLeaveRequest"; // Nouveau composant de demande de congé amélioré
+import EmployeeTaskPage from "./EmployeeTaskPage"; // Nouveau composant de gestion des tâches
+import EmployeeProjectDetail from "./EmployeeProjectDetail"; // Composant de détail de projet
+import DashboardHomeEmployee from "./DashboardHomeEmployee"; // Nouveau tableau de bord employé
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
 
-const EmployeeDashboard = () => {
+const EmployeeDashboard = ({ initialView }) => {
   const { user } = useContext(AuthContext);
-  const [activeView, setActiveView] = useState("dashboard");
+  const location = useLocation();
+  const { projectId } = useParams();
+
+  // Set initial view based on props, URL params, or location state
+  const getInitialView = () => {
+    if (initialView) return initialView;
+    if (projectId) return "projectDetail";
+    if (location.state?.activeView) return location.state.activeView;
+    return "dashboard";
+  };
+
+  const [activeView, setActiveView] = useState(getInitialView());
+
+  // Update active view when location state changes
+  useEffect(() => {
+    if (location.state?.activeView) {
+      setActiveView(location.state.activeView);
+    }
+  }, [location.state]);
   // Solde de congés initial (exemple : 15 jours)
   const [leaveBalance, setLeaveBalance] = useState(15);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
@@ -291,7 +314,7 @@ const EmployeeDashboard = () => {
             sx={getMenuItemStyles(activeView === "taskChat")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "taskChat")}>
-              <Forum />
+              <AssignmentTurnedIn />
             </ListItemIcon>
             <ListItemText
               primary="Mes Tâches"
@@ -374,6 +397,7 @@ const EmployeeDashboard = () => {
                   {activeView === "dashboard" && "Tableau de Bord Employé"}
                   {activeView === "profile" && "Mon Profil"}
                   {activeView === "projects" && "Mes Projets"}
+                  {activeView === "projectDetail" && "Détail du Projet"}
                   {activeView === "leaves" && "Mes Congés"}
                   {activeView === "taskChat" && "Mes Tâches"}
                   {activeView === "messaging" && "Messagerie"}
@@ -422,31 +446,12 @@ const EmployeeDashboard = () => {
               <Box>
                 {activeView === "profile" && <Typography variant="h6">Mon Profil (Vue Employé)</Typography>}
                 {activeView === "projects" && <EmployeeProjectDashboard />}
+                {activeView === "projectDetail" && <EmployeeProjectDetail />}
                 {activeView === "leaves" && <FinalLeaveRequest />}
-                {activeView === "taskChat" && <EmployeeTaskChat />}
+                {activeView === "taskChat" && <EmployeeTaskPage />}
                 {activeView === "messaging" && <EmployeeMessaging />}
                 {(activeView === "dashboard" || !activeView) && (
-                  <Box>
-                    {/* Bannière de bienvenue */}
-                    <WelcomeBanner />
-
-                    <Box
-                      sx={{
-                        p: 4,
-                        background: theme.palette.background.paper,
-                        borderRadius: 3,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                        minHeight: "50vh",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography variant="h6" color="textSecondary">
-                        Contenu du tableau de bord
-                      </Typography>
-                    </Box>
-                  </Box>
+                  <DashboardHomeEmployee />
                 )}
               </Box>
             </Fade>
