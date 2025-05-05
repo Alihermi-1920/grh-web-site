@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  CircularProgress, 
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
   useTheme,
   List,
   ListItem,
@@ -47,41 +47,41 @@ const TaskProgress = () => {
 
       try {
         setLoading(true);
-        
-        // Fetch tasks assigned to this employee
-        const tasksResponse = await fetch(`http://localhost:5000/api/tasks?assignedTo=${user._id}`);
-        
+
+        // Fetch tasks assigned to this employee using the employee-specific endpoint
+        const tasksResponse = await fetch(`http://localhost:5000/api/tasks/employee/${user._id}`);
+
         if (!tasksResponse.ok) {
           throw new Error('Failed to fetch tasks data');
         }
-        
+
         const tasksData = await tasksResponse.json();
-        console.log("Fetched tasks:", tasksData);
-        
+        console.log("Fetched tasks for employee:", tasksData);
+
         // Calculate task statistics
         const now = new Date();
         const completedTasks = tasksData.filter(task => task.status === 'completed');
         const inProgressTasks = tasksData.filter(task => task.status === 'in-progress');
-        const overdueTasks = tasksData.filter(task => 
-          task.status !== 'completed' && 
-          task.deadline && 
+        const overdueTasks = tasksData.filter(task =>
+          task.status !== 'completed' &&
+          task.deadline &&
           new Date(task.deadline) < now
         );
-        
+
         setStats({
           total: tasksData.length,
           completed: completedTasks.length,
           inProgress: inProgressTasks.length,
           overdue: overdueTasks.length
         });
-        
+
         // Sort tasks by deadline (closest first)
         const sortedTasks = [...tasksData].sort((a, b) => {
           if (!a.deadline) return 1;
           if (!b.deadline) return -1;
           return new Date(a.deadline) - new Date(b.deadline);
         });
-        
+
         setTasks(sortedTasks);
       } catch (err) {
         console.error('Error fetching tasks data:', err);
@@ -104,7 +104,7 @@ const TaskProgress = () => {
   const getTaskStatusInfo = (task) => {
     const now = new Date();
     const deadline = task.deadline ? new Date(task.deadline) : null;
-    
+
     if (task.status === 'completed') {
       return {
         label: 'Terminée',
@@ -139,11 +139,11 @@ const TaskProgress = () => {
   };
 
   return (
-    <Paper 
+    <Paper
       elevation={0}
-      sx={{ 
-        p: 3, 
-        borderRadius: 4, 
+      sx={{
+        p: 3,
+        borderRadius: 4,
         height: '100%',
         background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
         backdropFilter: 'blur(10px)',
@@ -155,10 +155,10 @@ const TaskProgress = () => {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <AssignmentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-        <Typography 
-          variant="h6" 
-          fontWeight="600" 
-          sx={{ 
+        <Typography
+          variant="h6"
+          fontWeight="600"
+          sx={{
             color: theme.palette.text.primary,
             fontSize: '1.1rem'
           }}
@@ -166,21 +166,21 @@ const TaskProgress = () => {
           Vos Tâches
         </Typography>
       </Box>
-      
+
       {loading ? (
-        <Box sx={{ 
-          flexGrow: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           <CircularProgress size={40} thickness={4} />
         </Box>
       ) : tasks.length === 0 ? (
-        <Box sx={{ 
-          flexGrow: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
           gap: 1
@@ -193,11 +193,11 @@ const TaskProgress = () => {
       ) : (
         <>
           {/* Task statistics */}
-          <Box 
-            sx={{ 
-              mb: 3, 
-              p: 2, 
-              borderRadius: 3, 
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: 3,
               bgcolor: alpha(theme.palette.primary.main, 0.05),
               border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
             }}
@@ -210,12 +210,12 @@ const TaskProgress = () => {
                 {stats.completed} sur {stats.total} tâches
               </Typography>
             </Box>
-            
-            <LinearProgress 
-              variant="determinate" 
-              value={getCompletionPercentage()} 
-              sx={{ 
-                height: 8, 
+
+            <LinearProgress
+              variant="determinate"
+              value={getCompletionPercentage()}
+              sx={{
+                height: 8,
                 borderRadius: 4,
                 mb: 2,
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -225,37 +225,37 @@ const TaskProgress = () => {
                 }
               }}
             />
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-              <Chip 
-                icon={<CheckCircleIcon />} 
-                label={`${stats.completed} Terminées`} 
-                size="small" 
-                color="success" 
+              <Chip
+                icon={<CheckCircleIcon />}
+                label={`${stats.completed} Terminées`}
+                size="small"
+                color="success"
                 variant="outlined"
               />
-              <Chip 
-                icon={<AssignmentIcon />} 
-                label={`${stats.inProgress} En cours`} 
-                size="small" 
-                color="info" 
+              <Chip
+                icon={<AssignmentIcon />}
+                label={`${stats.inProgress} En cours`}
+                size="small"
+                color="info"
                 variant="outlined"
               />
-              <Chip 
-                icon={<WarningIcon />} 
-                label={`${stats.overdue} En retard`} 
-                size="small" 
-                color="error" 
+              <Chip
+                icon={<WarningIcon />}
+                label={`${stats.overdue} En retard`}
+                size="small"
+                color="error"
                 variant="outlined"
               />
             </Box>
           </Box>
-          
+
           {/* Task list */}
-          <Typography 
-            variant="subtitle2" 
-            sx={{ 
-              mb: 1, 
+          <Typography
+            variant="subtitle2"
+            sx={{
+              mb: 1,
               color: theme.palette.text.secondary,
               display: 'flex',
               alignItems: 'center'
@@ -264,12 +264,12 @@ const TaskProgress = () => {
             <FlagIcon sx={{ mr: 0.5, fontSize: 16 }} />
             Tâches à venir
           </Typography>
-          
-          <List 
-            sx={{ 
-              width: '100%', 
-              p: 0, 
-              flexGrow: 1, 
+
+          <List
+            sx={{
+              width: '100%',
+              p: 0,
+              flexGrow: 1,
               overflow: 'auto',
               maxHeight: 300,
               '& .MuiListItem-root': {
@@ -283,11 +283,11 @@ const TaskProgress = () => {
           >
             {tasks.slice(0, 5).map((task, index) => {
               const statusInfo = getTaskStatusInfo(task);
-              
+
               return (
                 <React.Fragment key={task._id}>
-                  <ListItem 
-                    sx={{ 
+                  <ListItem
+                    sx={{
                       py: 1.5,
                       px: 1,
                       borderRadius: 2
@@ -305,17 +305,17 @@ const TaskProgress = () => {
                       secondary={
                         <Box sx={{ mt: 0.5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip 
-                              label={statusInfo.label} 
-                              size="small" 
-                              color={statusInfo.color} 
+                            <Chip
+                              label={statusInfo.label}
+                              size="small"
+                              color={statusInfo.color}
                               sx={{ height: 20, fontSize: '0.7rem' }}
                             />
-                            
+
                             <Tooltip title={task.deadline ? new Date(task.deadline).toLocaleDateString('fr-FR') : 'Pas de date limite'}>
-                              <Box 
-                                sx={{ 
-                                  display: 'flex', 
+                              <Box
+                                sx={{
+                                  display: 'flex',
                                   alignItems: 'center',
                                   color: theme.palette.text.secondary,
                                   fontSize: '0.75rem'
@@ -326,13 +326,13 @@ const TaskProgress = () => {
                               </Box>
                             </Tooltip>
                           </Box>
-                          
+
                           {task.description && (
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary" 
-                              sx={{ 
-                                display: 'block', 
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{
+                                display: 'block',
                                 mt: 0.5,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -340,8 +340,8 @@ const TaskProgress = () => {
                                 maxWidth: '100%'
                               }}
                             >
-                              {task.description.length > 60 
-                                ? `${task.description.substring(0, 60)}...` 
+                              {task.description.length > 60
+                                ? `${task.description.substring(0, 60)}...`
                                 : task.description}
                             </Typography>
                           )}
@@ -354,13 +354,13 @@ const TaskProgress = () => {
               );
             })}
           </List>
-          
-          <Button 
-            variant="text" 
-            color="primary" 
+
+          <Button
+            variant="text"
+            color="primary"
             endIcon={<ArrowForwardIcon />}
-            sx={{ 
-              alignSelf: 'flex-end', 
+            sx={{
+              alignSelf: 'flex-end',
               mt: 2,
               textTransform: 'none',
               fontWeight: 'medium'

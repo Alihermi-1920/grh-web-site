@@ -16,6 +16,11 @@ export const AuthProvider = ({ children }) => {
         const parsedEmployee = JSON.parse(storedEmployee);
         console.log("Found employee in localStorage:", parsedEmployee);
         setUser(parsedEmployee);
+
+        // First login is now handled by the PrivateRoute component
+        if (parsedEmployee.firstLogin === true) {
+          console.log("First login detected, will be handled by PrivateRoute");
+        }
       } catch (error) {
         console.error("Error parsing employee from localStorage:", error);
       }
@@ -24,6 +29,11 @@ export const AuthProvider = ({ children }) => {
         const parsedUser = JSON.parse(storedUser);
         console.log("Found user in localStorage:", parsedUser);
         setUser(parsedUser);
+
+        // First login is now handled by the PrivateRoute component
+        if (parsedUser.firstLogin === true) {
+          console.log("First login detected, will be handled by PrivateRoute");
+        }
       } catch (error) {
         console.error("Error parsing user from localStorage:", error);
       }

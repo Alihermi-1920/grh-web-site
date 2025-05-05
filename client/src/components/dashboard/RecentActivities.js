@@ -138,51 +138,9 @@ const RecentActivities = () => {
           });
         });
 
-        // If we have no real activities, create some dummy ones with real employee names
-        if (allActivities.length === 0 && employees.length > 0) {
-          console.log("No real activities found, creating dummy data with real employee names");
-
-          const now = new Date();
-          const yesterday = new Date(now);
-          yesterday.setDate(yesterday.getDate() - 1);
-
-          // Create dummy activities with real employee names
-          employees.forEach((employee, index) => {
-            // Add a dummy task status update
-            allActivities.push({
-              type: 'status',
-              date: new Date(now.getTime() - 1000 * 60 * 60 * index), // Stagger times
-              task: {
-                _id: `dummy-${index}`,
-                title: `Tâche ${index + 1}`,
-                status: index % 2 === 0 ? 'in-progress' : 'completed'
-              },
-              user: {
-                firstName: employee.firstName,
-                lastName: employee.lastName
-              },
-              content: `Statut mis à jour: ${index % 2 === 0 ? 'in-progress' : 'completed'}`
-            });
-
-            // Add a dummy leave request for some employees
-            if (index % 3 === 0) {
-              const startDate = new Date();
-              startDate.setDate(startDate.getDate() + 10 + index);
-              const endDate = new Date(startDate);
-              endDate.setDate(endDate.getDate() + 5);
-
-              allActivities.push({
-                type: 'leave',
-                date: yesterday,
-                user: {
-                  firstName: employee.firstName,
-                  lastName: employee.lastName
-                },
-                content: `Demande de congé du ${startDate.toLocaleDateString('fr-FR')} au ${endDate.toLocaleDateString('fr-FR')}`,
-                status: index % 2 === 0 ? 'pending' : 'approved'
-              });
-            }
-          });
+        // If we have no real activities, just leave the list empty
+        if (allActivities.length === 0) {
+          console.log("No real activities found");
         }
 
         // Sort by date (newest first)

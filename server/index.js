@@ -23,6 +23,8 @@ const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
 // Messaging system routes
 const messageRoutes = require("./routes/messageRoutes");
+// Password change route
+const passwordChangeRoutes = require("./routes/passwordChange");
 
 const app = express();
 
@@ -79,6 +81,7 @@ app.use("/api/evaluationresultat", evaluationResultatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/password-change", passwordChangeRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI, {

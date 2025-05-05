@@ -220,85 +220,13 @@ const EmployeeLeaderboard = () => {
 
           setLeaderboard(leaderboardData);
         } else {
-          // Use dummy data with real employee names
-          console.log("Using dummy data with real employee names");
-
-          // Create dummy scores for each employee
-          const dummyLeaderboard = employees.map(employee => {
-            // Generate a random score between 3.0 and 5.0
-            const score = (3 + Math.random() * 2).toFixed(1);
-
-            return {
-              employee: employee,
-              averageScore: parseFloat(score),
-              evaluationCount: Math.floor(Math.random() * 5) + 1 // Random count between 1 and 5
-            };
-          });
-
-          // Sort by score (highest first)
-          dummyLeaderboard.sort((a, b) => b.averageScore - a.averageScore);
-
-          // Take only the top 5
-          setLeaderboard(dummyLeaderboard.slice(0, 5));
+          // No evaluations found, set empty leaderboard
+          console.log("No evaluations found for this chef's employees");
+          setLeaderboard([]);
         }
       } catch (err) {
         console.error('Error fetching leaderboard data:', err);
-
-        // Fallback to completely static data if even employee fetch fails
-        const staticLeaderboard = [
-          {
-            employee: {
-              _id: '1',
-              firstName: 'Sophie',
-              lastName: 'Martin',
-              photo: ''
-            },
-            averageScore: 4.8,
-            evaluationCount: 5
-          },
-          {
-            employee: {
-              _id: '2',
-              firstName: 'Thomas',
-              lastName: 'Dubois',
-              photo: ''
-            },
-            averageScore: 4.5,
-            evaluationCount: 4
-          },
-          {
-            employee: {
-              _id: '3',
-              firstName: 'Emma',
-              lastName: 'Bernard',
-              photo: ''
-            },
-            averageScore: 4.2,
-            evaluationCount: 6
-          },
-          {
-            employee: {
-              _id: '4',
-              firstName: 'Lucas',
-              lastName: 'Petit',
-              photo: ''
-            },
-            averageScore: 3.9,
-            evaluationCount: 3
-          },
-          {
-            employee: {
-              _id: '5',
-              firstName: 'Chloé',
-              lastName: 'Moreau',
-              photo: ''
-            },
-            averageScore: 3.7,
-            evaluationCount: 4
-          }
-        ];
-
-        setLeaderboard(staticLeaderboard);
+        setLeaderboard([]);
       } finally {
         setLoading(false);
       }

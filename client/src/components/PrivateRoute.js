@@ -1,17 +1,47 @@
 // src/components/PrivateRoute.js
-import React from "react";
+import React, { useContext } from "react";
 import { Navigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const PrivateRoute = ({ children }) => {
-  // Simple direct check for authentication in localStorage
-  const storedEmployee = localStorage.getItem("employee");
+  const { user } = useContext(AuthContext);
 
-  // Si aucun utilisateur n'est trouvé dans localStorage, redirige vers /login
-  if (!storedEmployee) {
+  // Si aucun utilisateur n'est trouvé, redirige vers /login
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si l'utilisateur est authentifié, afficher les enfants
+  // Si c'est une première connexion, l'utilisateur doit changer son mot de passe
+  // On va afficher le composant FirstLoginPasswordChange directement ici
+  if (user.firstLogin === true) {
+    // Import dynamique pour éviter les problèmes de dépendances circulaires
+    const FirstLoginPasswordChange = require('./FirstLoginPasswordChange').default;
+
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))'
+      }}>
+        <FirstLoginPasswordChange
+          open={true}
+          user={user}
+          onSuccess={() => {
+            // Update the user object in localStorage
+            const updatedUser = { ...user, firstLogin: false };
+            localStorage.setItem("employee", JSON.stringify(updatedUser));
+
+            // Force a reload to update the context
+            window.location.reload();
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Si l'utilisateur est authentifié et a changé son mot de passe, afficher les enfants
   return children;
 };
 

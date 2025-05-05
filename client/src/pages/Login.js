@@ -14,13 +14,17 @@ import {
   Stack,
   IconButton,
   styled,
-  ThemeProvider
+  ThemeProvider,
+  Divider,
+  Link
 } from "@mui/material";
 import MuiCard from '@mui/material/Card';
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import LockResetIcon from "@mui/icons-material/LockReset";
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
+import PasswordChangeDialog from "../components/PasswordChangeDialog";
 
 const ADMIN_CREDENTIALS = {
   email: "admin@grh.com",
@@ -57,6 +61,7 @@ const Login = () => {
   const [emailErrorMessage, setEmailErrorMessage] = useState("");
   const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
   const [mode, setMode] = useState(localStorage.getItem("themeMode") || "light");
+  const [passwordChangeDialogOpen, setPasswordChangeDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
 
@@ -99,7 +104,7 @@ const Login = () => {
 
     // Gestion de la connexion admin
     if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      const adminUser = { email, role: "admin" }; // Objet utilisateur admin
+      const adminUser = { email, role: "admin", firstLogin: false }; // Objet utilisateur admin
       localStorage.setItem("employee", JSON.stringify(adminUser));
       setUser(adminUser);
       navigate("/dashboard");
@@ -112,9 +117,18 @@ const Login = () => {
         email,
         password,
       });
+
       // Stocker l'objet utilisateur sous la clé "employee"
       localStorage.setItem("employee", JSON.stringify(res.data));
       setUser(res.data);
+
+      // Check if this is a first login
+      if (res.data.firstLogin === true) {
+        console.log("First login detected, user will be prompted to change password");
+        // We'll still navigate to the dashboard, but the PrivateRoute will prevent access
+        // until the user changes their password
+      }
+
       const role = res.data.role.trim().toLowerCase();
       navigate(role === "chef" ? "/chef-dashboard" : "/employee-dashboard");
     } catch (error) {
@@ -216,8 +230,37 @@ const Login = () => {
             >
               Log in
             </Button>
+
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                ou
+              </Typography>
+            </Divider>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              size="medium"
+              startIcon={<LockResetIcon />}
+              onClick={() => setPasswordChangeDialogOpen(true)}
+              sx={{
+                borderColor: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.23)' : 'rgba(255,255,255,0.23)',
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+                }
+              }}
+            >
+              Changer votre mot de passe
+            </Button>
           </Box>
         </Card>
+
+        {/* Password Change Dialog */}
+        <PasswordChangeDialog
+          open={passwordChangeDialogOpen}
+          onClose={() => setPasswordChangeDialogOpen(false)}
+        />
       </SignInContainer>
     </ThemeProvider>
   );

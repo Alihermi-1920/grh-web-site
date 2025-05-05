@@ -19,7 +19,8 @@ const EmployeeSchema = new mongoose.Schema({
   position: String,
   hireDate: Date,
   photo: String,
-  chefId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }  // Référence au chef (si l'employé est sous sa responsabilité)
+  chefId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },  // Référence au chef (si l'employé est sous sa responsabilité)
+  firstLogin: { type: Boolean, default: true } // Flag pour indiquer si c'est la première connexion
 });
 
 // Hook pour chiffrer le mot de passe de manière réversible

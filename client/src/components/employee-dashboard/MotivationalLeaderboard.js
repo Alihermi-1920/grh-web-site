@@ -122,12 +122,9 @@ const MotivationalLeaderboard = () => {
         leaderboardData = leaderboardData.map((item, index) => ({
           ...item,
           rank: index + 1,
-          // Simulate rank change (in a real app, you'd store previous ranks in the database)
-          rankChange: Math.random() > 0.7
-            ? Math.floor(Math.random() * 3) * (Math.random() > 0.5 ? 1 : -1)
-            : 0,
-          // Simulate streak (in a real app, this would be calculated from historical data)
-          streak: Math.random() > 0.7 ? Math.floor(Math.random() * 5) + 1 : 0
+          // Set default values for rank change and streak
+          rankChange: 0,
+          streak: 0
         }));
 
         // Find current user's rank

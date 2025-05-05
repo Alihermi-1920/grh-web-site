@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  CircularProgress, 
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
   useTheme,
   Divider,
   LinearProgress,
@@ -46,25 +46,41 @@ const ProjectProgressChart = () => {
       try {
         setLoading(true);
         // Fetch projects for this chef
-        const response = await fetch(`http://localhost:5000/api/projects?projectLeader=${user._id}`);
-        
+        const response = await fetch(`http://localhost:5000/api/projects?chef=${user._id}`);
+
         if (!response.ok) {
           throw new Error('Failed to fetch project data');
         }
-        
-        const projects = await response.json();
-        
+
+        const allProjects = await response.json();
+
+        // Filter projects to only include those where this chef is the project leader
+        const projects = allProjects.filter(project =>
+          project.projectLeader === user._id ||
+          (project.projectLeader && project.projectLeader._id === user._id)
+        );
+
+        console.log(`Filtered ${allProjects.length} projects to ${projects.length} for chef ${user._id} in ProjectProgressChart`);
+
+        // Check if we have any projects
+        if (projects.length === 0) {
+          setTopProjects([]);
+          setChartData(null);
+          setLoading(false);
+          return;
+        }
+
         // Sort projects by completion percentage (highest first)
-        const sortedProjects = [...projects].sort((a, b) => 
+        const sortedProjects = [...projects].sort((a, b) =>
           (b.completionPercentage || 0) - (a.completionPercentage || 0)
         );
-        
+
         // Get top 5 projects for detailed view
         setTopProjects(sortedProjects.slice(0, 5));
-        
+
         // Get top 8 projects for chart
         const topChartProjects = sortedProjects.slice(0, 8);
-        
+
         // Prepare chart data
         setChartData({
           labels: topChartProjects.map(project => project.projectName),
@@ -116,11 +132,11 @@ const ProjectProgressChart = () => {
   };
 
   return (
-    <Paper 
+    <Paper
       elevation={0}
-      sx={{ 
-        p: 3, 
-        borderRadius: 4, 
+      sx={{
+        p: 3,
+        borderRadius: 4,
         height: '100%',
         background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
         backdropFilter: 'blur(10px)',
@@ -130,10 +146,10 @@ const ProjectProgressChart = () => {
         flexDirection: 'column'
       }}
     >
-      <Typography 
-        variant="h6" 
-        fontWeight="600" 
-        sx={{ 
+      <Typography
+        variant="h6"
+        fontWeight="600"
+        sx={{
           mb: 2,
           color: theme.palette.text.primary,
           fontSize: '1.1rem'
@@ -141,22 +157,22 @@ const ProjectProgressChart = () => {
       >
         Progression des Projets
       </Typography>
-      
+
       {loading ? (
-        <Box sx={{ 
-          flexGrow: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           <CircularProgress size={40} thickness={4} />
         </Box>
       ) : !chartData || chartData.datasets[0].data.length === 0 ? (
-        <Box sx={{ 
-          flexGrow: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           <Typography variant="body1" color="text.secondary">
             Aucun projet trouvé
@@ -165,8 +181,8 @@ const ProjectProgressChart = () => {
       ) : (
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ height: 200, mb: 2 }}>
-            <Bar 
-              data={chartData} 
+            <Bar
+              data={chartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
@@ -232,27 +248,27 @@ const ProjectProgressChart = () => {
               }}
             />
           </Box>
-          
+
           <Divider sx={{ my: 2 }} />
-          
-          <Typography 
-            variant="subtitle2" 
-            fontWeight="600" 
+
+          <Typography
+            variant="subtitle2"
+            fontWeight="600"
             sx={{ mb: 1.5, color: theme.palette.text.secondary }}
           >
             Top Projets
           </Typography>
-          
+
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             {topProjects.map((project, index) => (
               <Box key={project._id} sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                   <Tooltip title={project.projectName}>
-                    <Typography 
-                      variant="body2" 
-                      fontWeight="medium" 
-                      noWrap 
-                      sx={{ 
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      noWrap
+                      sx={{
                         flexGrow: 1,
                         maxWidth: '70%'
                       }}
@@ -260,27 +276,27 @@ const ProjectProgressChart = () => {
                       {project.projectName}
                     </Typography>
                   </Tooltip>
-                  <Typography 
-                    variant="body2" 
-                    fontWeight="bold" 
-                    sx={{ 
+                  <Typography
+                    variant="body2"
+                    fontWeight="bold"
+                    sx={{
                       color: getProgressColor(project.completionPercentage || 0)
                     }}
                   >
                     {project.completionPercentage || 0}%
                   </Typography>
                 </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={project.completionPercentage || 0} 
-                  sx={{ 
-                    height: 6, 
+                <LinearProgress
+                  variant="determinate"
+                  value={project.completionPercentage || 0}
+                  sx={{
+                    height: 6,
                     borderRadius: 3,
                     bgcolor: theme.palette.grey[200],
                     '& .MuiLinearProgress-bar': {
                       bgcolor: getProgressColor(project.completionPercentage || 0)
                     }
-                  }} 
+                  }}
                 />
               </Box>
             ))}
