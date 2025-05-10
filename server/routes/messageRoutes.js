@@ -75,7 +75,7 @@ router.get("/conversations/:userId", async (req, res) => {
     // Get details for each conversation partner
     const conversations = await Promise.all(
       Array.from(conversationPartners).map(async (partnerId) => {
-        const partner = await Employee.findById(partnerId).select("firstName lastName photo role");
+        const partner = await Employee.findById(partnerId).select("firstName lastName photo role cin department");
 
         // Get the latest message in this conversation
         const latestMessage = await Message.findOne({
@@ -119,8 +119,8 @@ router.get("/conversation/:userId/:partnerId", async (req, res) => {
         { sender: partnerId, receiver: userId }
       ]
     })
-      .populate("sender", "firstName lastName photo role")
-      .populate("receiver", "firstName lastName photo role")
+      .populate("sender", "firstName lastName photo role cin department")
+      .populate("receiver", "firstName lastName photo role cin department")
       .sort({ createdAt: 1 });
 
     // Mark messages as read
@@ -143,7 +143,7 @@ router.get("/employees/:chefId", async (req, res) => {
 
     // Find all employees where the chef is the specified chef
     const employees = await Employee.find({ chefId: chefId })
-      .select("firstName lastName photo role");
+      .select("firstName lastName photo role cin department");
 
     res.json(employees);
   } catch (error) {
@@ -166,7 +166,7 @@ router.get("/chef/:employeeId", async (req, res) => {
 
     // Get the chef details
     const chef = await Employee.findById(employee.chefId)
-      .select("firstName lastName photo role");
+      .select("firstName lastName photo role cin department");
 
     if (!chef) {
       return res.status(404).json({ message: "Chef not found" });
@@ -214,8 +214,8 @@ router.post("/", upload.array("attachments", 5), async (req, res) => {
 
     // Populate sender and receiver info
     const populatedMessage = await Message.findById(savedMessage._id)
-      .populate("sender", "firstName lastName photo role")
-      .populate("receiver", "firstName lastName photo role");
+      .populate("sender", "firstName lastName photo role cin department")
+      .populate("receiver", "firstName lastName photo role cin department");
 
     res.status(201).json(populatedMessage);
   } catch (error) {

@@ -59,7 +59,7 @@ import EvaluationResults from "./EvaluationResults";
 import ChefProjectPage from "./ChefProjectPage";
 import ChefAttendance from "./ChefAttendance";
 import ChefAttendanceCalendar from "./ChefAttendanceCalendar";
-import ChefMessaging from "./ChefMessaging";
+
 import ChefLeaveManagement from "./ChefLeaveManagement"; // Nouveau composant de gestion des congés
 import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
 import ChefTaskManagement from "./ChefTaskManagement"; // Composant de gestion des tâches
@@ -504,22 +504,7 @@ const ChefDashboard = () => {
 
 
 
-        {/* Messagerie */}
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("messaging")}
-            selected={activeView === "messaging"}
-            sx={getMenuItemStyles(activeView === "messaging")}
-          >
-            <ListItemIcon sx={getIconStyles(activeView === "messaging")}>
-              <Chat />
-            </ListItemIcon>
-            <ListItemText
-              primary="Messagerie"
-              primaryTypographyProps={getTextStyles(activeView === "messaging")}
-            />
-          </ListItemButton>
-        </ListItem>
+
       </List>
 
       {/* Bouton de déconnexion */}
@@ -583,7 +568,6 @@ const ChefDashboard = () => {
                   {activeView === "attendance" && "Liste de Présences"}
                   {activeView === "attendanceCalendar" && "Calendrier de Présence"}
                   {activeView === "leaveManagement" && "Gestion des Congés"}
-                  {activeView === "messaging" && "Messagerie"}
                   {activeView === "taskManagement" && "Gestion des Tâches"}
                   {activeView === "taskDetail" && "Détail de la Tâche"}
                   {!activeView && "Tableau de Bord Chef"}
@@ -653,7 +637,7 @@ const ChefDashboard = () => {
                 {activeView === "attendance" && <ChefAttendance />}
                 {activeView === "attendanceCalendar" && <ChefAttendanceCalendar />}
                 {activeView === "leaveManagement" && <ChefLeaveManagement />}
-                {activeView === "messaging" && <ChefMessaging />}
+
                 {activeView === "taskManagement" && <ChefTaskManagement />}
                 {activeView === "taskDetail" && selectedTaskId && <ChefTaskDetail taskId={selectedTaskId} />}
                 {!activeView && (

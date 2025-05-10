@@ -80,6 +80,7 @@ const uploadRoutes = require("./routes/upload");
 const commentRoutes = require("./routes/comments");
 const fileUploadRoutes = require("./routes/fileUploadRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const usersRoutes = require("./routes/users");
 
 // Register routes
 app.use("/api/auth", authRoutes);
@@ -97,6 +98,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/files", fileUploadRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/users", usersRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {
@@ -128,6 +130,7 @@ mongoose
       console.log("- /api/comments");
       console.log("- /api/files");
       console.log("- /api/dashboard");
+      console.log("- /api/users");
       console.log("- /api/test");
 
       // Update all project progress values

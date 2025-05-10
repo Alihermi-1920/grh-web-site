@@ -36,16 +36,18 @@ import {
   Forum,
   Chat,
   AssignmentTurnedIn,
+  Psychology,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import EmployeeTaskChat from "./EmployeeTaskChat"; // Composant pour la communication des tâches
-import EmployeeMessaging from "./EmployeeMessaging"; // Composant pour la messagerie
 import EmployeeProjectDashboard from "./EmployeeProjectDashboard"; // Import du tableau de bord des projets
 import EmployeeLeaveRequest from "./EmployeeLeaveRequest"; // Ancien composant de demande de congé
 import FinalLeaveRequest from "./FinalLeaveRequest"; // Nouveau composant de demande de congé amélioré
 import EmployeeTaskPage from "./EmployeeTaskPage"; // Nouveau composant de gestion des tâches
 import EmployeeProjectDetail from "./EmployeeProjectDetail"; // Composant de détail de projet
 import DashboardHomeEmployee from "./DashboardHomeEmployee"; // Nouveau tableau de bord employé
+import AmeliorationAI from "./AmeliorationAI"; // Nouveau composant d'amélioration de performance AI
+import EmployeeProfile from "./EmployeeProfile"; // Nouveau composant de profil employé
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
@@ -323,18 +325,20 @@ const EmployeeDashboard = ({ initialView }) => {
           </ListItemButton>
         </ListItem>
 
+
+
         <ListItem disablePadding>
           <ListItemButton
-            onClick={() => setActiveView("messaging")}
-            selected={activeView === "messaging"}
-            sx={getMenuItemStyles(activeView === "messaging")}
+            onClick={() => setActiveView("performanceAI")}
+            selected={activeView === "performanceAI"}
+            sx={getMenuItemStyles(activeView === "performanceAI")}
           >
-            <ListItemIcon sx={getIconStyles(activeView === "messaging")}>
-              <Chat />
+            <ListItemIcon sx={getIconStyles(activeView === "performanceAI")}>
+              <Psychology />
             </ListItemIcon>
             <ListItemText
-              primary="Messagerie"
-              primaryTypographyProps={getTextStyles(activeView === "messaging")}
+              primary="Amélioration AI"
+              primaryTypographyProps={getTextStyles(activeView === "performanceAI")}
             />
           </ListItemButton>
         </ListItem>
@@ -400,7 +404,7 @@ const EmployeeDashboard = ({ initialView }) => {
                   {activeView === "projectDetail" && "Détail du Projet"}
                   {activeView === "leaves" && "Mes Congés"}
                   {activeView === "taskChat" && "Mes Tâches"}
-                  {activeView === "messaging" && "Messagerie"}
+                  {activeView === "performanceAI" && "Amélioration de Performance AI"}
                   {!activeView && "Tableau de Bord Employé"}
                 </Typography>
               </Box>
@@ -444,12 +448,13 @@ const EmployeeDashboard = ({ initialView }) => {
           >
             <Fade in timeout={800}>
               <Box>
-                {activeView === "profile" && <Typography variant="h6">Mon Profil (Vue Employé)</Typography>}
+                {activeView === "profile" && <EmployeeProfile />}
                 {activeView === "projects" && <EmployeeProjectDashboard />}
                 {activeView === "projectDetail" && <EmployeeProjectDetail />}
                 {activeView === "leaves" && <FinalLeaveRequest />}
                 {activeView === "taskChat" && <EmployeeTaskPage />}
-                {activeView === "messaging" && <EmployeeMessaging />}
+
+                {activeView === "performanceAI" && <AmeliorationAI />}
                 {(activeView === "dashboard" || !activeView) && (
                   <DashboardHomeEmployee />
                 )}

@@ -80,4 +80,26 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/qcm/chapter/:chapterName - Supprimer toutes les questions d'un chapitre
+router.delete("/chapter/:chapterName", async (req, res) => {
+  try {
+    const { chapterName } = req.params;
+
+    // Delete all questions with the specified chapter name
+    const result = await QCM.deleteMany({ chapter: chapterName });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Aucune question trouvée dans ce chapitre" });
+    }
+
+    res.json({
+      message: `${result.deletedCount} question(s) supprimée(s) avec succès`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error("Erreur lors de la suppression du chapitre:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
 module.exports = router;

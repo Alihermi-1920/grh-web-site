@@ -205,6 +205,9 @@ const EvaluationManager = () => {
       question: newQuestionText,
     };
 
+    // Save the current chapter name to keep it after adding
+    const currentChapter = newChapter;
+
     fetch("http://localhost:5000/api/qcm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -213,18 +216,54 @@ const EvaluationManager = () => {
       .then((response) => response.json())
       .then((data) => {
         setQuestions([...questions, data]);
-        setNewChapter("");
+        // Keep the chapter name but clear the question text
         setNewQuestionText("");
         setFeedback({
           type: "success",
           message: "New question added successfully!"
         });
+
+        // Expand the chapter accordion to show the new question
+        setExpandedChapter(currentChapter);
       })
       .catch((error) => {
         console.error("Error adding question:", error);
         setFeedback({
           type: "error",
           message: "Failed to add new question."
+        });
+      });
+  };
+
+  // Delete entire chapter with all questions
+  const deleteChapter = (chapterName) => {
+    // Show confirmation dialog
+    if (!window.confirm(`Are you sure you want to delete the entire "${chapterName}" chapter and all its questions? This action cannot be undone.`)) {
+      return;
+    }
+
+    fetch(`http://localhost:5000/api/qcm/chapter/${encodeURIComponent(chapterName)}`, {
+      method: "DELETE",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to delete chapter");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Remove all questions from this chapter
+        setQuestions(questions.filter(q => q.chapter !== chapterName));
+        setFeedback({
+          type: "success",
+          message: `Chapter "${chapterName}" deleted successfully! ${data.deletedCount} questions removed.`
+        });
+      })
+      .catch((error) => {
+        console.error("Error deleting chapter:", error);
+        setFeedback({
+          type: "error",
+          message: `Failed to delete chapter: ${error.message}`
         });
       });
   };
@@ -573,9 +612,27 @@ const EvaluationManager = () => {
                           e.stopPropagation();
                           handleAddInChapter(chapter);
                         }}
+                        sx={{ mr: 1 }}
                       >
                         Add Question
                       </Button>
+                      <Tooltip title="Delete Chapter">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChapter(chapter);
+                          }}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: 'rgba(244, 67, 54, 0.08)'
+                            }
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </Box>
                 </AccordionSummary>
