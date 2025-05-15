@@ -1,10 +1,24 @@
 // src/components/PrivateRoute.js
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
+// Apply theme to document body to prevent white flash during transitions
+const applyDarkTheme = () => {
+  const isDarkMode = localStorage.getItem('themeMode') === 'dark';
+  if (isDarkMode) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.body.style.backgroundColor = 'hsl(220, 30%, 5%)';
+  }
+};
+
 const PrivateRoute = ({ children }) => {
   const { user } = useContext(AuthContext);
+
+  // Apply dark theme on component mount
+  useEffect(() => {
+    applyDarkTheme();
+  }, []);
 
   // Si aucun utilisateur n'est trouvé, redirige vers /login
   if (!user) {

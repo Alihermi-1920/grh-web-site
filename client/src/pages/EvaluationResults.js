@@ -277,7 +277,11 @@ const EvaluationResults = () => {
     autoTable(doc, {
       startY: 77,
       head: [['Chapter', 'Score', 'Performance']],
-      body: chapterScores,
+      body: chapterScores.map(([chapter, score, performance]) => [
+        chapter,
+        `${score}/10`,
+        performance
+      ]),
       theme: 'grid',
       headStyles: {
         fillColor: [theme.palette.primary.main],
@@ -331,18 +335,18 @@ const EvaluationResults = () => {
   // Helper function to determine performance rating based on score
   const getPerformanceRating = (score) => {
     const scoreNum = parseFloat(score);
-    if (scoreNum >= 4) return "Excellent";
-    if (scoreNum >= 3) return "Good";
-    if (scoreNum >= 2) return "Average";
+    if (scoreNum >= 8) return "Excellent";
+    if (scoreNum >= 6) return "Good";
+    if (scoreNum >= 4) return "Average";
     return "Needs Improvement";
   };
 
   // Helper function to get color based on score
   const getScoreColor = (score) => {
     const scoreNum = parseFloat(score);
-    if (scoreNum >= 4) return theme.palette.success.main;
-    if (scoreNum >= 3) return theme.palette.info.main;
-    if (scoreNum >= 2) return theme.palette.warning.main;
+    if (scoreNum >= 8) return theme.palette.success.main;
+    if (scoreNum >= 6) return theme.palette.info.main;
+    if (scoreNum >= 4) return theme.palette.warning.main;
     return theme.palette.error.main;
   };
 
@@ -716,7 +720,7 @@ const EvaluationResults = () => {
                                         color: getScoreColor(score)
                                       }}
                                     >
-                                      {score}/5
+                                      {score}/10
                                     </Typography>
                                   </Box>
                                   <Box
@@ -730,7 +734,7 @@ const EvaluationResults = () => {
                                   >
                                     <Box
                                       sx={{
-                                        width: `${(score / 5) * 100}%`,
+                                        width: `${(score / 10) * 100}%`,
                                         height: '100%',
                                         bgcolor: getScoreColor(score),
                                         borderRadius: 2
@@ -965,7 +969,7 @@ const EvaluationResults = () => {
                                   color: getScoreColor(score)
                                 }}
                               >
-                                {score}/5
+                                {score}/10
                               </Typography>
                               <Chip
                                 label={getPerformanceRating(score)}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   useTheme,
@@ -132,16 +132,13 @@ const ProjectProgressChart = () => {
   };
 
   return (
-    <Paper
+    <Card
       elevation={0}
+      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 4,
+        borderRadius: 2,
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
         display: 'flex',
         flexDirection: 'column'
       }}
@@ -191,8 +188,10 @@ const ProjectProgressChart = () => {
                     display: false
                   },
                   tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30, 40, 60, 0.9)' : 'rgba(0, 0, 0, 0.8)',
                     padding: 12,
+                    titleColor: theme.palette.mode === 'dark' ? '#ffffff' : undefined,
+                    bodyColor: theme.palette.mode === 'dark' ? '#e0e0e0' : undefined,
                     titleFont: {
                       size: 13,
                       family: "'Inter', sans-serif"
@@ -211,14 +210,15 @@ const ProjectProgressChart = () => {
                 scales: {
                   x: {
                     grid: {
-                      display: false
+                      display: false,
+                      color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined
                     },
                     ticks: {
                       font: {
                         size: 10,
                         family: "'Inter', sans-serif"
                       },
-                      color: theme.palette.text.secondary,
+                      color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.secondary,
                       maxRotation: 45,
                       minRotation: 45
                     }
@@ -227,14 +227,14 @@ const ProjectProgressChart = () => {
                     beginAtZero: true,
                     max: 100,
                     grid: {
-                      color: theme.palette.divider
+                      color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider
                     },
                     ticks: {
                       font: {
                         size: 10,
                         family: "'Inter', sans-serif"
                       },
-                      color: theme.palette.text.secondary,
+                      color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.secondary,
                       callback: function(value) {
                         return value + '%';
                       }
@@ -292,7 +292,7 @@ const ProjectProgressChart = () => {
                   sx={{
                     height: 6,
                     borderRadius: 3,
-                    bgcolor: theme.palette.grey[200],
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.grey[200],
                     '& .MuiLinearProgress-bar': {
                       bgcolor: getProgressColor(project.completionPercentage || 0)
                     }
@@ -303,7 +303,7 @@ const ProjectProgressChart = () => {
           </Box>
         </Box>
       )}
-    </Paper>
+    </Card>
   );
 };
 

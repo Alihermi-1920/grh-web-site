@@ -11,6 +11,7 @@ import EvaluationResults from "./EvaluationResults";
 import DashboardHome from "./DashboardHome";
 import LeaveApproval from "./LeaveApproval";
 import AttendanceCalendar from "./AttendanceCalendar";
+import MaintenanceSettings from "./MaintenanceSettings";
 // import MonthlyRecruitmentChart from "../components/MonthlyRecruitmentChart";
 
 import {
@@ -28,12 +29,11 @@ import {
   ExitToApp,
   Business,
   Groups,
-  NotificationsNone,
   LightMode,
   DarkMode,
-  Settings,
-  Help,
-  Assessment
+  Assessment,
+  Build,
+  Person
 } from "@mui/icons-material";
 
 import {
@@ -75,23 +75,10 @@ const Dashboard = () => {
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [notifications] = useState(3);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
-  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
 
   // Create theme based on dark mode state
   const theme = createAppTheme(darkMode ? "dark" : "light");
-
-
-
-  // Handle menu open/close
-  const handleUserMenuOpen = (event) => setUserMenuAnchor(event.currentTarget);
-  const handleUserMenuClose = () => setUserMenuAnchor(null);
-  const handleNotificationsOpen = (event) => setNotificationsAnchor(event.currentTarget);
-  const handleNotificationsClose = () => setNotificationsAnchor(null);
-
-
 
   // Chargement des départements
   useEffect(() => {
@@ -167,28 +154,6 @@ const Dashboard = () => {
 
   const drawerWidth = 280;
 
-  // Sample notification items
-  const notificationItems = [
-    {
-      id: 1,
-      title: "Nouvelle demande de congé",
-      content: "Julie Martin a demandé 5 jours de congé",
-      time: "Il y a 30 min"
-    },
-    {
-      id: 2,
-      title: "Retard enregistré",
-      content: "Thomas Dupont est arrivé avec 45 minutes de retard",
-      time: "Il y a 2 heures"
-    },
-    {
-      id: 3,
-      title: "Projet mis à jour",
-      content: "Le projet 'Refonte CRM' a été mis à jour",
-      time: "Hier, 15:42"
-    }
-  ];
-
   const Sidebar = () => (
     <Drawer
       variant="permanent"
@@ -206,83 +171,89 @@ const Dashboard = () => {
         },
       }}
     >
-      {/* Logo & App Name */}
+      {/* Logo & App Name with Profile */}
       <Box sx={{
-        p: 3,
+        pt: 2,
+        pb: 1,
+        px: 2,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
       }}>
-        <Box display="flex" flexDirection="column" alignItems="center">
-          <img
-            src="/logo.png"
-            alt="GRH Logo"
-            style={{
-              width: 100,
-              marginBottom: 10,
-            }}
-          />
-          <Typography variant="h5" component="div" sx={{
-            fontWeight: 700,
-            letterSpacing: 1,
-            color: darkMode ? 'white' : '#333',
-          }}>
-            HRMS
-          </Typography>
-        </Box>
-      </Box>
+        <img
+          src="/logo.png"
+          alt="GRH Logo"
+          style={{
+            width: 80,
+            marginBottom: 8,
+          }}
+        />
+        <Typography variant="subtitle1" component="div" sx={{
+          fontWeight: 700,
+          letterSpacing: 0.5,
+          color: darkMode ? 'white' : '#333',
+          mb: 1
+        }}>
+          HRMS
+        </Typography>
 
-      {/* Profile - Simplified for the new design */}
-      <Box
-        component={motion.div}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        sx={{
-          p: 3,
-          borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2
-        }}
-      >
-        <Avatar
+        {/* Compact Profile */}
+        <Box
+          component={motion.div}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
           sx={{
-            width: 50,
-            height: 50,
-            bgcolor: darkMode ? '#1976d2' : '#1976d2',
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.05)",
-            }
+            width: '100%',
+            mt: 1,
+            py: 1.5,
+            px: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            borderRadius: 2,
+            backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
           }}
         >
-          <AdminPanelSettings sx={{ fontSize: 28, color: "white" }} />
-        </Avatar>
-        <Box>
-          <Typography variant="subtitle1" fontWeight="600" sx={{
-            color: darkMode ? 'white' : '#333',
-          }}>
-            Admin Dupont
-          </Typography>
-          <Typography
-            variant="caption"
+          <Avatar
             sx={{
-              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
-              fontWeight: 500,
+              width: 38,
+              height: 38,
+              bgcolor: darkMode ? '#1976d2' : '#1976d2',
             }}
           >
-            Super Administrateur
-          </Typography>
+            <AdminPanelSettings sx={{ fontSize: 20, color: "white" }} />
+          </Avatar>
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography variant="body2" fontWeight="600" sx={{
+              color: darkMode ? 'white' : '#333',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              Admin Dupont
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
+              }}
+            >
+              <Person fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
+              Super Administrateur
+            </Typography>
+          </Box>
         </Box>
       </Box>
 
       <List
         sx={{
           px: 2,
-          py: 3,
-          height: 'calc(100vh - 180px)',
+          py: 2,
+          height: 'calc(100vh - 220px)',
           overflowY: 'auto',
           '&::-webkit-scrollbar': {
             width: '0px',
@@ -292,7 +263,7 @@ const Dashboard = () => {
         component={motion.div}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
       >
         {/* Dashboard */}
         <ListItem disablePadding sx={{ mb: 1 }}>
@@ -812,6 +783,45 @@ const Dashboard = () => {
           </ListItemButton>
         </ListItem>
 
+        {/* Mode Maintenance */}
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => setActiveView("maintenanceSettings")}
+            selected={activeView === "maintenanceSettings"}
+            sx={{
+              py: 1.2,
+              borderRadius: 1,
+              mb: 0.5,
+              backgroundColor: activeView === "maintenanceSettings" ?
+                (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                'transparent',
+              color: activeView === "maintenanceSettings" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+              '&:hover': {
+                backgroundColor: activeView === "maintenanceSettings" ?
+                  (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                  (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
+              }
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 40,
+              color: activeView === "maintenanceSettings" ?
+                (darkMode ? 'white' : '#333') :
+                (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+            }}>
+              <Build />
+            </ListItemIcon>
+            <ListItemText
+              primary="Mode Maintenance"
+              primaryTypographyProps={{
+                fontWeight: activeView === "maintenanceSettings" ? 600 : 500
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
         {/* Déconnexion */}
         <Box sx={{ mt: 'auto', pt: 4 }}>
           <Divider sx={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)', my: 2 }} />
@@ -878,207 +888,29 @@ const Dashboard = () => {
 
               <Box sx={{ flexGrow: 1 }} />
 
-              {/* Right side icons */}
+              {/* Right side icons - Only dark mode toggle */}
               <Stack direction="row" spacing={1} alignItems="center">
                 <Zoom in={true} style={{ transitionDelay: '200ms' }}>
                   <Tooltip title={darkMode ? "Mode clair" : "Mode sombre"} arrow>
-                    <IconButton onClick={handleThemeToggle} color="inherit">
-                      {darkMode ? <LightMode /> : <DarkMode />}
-                    </IconButton>
-                  </Tooltip>
-                </Zoom>
-
-                <Zoom in={true} style={{ transitionDelay: '300ms' }}>
-                  <Tooltip title="Aide" arrow>
-                    <IconButton color="inherit">
-                      <Help />
-                    </IconButton>
-                  </Tooltip>
-                </Zoom>
-
-                <Zoom in={true} style={{ transitionDelay: '400ms' }}>
-                  <Tooltip title="Paramètres" arrow>
-                    <IconButton color="inherit">
-                      <Settings />
-                    </IconButton>
-                  </Tooltip>
-                </Zoom>
-
-                <Zoom in={true} style={{ transitionDelay: '500ms' }}>
-                  <Tooltip title="Notifications" arrow>
                     <IconButton
+                      onClick={handleThemeToggle}
                       color="inherit"
-                      onClick={handleNotificationsOpen}
-                    >
-                      <Badge badgeContent={notifications} color="error">
-                        <NotificationsNone />
-                      </Badge>
-                    </IconButton>
-                  </Tooltip>
-                </Zoom>
-
-                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-
-                <Zoom in={true} style={{ transitionDelay: '600ms' }}>
-                  <Tooltip title="Mon profil" arrow>
-                    <IconButton
-                      onClick={handleUserMenuOpen}
                       sx={{
-                        ml: 1,
-                        p: 0.5,
-                        border: darkMode
-                          ? '2px solid rgba(255,255,255,0.2)'
-                          : `2px solid ${theme.palette.primary.main}`,
-                        borderRadius: '50%',
-                        transition: 'all 0.2s',
-                        '&:hover': {
-                          borderColor: theme.palette.primary.main,
+                        bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                        "&:hover": {
+                          bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
                           transform: 'scale(1.05)'
-                        }
+                        },
+                        transition: 'all 0.2s'
                       }}
                     >
-                      <Avatar sx={{
-                        width: 34,
-                        height: 34,
-                        bgcolor: theme.palette.primary.main,
-                      }}>
-                        AD
-                      </Avatar>
+                      {darkMode ? <LightMode /> : <DarkMode />}
                     </IconButton>
                   </Tooltip>
                 </Zoom>
               </Stack>
             </Toolbar>
           </AppBar>
-
-          {/* User Menu */}
-          <MuiMenu
-            id="user-menu"
-            anchorEl={userMenuAnchor}
-            open={Boolean(userMenuAnchor)}
-            onClose={handleUserMenuClose}
-            TransitionComponent={Fade}
-            PaperProps={{
-              elevation: 3,
-              sx: {
-                overflow: 'visible',
-                mt: 1.5,
-                '&:before': {
-                  content: '""',
-                  display: 'block',
-                  position: 'absolute',
-                  top: 0,
-                  right: 14,
-                  width: 10,
-                  height: 10,
-                  bgcolor: 'background.paper',
-                  transform: 'translateY(-50%) rotate(45deg)',
-                  zIndex: 0,
-                },
-              },
-            }}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem onClick={handleUserMenuClose} sx={{ minWidth: 180 }}>
-              <ListItemIcon>
-                <AdminPanelSettings fontSize="small" />
-              </ListItemIcon>
-              Mon profil
-            </MenuItem>
-            <MenuItem onClick={handleUserMenuClose}>
-              <ListItemIcon>
-                <Settings fontSize="small" />
-              </ListItemIcon>
-              Paramètres
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <ExitToApp fontSize="small" />
-              </ListItemIcon>
-              Déconnexion
-            </MenuItem>
-          </MuiMenu>
-
-          {/* Notifications Menu */}
-          <MuiMenu
-            id="notifications-menu"
-            anchorEl={notificationsAnchor}
-            open={Boolean(notificationsAnchor)}
-            onClose={handleNotificationsClose}
-            TransitionComponent={Fade}
-            PaperProps={{
-              elevation: 3,
-              sx: {
-                overflow: 'visible',
-                mt: 1.5,
-                width: 320,
-                '&:before': {
-                  content: '""',
-                  display: 'block',
-                  position: 'absolute',
-                  top: 0,
-                  right: 14,
-                  width: 10,
-                  height: 10,
-                  bgcolor: 'background.paper',
-                  transform: 'translateY(-50%) rotate(45deg)',
-                  zIndex: 0,
-                },
-              },
-            }}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <Box sx={{ p: 2 }}>
-              <Typography variant="subtitle1" fontWeight={600}>Notifications</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Vous avez {notifications} nouvelles notifications
-              </Typography>
-            </Box>
-            <Divider />
-            {notificationItems.map((item) => (
-              <MenuItem
-                key={item.id}
-                onClick={handleNotificationsClose}
-                sx={{
-                  py: 1.5,
-                  px: 2,
-                  borderLeft: '3px solid transparent',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    borderLeft: `3px solid ${theme.palette.primary.main}`,
-                    backgroundColor: darkMode
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : alpha(theme.palette.primary.main, 0.05),
-                  }
-                }}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    {item.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {item.content}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, alignSelf: 'flex-end' }}>
-                    {item.time}
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
-            <Divider />
-            <Box sx={{ p: 1.5, textAlign: 'center' }}>
-              <Button
-                size="small"
-                color="primary"
-                sx={{ borderRadius: 4, px: 2 }}
-              >
-                Voir toutes les notifications
-              </Button>
-            </Box>
-          </MuiMenu>
 
           {/* Main Content Area */}
           <Container
@@ -1120,6 +952,7 @@ const Dashboard = () => {
               {activeView === "evaluationManager" && <EvaluationManager employees={employees} />}
               {activeView === "evaluationResults" && <EvaluationResults />}
               {activeView === "leaveApproval" && <LeaveApproval employees={employees} />}
+              {activeView === "maintenanceSettings" && <MaintenanceSettings />}
             </Box>
           </Container>
         </Box>

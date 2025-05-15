@@ -13,7 +13,10 @@ const app = express();
 const port = process.env.PORT || 5000; // Default port
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
@@ -81,6 +84,8 @@ const commentRoutes = require("./routes/comments");
 const fileUploadRoutes = require("./routes/fileUploadRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const usersRoutes = require("./routes/users");
+const maintenanceRoutes = require("./routes/maintenance");
+// Email routes removed
 
 // Register routes
 app.use("/api/auth", authRoutes);
@@ -99,10 +104,145 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/files", fileUploadRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
+// Email routes removed
 
 // Test route
 app.get("/api/test", (req, res) => {
   res.json({ message: "API is working!" });
+});
+
+// Test email route
+app.get("/api/test-email", async (req, res) => {
+  try {
+    // Import the email service
+    const { sendTestEmail } = require('./services/emailService');
+
+    // Get the recipient email from the query parameter or use a default
+    let recipientEmail = req.query.email || 'huiihyii212@gmail.com';
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      console.error(`Invalid email format: ${recipientEmail}`);
+      recipientEmail = 'huiihyii212@gmail.com';
+      console.log(`Using default email instead: ${recipientEmail}`);
+    }
+
+    // Log all request information for debugging
+    console.log('=== TEST EMAIL REQUEST ===');
+    console.log('Request URL:', req.originalUrl);
+    console.log('Request method:', req.method);
+    console.log('Request query:', req.query);
+    console.log('Request headers:', req.headers);
+    console.log(`Sending test email to ${recipientEmail}...`);
+
+    // Send a test email
+    const result = await sendTestEmail(recipientEmail);
+
+    if (result.success) {
+      console.log('Test email sent successfully');
+      console.log('Message ID:', result.messageId);
+      res.json({
+        success: true,
+        message: `Test email sent successfully to ${recipientEmail}`,
+        messageId: result.messageId
+      });
+    } else {
+      console.error('Failed to send test email:', result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in test email route:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Leave notification email route
+app.get("/api/leave-notification", async (req, res) => {
+  try {
+    // Import the email service
+    const { sendLeaveNotificationEmail } = require('./services/emailService');
+
+    // Get the recipient email from the query parameter or use a default
+    let recipientEmail = req.query.email || 'huiihyii212@gmail.com';
+
+    // Get other parameters
+    const status = req.query.status || 'Approuvé';
+    const employeeName = req.query.name || 'Employé';
+    const startDate = req.query.startDate || new Date().toISOString();
+    const endDate = req.query.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const numberOfDays = req.query.days || '7';
+    const leaveType = req.query.type || 'Congé payé';
+    const reason = req.query.reason || 'Vacances';
+    const justification = req.query.justification || '';
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      console.error(`Invalid email format: ${recipientEmail}`);
+      recipientEmail = 'huiihyii212@gmail.com';
+      console.log(`Using default email instead: ${recipientEmail}`);
+    }
+
+    // Log all request information for debugging
+    console.log('=== LEAVE NOTIFICATION EMAIL REQUEST ===');
+    console.log('Request URL:', req.originalUrl);
+    console.log('Request method:', req.method);
+    console.log('Request query:', req.query);
+    console.log(`Sending leave notification email to ${recipientEmail}...`);
+
+    // Create leave request object
+    const leaveRequest = {
+      status,
+      startDate,
+      endDate,
+      numberOfDays,
+      leaveType,
+      reason,
+      justification
+    };
+
+    // Create employee object
+    const employee = {
+      email: recipientEmail,
+      firstName: employeeName.split(' ')[0] || 'Employé',
+      lastName: employeeName.split(' ')[1] || ''
+    };
+
+    // Send the leave notification email
+    const result = await sendLeaveNotificationEmail(leaveRequest, employee);
+
+    if (result.success) {
+      console.log('Leave notification email sent successfully');
+      console.log('Message ID:', result.messageId);
+      res.json({
+        success: true,
+        message: `Leave notification email sent successfully to ${recipientEmail}`,
+        messageId: result.messageId
+      });
+    } else {
+      console.error('Failed to send leave notification email:', result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in leave notification email route:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 // Connect to MongoDB
@@ -131,7 +271,11 @@ mongoose
       console.log("- /api/files");
       console.log("- /api/dashboard");
       console.log("- /api/users");
+      console.log("- /api/maintenance");
+      // Email routes removed
       console.log("- /api/test");
+      console.log("- /api/test-email");
+      console.log("- /api/leave-notification");
 
       // Update all project progress values
       console.log("Updating all project progress values...");

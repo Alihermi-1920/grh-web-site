@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   useTheme,
@@ -59,7 +59,10 @@ const StatCard = ({ icon, title, value, subtitle, color }) => {
           {title}
         </Typography>
         {subtitle && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            color={theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'text.secondary'}
+          >
             {subtitle}
           </Typography>
         )}
@@ -195,15 +198,12 @@ const TeamStatsSummary = () => {
   }, [user]);
 
   return (
-    <Paper
+    <Card
       elevation={0}
+      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 4,
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)'
+        borderRadius: 2
       }}
     >
       {loading ? (
@@ -287,7 +287,7 @@ const TeamStatsSummary = () => {
           </Grid>
         </Grid>
       )}
-    </Paper>
+    </Card>
   );
 };
 

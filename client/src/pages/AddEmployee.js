@@ -36,7 +36,9 @@ import {
   CheckCircle,
   ContactPhone,
   CreditCard,
-  SupervisorAccount
+  SupervisorAccount,
+  Cake,
+  Wc
 } from "@mui/icons-material";
 
 // Composant Alert pour le Snackbar
@@ -52,6 +54,8 @@ const AddEmployee = ({ onSuccess, departments }) => {
     password: "",
     phone: "",
     cin: "",
+    birthDate: "",
+    gender: "",
     department: "",
     role: "",
     position: "",
@@ -233,10 +237,13 @@ const AddEmployee = ({ onSuccess, departments }) => {
           password: "",
           phone: "",
           cin: "",
+          birthDate: "",
+          gender: "",
           department: "",
           role: "",
           position: "",
-          hireDate: ""
+          hireDate: "",
+          chefId: ""
         });
         setPhoto(null);
         setPhotoPreview(null);
@@ -375,6 +382,64 @@ const AddEmployee = ({ onSuccess, departments }) => {
                       }
                     }}
                   />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Tooltip
+                    title="Date de naissance de l'employé"
+                    arrow
+                    placement="top"
+                    TransitionComponent={Zoom}
+                  >
+                    <TextField
+                      fullWidth
+                      label="Date de naissance"
+                      name="birthDate"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={formData.birthDate}
+                      onChange={handleChange}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Cake color="primary" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 1.5,
+                          '&:hover fieldset': {
+                            borderColor: 'primary.light',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderWidth: '1.5px',
+                          },
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
+                    <InputLabel>Genre</InputLabel>
+                    <Select
+                      name="gender"
+                      value={formData.gender}
+                      label="Genre"
+                      onChange={handleChange}
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <Wc color="primary" />
+                        </InputAdornment>
+                      }
+                    >
+                      <MenuItem value="Homme">Homme</MenuItem>
+                      <MenuItem value="Femme">Femme</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>

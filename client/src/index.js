@@ -7,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { fr } from 'date-fns/locale';
+import MaintenanceCheck from './components/MaintenanceCheck';
 import App from './App';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -39,12 +40,14 @@ root.render(
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<App />} />
-            {/* Routes protégées */}
+            {/* Routes protégées avec vérification de maintenance */}
             <Route
               path="/dashboard"
               element={
                 <PrivateRoute>
-                  <Dashboard />
+                  <MaintenanceCheck>
+                    <Dashboard />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -52,7 +55,9 @@ root.render(
               path="/chef-dashboard"
               element={
                 <PrivateRoute>
-                  <ChefDashboard />
+                  <MaintenanceCheck>
+                    <ChefDashboard />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -60,7 +65,9 @@ root.render(
               path="/employee-dashboard"
               element={
                 <PrivateRoute>
-                  <EmployeeDashboard />
+                  <MaintenanceCheck>
+                    <EmployeeDashboard />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -68,7 +75,9 @@ root.render(
               path="/projects"
               element={
                 <PrivateRoute>
-                  <ProjectList />
+                  <MaintenanceCheck>
+                    <ProjectList />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -76,7 +85,9 @@ root.render(
               path="/addproject"
               element={
                 <PrivateRoute>
-                  <AddProject />
+                  <MaintenanceCheck>
+                    <AddProject />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -84,7 +95,9 @@ root.render(
               path="/simple-leave"
               element={
                 <PrivateRoute>
-                  <SimpleLeaveRequest />
+                  <MaintenanceCheck>
+                    <SimpleLeaveRequest />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -92,7 +105,9 @@ root.render(
               path="/final-leave"
               element={
                 <PrivateRoute>
-                  <FinalLeaveRequest />
+                  <MaintenanceCheck>
+                    <FinalLeaveRequest />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -100,7 +115,9 @@ root.render(
               path="/employee-projects"
               element={
                 <PrivateRoute>
-                  <EmployeeProjects />
+                  <MaintenanceCheck>
+                    <EmployeeProjects />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -108,21 +125,27 @@ root.render(
               path="/employee-project/:projectId"
               element={
                 <PrivateRoute>
-                  <EmployeeProjectDetail />
+                  <MaintenanceCheck>
+                    <EmployeeProjectDetail />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
             <Route
               path="/test-upload"
               element={
-                <TestFileUpload />
+                <MaintenanceCheck>
+                  <TestFileUpload />
+                </MaintenanceCheck>
               }
             />
             <Route
               path="/chef-tasks"
               element={
                 <PrivateRoute>
-                  <ChefTaskManagement />
+                  <MaintenanceCheck>
+                    <ChefTaskManagement />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -130,7 +153,9 @@ root.render(
               path="/mes-taches"
               element={
                 <PrivateRoute>
-                  <EmployeeTaskPage />
+                  <MaintenanceCheck>
+                    <EmployeeTaskPage />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />
@@ -138,7 +163,9 @@ root.render(
               path="/chef-task/:taskId"
               element={
                 <PrivateRoute>
-                  <ChefTaskDetail />
+                  <MaintenanceCheck>
+                    <ChefTaskDetail />
+                  </MaintenanceCheck>
                 </PrivateRoute>
               }
             />

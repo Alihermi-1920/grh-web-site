@@ -32,8 +32,8 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ message: "Chapitre et question sont requis" });
   }
 
-  // Génération automatique des options de 0 à 5
-  const finalOptions = Array.from({ length: 6 }, (_, note) => ({
+  // Génération automatique des options de 0 à 10
+  const finalOptions = Array.from({ length: 11 }, (_, note) => ({
     text: note.toString(),
     note,
   }));

@@ -1,20 +1,28 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  CircularProgress, 
-  useTheme 
+import {
+  Box,
+  Card,
+  Typography,
+  CircularProgress,
+  useTheme,
+  Divider
 } from '@mui/material';
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import {
+  Assignment as AssignmentIcon
+} from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
-
-// Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 const TaskStatusChart = () => {
   const [chartData, setChartData] = useState(null);
+  const [taskStats, setTaskStats] = useState({
+    pending: 0,
+    inProgress: 0,
+    review: 0,
+    completed: 0,
+    blocked: 0,
+    onHold: 0,
+    total: 0
+  });
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
   const theme = useTheme();
@@ -27,13 +35,13 @@ const TaskStatusChart = () => {
         setLoading(true);
         // Fetch tasks assigned by this chef
         const response = await fetch(`http://localhost:5000/api/tasks?assignedBy=${user._id}`);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch task data');
         }
-        
+
         const tasks = await response.json();
-        
+
         // Count tasks by status
         const statusCounts = {
           'pending': 0,
@@ -43,53 +51,24 @@ const TaskStatusChart = () => {
           'blocked': 0,
           'on-hold': 0
         };
-        
+
         tasks.forEach(task => {
           if (statusCounts.hasOwnProperty(task.status)) {
             statusCounts[task.status]++;
           }
         });
-        
-        // Prepare chart data
-        setChartData({
-          labels: [
-            'En attente', 
-            'En cours', 
-            'En révision', 
-            'Terminé', 
-            'Bloqué', 
-            'En pause'
-          ],
-          datasets: [
-            {
-              data: [
-                statusCounts['pending'],
-                statusCounts['in-progress'],
-                statusCounts['review'],
-                statusCounts['completed'],
-                statusCounts['blocked'],
-                statusCounts['on-hold']
-              ],
-              backgroundColor: [
-                '#FFCA28', // amber for pending
-                '#29B6F6', // light blue for in-progress
-                '#9575CD', // deep purple for review
-                '#66BB6A', // green for completed
-                '#EF5350', // red for blocked
-                '#BDBDBD'  // grey for on-hold
-              ],
-              borderColor: [
-                '#FFA000', // darker amber
-                '#0288D1', // darker blue
-                '#673AB7', // darker purple
-                '#388E3C', // darker green
-                '#D32F2F', // darker red
-                '#757575'  // darker grey
-              ],
-              borderWidth: 1,
-              hoverOffset: 5
-            },
-          ],
+
+        const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+
+        // Update task stats
+        setTaskStats({
+          pending: statusCounts['pending'],
+          inProgress: statusCounts['in-progress'],
+          review: statusCounts['review'],
+          completed: statusCounts['completed'],
+          blocked: statusCounts['blocked'],
+          onHold: statusCounts['on-hold'],
+          total: total
         });
       } catch (err) {
         console.error('Error fetching task data:', err);
@@ -101,114 +80,243 @@ const TaskStatusChart = () => {
     fetchData();
   }, [user]);
 
+  // Calculate percentages
+  const getPercentage = (value) => {
+    return taskStats.total > 0 ? Math.round((value / taskStats.total) * 100) : 0;
+  };
+
   return (
-    <Paper 
+    <Card
       elevation={0}
-      sx={{ 
-        p: 3, 
-        borderRadius: 4, 
+      variant="outlined"
+      sx={{
+        p: 3,
+        borderRadius: 2,
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}
     >
-      <Typography 
-        variant="h6" 
-        fontWeight="600" 
-        sx={{ 
-          mb: 2,
-          color: theme.palette.text.primary,
-          fontSize: '1.1rem'
-        }}
-      >
-        Distribution des Tâches
-      </Typography>
-      
-      <Box sx={{ 
-        flexGrow: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
-      }}>
-        {loading ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <AssignmentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+        <Typography
+          variant="h6"
+          fontWeight="600"
+          sx={{
+            color: theme.palette.text.primary,
+            fontSize: '1.1rem'
+          }}
+        >
+          Distribution des Tâches
+        </Typography>
+      </Box>
+
+      {loading ? (
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
           <CircularProgress size={40} thickness={4} />
-        ) : !chartData || chartData.datasets[0].data.every(value => value === 0) ? (
+        </Box>
+      ) : taskStats.total === 0 ? (
+        <Box sx={{
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 1
+        }}>
+          <AssignmentIcon sx={{ fontSize: 40, color: theme.palette.grey[400], opacity: 0.7 }} />
           <Typography variant="body1" color="text.secondary">
             Aucune tâche trouvée
           </Typography>
-        ) : (
-          <Box sx={{ height: 240, width: '100%', position: 'relative' }}>
-            <Doughnut 
-              data={chartData} 
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                  legend: {
-                    position: 'bottom',
-                    labels: {
-                      boxWidth: 12,
-                      padding: 15,
-                      font: {
-                        size: 11,
-                        family: "'Inter', sans-serif"
-                      },
-                      color: theme.palette.text.secondary
-                    }
-                  },
-                  tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                      size: 13,
-                      family: "'Inter', sans-serif"
-                    },
-                    bodyFont: {
-                      size: 12,
-                      family: "'Inter', sans-serif"
-                    },
-                    callbacks: {
-                      label: function(context) {
-                        const label = context.label || '';
-                        const value = context.raw || 0;
-                        const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
-                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                        return `${label}: ${value} (${percentage}%)`;
-                      }
-                    }
-                  }
-                },
-                animation: {
-                  animateScale: true,
-                  animateRotate: true
-                }
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, mt: 1 }}>
+          {/* Total Tasks */}
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: 3
+          }}>
+            <Typography
+              variant="h3"
+              fontWeight="bold"
+              color={theme.palette.primary.main}
+              sx={{
+                textShadow: theme.palette.mode === 'dark' ? '0 0 10px rgba(25, 118, 210, 0.3)' : 'none',
+                letterSpacing: '-1px'
               }}
-            />
-            {chartData && (
-              <Box sx={{ 
-                position: 'absolute', 
-                top: '50%', 
-                left: '50%', 
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center'
-              }}>
-                <Typography variant="h4" fontWeight="bold" color="text.primary">
-                  {chartData.datasets[0].data.reduce((a, b) => a + b, 0)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Tâches
-                </Typography>
-              </Box>
-            )}
+            >
+              {taskStats.total}
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ ml: 1, mt: 1.5 }}
+            >
+              tâches
+            </Typography>
           </Box>
-        )}
-      </Box>
-    </Paper>
+
+          {/* Task Distribution Bars */}
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Pending Tasks */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" fontWeight="medium">En attente</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {taskStats.pending}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                    ({getPercentage(taskStats.pending)}%)
+                  </Typography>
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  height: 24,
+                  width: '100%',
+                  position: 'relative',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: `${getPercentage(taskStats.pending)}%`,
+                    bgcolor: theme.palette.warning.main,
+                    transition: 'width 1s ease-in-out'
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* In Progress Tasks */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" fontWeight="medium">En cours</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {taskStats.inProgress}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                    ({getPercentage(taskStats.inProgress)}%)
+                  </Typography>
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  height: 24,
+                  width: '100%',
+                  position: 'relative',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: `${getPercentage(taskStats.inProgress)}%`,
+                    bgcolor: theme.palette.info.main,
+                    transition: 'width 1s ease-in-out'
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Review Tasks */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" fontWeight="medium">En révision</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {taskStats.review}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                    ({getPercentage(taskStats.review)}%)
+                  </Typography>
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  height: 24,
+                  width: '100%',
+                  position: 'relative',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: `${getPercentage(taskStats.review)}%`,
+                    bgcolor: theme.palette.secondary.main,
+                    transition: 'width 1s ease-in-out'
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Completed Tasks */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" fontWeight="medium">Terminé</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" fontWeight="bold">
+                    {taskStats.completed}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                    ({getPercentage(taskStats.completed)}%)
+                  </Typography>
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  height: 24,
+                  width: '100%',
+                  position: 'relative',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: `${getPercentage(taskStats.completed)}%`,
+                    bgcolor: theme.palette.success.main,
+                    transition: 'width 1s ease-in-out'
+                  }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
+    </Card>
   );
 };
 

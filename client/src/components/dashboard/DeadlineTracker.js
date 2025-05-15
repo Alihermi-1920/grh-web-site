@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   useTheme,
@@ -96,16 +96,13 @@ const DeadlineTracker = () => {
   };
 
   return (
-    <Paper
+    <Card
       elevation={0}
+      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 4,
+        borderRadius: 2,
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
         display: 'flex',
         flexDirection: 'column'
       }}
@@ -262,21 +259,8 @@ const DeadlineTracker = () => {
         </List>
       )}
 
-      <Button
-        variant="text"
-        color="primary"
-        endIcon={<ArrowForwardIcon />}
-        sx={{
-          alignSelf: 'flex-end',
-          mt: 2,
-          textTransform: 'none',
-          fontWeight: 'medium'
-        }}
-        onClick={() => window.location.href = '/chef-dashboard/tasks'}
-      >
-        Voir toutes les tâches
-      </Button>
-    </Paper>
+
+    </Card>
   );
 };
 

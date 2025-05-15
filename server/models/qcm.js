@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const optionSchema = new mongoose.Schema({
   text: { type: String, required: true },
-  note: { type: Number, required: true, min: 0, max: 5 },
+  note: { type: Number, required: true, min: 0, max: 10 },
 });
 
 const qcmSchema = new mongoose.Schema(

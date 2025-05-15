@@ -20,9 +20,6 @@ const DashboardHomeChef = () => {
       sx={{
         minHeight: '100%',
         p: 3,
-        background: theme.palette.mode === 'dark'
-          ? 'linear-gradient(135deg, rgba(20,30,48,0.95) 0%, rgba(36,59,85,0.95) 100%)'
-          : 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
         animation: 'fadeIn 0.5s ease-in-out',
         '@keyframes fadeIn': {
           '0%': {

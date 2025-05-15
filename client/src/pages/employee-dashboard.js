@@ -37,6 +37,8 @@ import {
   Chat,
   AssignmentTurnedIn,
   Psychology,
+  Person,
+  Business,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import EmployeeTaskChat from "./EmployeeTaskChat"; // Composant pour la communication des tâches
@@ -111,32 +113,32 @@ const EmployeeDashboard = ({ initialView }) => {
   // Function to generate consistent menu item styles
   const getMenuItemStyles = (isSelected) => ({
     py: 1.2,
-    transition: 'all 0.2s ease-in-out',
+    borderRadius: 1,
+    mb: 0.5,
+    backgroundColor: isSelected ?
+      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+      'transparent',
+    color: isSelected ?
+      (darkMode ? 'white' : '#333') :
+      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      transform: 'translateX(5px)'
-    },
-    '&.Mui-selected': {
-      backgroundColor: 'rgba(25, 118, 210, 0.25)',
-      borderLeft: '4px solid #1976d2',
-      paddingLeft: '12px'
+      backgroundColor: isSelected ?
+        (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+        (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
     }
   });
 
   // Function to generate consistent icon styles
   const getIconStyles = (isSelected) => ({
     minWidth: 40,
-    color: "inherit",
-    transition: 'transform 0.2s ease-in-out',
-    transform: isSelected ? 'scale(1.2)' : 'scale(1)'
+    color: isSelected ?
+      (darkMode ? 'white' : '#333') :
+      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
   });
 
   // Function to generate consistent text styles
   const getTextStyles = (isSelected) => ({
-    fontWeight: isSelected ? 600 : 500,
-    transition: 'all 0.2s ease-in-out',
-    fontSize: '0.95rem',
-    letterSpacing: 0.3
+    fontWeight: isSelected ? 600 : 500
   });
 
   const Sidebar = () => (
@@ -150,86 +152,109 @@ const EmployeeDashboard = ({ initialView }) => {
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          background: darkMode
-            ? "radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))"
-            : "#f8f9fa",
-          color: darkMode ? "white" : "#333333",
+          background: darkMode ? "#121212" : "#f8f9fa",
+          color: darkMode ? "#e0e0e0" : "#333333",
           borderRight: `1px solid ${darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
           overflow: "hidden",
         },
       }}
     >
-      {/* Logo & App Name */}
+      {/* Logo & App Name with Profile */}
       <Box sx={{
-        p: 3,
+        pt: 2,
+        pb: 1,
+        px: 2,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
       }}>
-        <Box display="flex" flexDirection="column" alignItems="center">
-          <img
-            src="/logo.png"
-            alt="GRH Logo"
-            style={{
-              width: 100,
-              marginBottom: 10,
-            }}
-          />
-          <Typography variant="h6" component="div" sx={{
-            fontWeight: 700,
-            letterSpacing: 1,
-            color: darkMode ? 'white' : '#333',
-          }}>
-            HRMS
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box sx={{
-        p: 3,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-      }}>
-        <Avatar
-          src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
-          sx={{
-            width: 50,
-            height: 50,
-            bgcolor: darkMode ? '#1976d2' : '#1976d2',
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.05)",
-            }
+        <img
+          src="/logo.png"
+          alt="GRH Logo"
+          style={{
+            width: 80,
+            marginBottom: 8,
           }}
-        >
-          {!user?.photo && (user ? `${user.firstName[0]}${user.lastName[0]}` : "ED")}
-        </Avatar>
-        <Box>
-          <Typography variant="subtitle1" fontWeight="600" sx={{
-            color: darkMode ? 'white' : '#333',
-          }}>
-            {user ? `${user.firstName} ${user.lastName}` : "Employé Durand"}
-          </Typography>
-          <Typography
-            variant="caption"
+        />
+        <Typography variant="subtitle1" component="div" sx={{
+          fontWeight: 700,
+          letterSpacing: 0.5,
+          color: darkMode ? 'white' : '#333',
+          mb: 1
+        }}>
+          HRMS
+        </Typography>
+
+        {/* Compact Profile */}
+        <Box sx={{
+          width: '100%',
+          mt: 1,
+          py: 1.5,
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          borderRadius: 2,
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+        }}>
+          <Avatar
+            src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
             sx={{
-              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
-              fontWeight: 500,
+              width: 38,
+              height: 38,
+              bgcolor: darkMode ? '#1976d2' : '#1976d2',
             }}
           >
-            {user?.role || "Employé"}
-            {user?.department && ` - ${user.department}`}
-          </Typography>
+            {!user?.photo && (user ? `${user.firstName[0]}${user.lastName[0]}` : "ED")}
+          </Avatar>
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography variant="body2" fontWeight="600" sx={{
+              color: darkMode ? 'white' : '#333',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {user ? `${user.firstName} ${user.lastName}` : "Employé Durand"}
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
+            }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Person fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
+                {user?.role || "Employé"}
+              </Typography>
+              {user?.department && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Business fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
+                  {user.department}
+                </Typography>
+              )}
+            </Box>
+          </Box>
         </Box>
       </Box>
 
       <List sx={{
         px: 2,
-        py: 3,
-        height: 'calc(100vh - 280px)',
+        py: 2,
+        height: 'calc(100vh - 220px)',
         overflowY: 'auto',
         '&::-webkit-scrollbar': {
           width: '0px',
@@ -373,7 +398,6 @@ const EmployeeDashboard = ({ initialView }) => {
           component="main"
           sx={{
             flexGrow: 1,
-            background: theme.palette.background.default,
             display: "flex",
             flexDirection: "column",
             position: "relative",
@@ -398,44 +422,31 @@ const EmployeeDashboard = ({ initialView }) => {
                   </IconButton>
                 )}
                 <Typography variant="h5" fontWeight="600" color="primary.main">
-                  {activeView === "dashboard" && "Tableau de Bord Employé"}
+                  {activeView === "dashboard" && "Espace de Travail Delice"}
                   {activeView === "profile" && "Mon Profil"}
                   {activeView === "projects" && "Mes Projets"}
                   {activeView === "projectDetail" && "Détail du Projet"}
                   {activeView === "leaves" && "Mes Congés"}
                   {activeView === "taskChat" && "Mes Tâches"}
                   {activeView === "performanceAI" && "Amélioration de Performance AI"}
-                  {!activeView && "Tableau de Bord Employé"}
+                  {!activeView && "Espace de Travail Delice"}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={2} alignItems="center">
-                {!isMobile && (
-                  <Tooltip title={darkMode ? "Passer au mode clair" : "Passer au mode sombre"} arrow>
-                    <IconButton
-                      onClick={handleThemeToggle}
-                      sx={{
-                        bgcolor: "rgba(0,0,0,0.05)",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
-                      }}
-                    >
-                      {darkMode ? <LightMode /> : <DarkMode />}
-                    </IconButton>
-                  </Tooltip>
-                )}
-                <Tooltip title={user ? `${user.firstName} ${user.lastName}` : "Employé Durand"} arrow>
-                  <Avatar
-                    src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
+                <Tooltip title={darkMode ? "Passer au mode clair" : "Passer au mode sombre"} arrow>
+                  <IconButton
+                    onClick={handleThemeToggle}
                     sx={{
-                      bgcolor: theme.palette.primary.light,
-                      width: 40,
-                      height: 40,
-                      fontSize: 16,
-                      border: `2px solid ${darkMode ? "#333333" : "#e0e0e0"}`,
-                      cursor: "pointer",
+                      bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                      "&:hover": {
+                        bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                        transform: 'scale(1.05)'
+                      },
+                      transition: 'all 0.2s'
                     }}
                   >
-                    {user ? `${user.firstName[0]}${user.lastName[0]}` : "ED"}
-                  </Avatar>
+                    {darkMode ? <LightMode /> : <DarkMode />}
+                  </IconButton>
                 </Tooltip>
               </Stack>
             </Toolbar>
@@ -456,28 +467,13 @@ const EmployeeDashboard = ({ initialView }) => {
 
                 {activeView === "performanceAI" && <AmeliorationAI />}
                 {(activeView === "dashboard" || !activeView) && (
-                  <DashboardHomeEmployee />
+                  <DashboardHomeEmployee setActiveView={setActiveView} />
                 )}
               </Box>
             </Fade>
           </Container>
 
-          {/* Élément décoratif arrière-plan */}
-          <Box
-            sx={{
-              position: "fixed",
-              top: "-15%",
-              right: "-10%",
-              width: "500px",
-              height: "500px",
-              borderRadius: "50%",
-              background: darkMode
-                ? `linear-gradient(135deg, ${theme.palette.primary.dark}22, ${theme.palette.secondary.dark}22)`
-                : `linear-gradient(135deg, ${theme.palette.primary.light}22, ${theme.palette.secondary.light}22)`,
-              filter: "blur(60px)",
-              zIndex: 0,
-            }}
-          />
+
         </Box>
       </Box>
     </ThemeProvider>

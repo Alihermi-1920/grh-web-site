@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, Typography, Paper, Button, Card, CardContent, Divider, Alert, Snackbar, IconButton, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Tooltip } from '@mui/material';
-import Grid from '@mui/material/Grid'; // Import Grid separately to avoid deprecation warning
+import { Box, Typography, Paper, Button, Card, CardContent, Divider, Alert, Snackbar, IconButton, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Tooltip, Grid } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Psychology, Download, Refresh, Star, StarBorder } from '@mui/icons-material';
+import { Psychology, Download, Refresh, Star, StarBorder, CheckCircle, Error, HourglassEmpty, Assignment } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
@@ -22,10 +21,15 @@ const AmeliorationAI = () => {
   const [error, setError] = useState(null);
   const [report, setReport] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
+  });
+  const [aiStatus, setAiStatus] = useState({
+    online: false,
+    checking: true
   });
 
   // Simple function to fetch evaluations
@@ -113,9 +117,17 @@ const AmeliorationAI = () => {
           // Convert the Map/Object to an array of chapter objects
           for (const chapterName in evaluation.chapterScores) {
             if (Object.prototype.hasOwnProperty.call(evaluation.chapterScores, chapterName)) {
+              // Get the comment for this chapter if it exists
+              const comment = evaluation.chapterComments &&
+                              typeof evaluation.chapterComments === 'object' &&
+                              Object.prototype.hasOwnProperty.call(evaluation.chapterComments, chapterName)
+                              ? evaluation.chapterComments[chapterName]
+                              : '';
+
               chapters.push({
                 name: chapterName,
                 score: parseFloat(evaluation.chapterScores[chapterName]) || 0,
+                comment: comment,
                 questions: []
               });
             }
@@ -176,9 +188,47 @@ const AmeliorationAI = () => {
     }
   };
 
-  // Fetch evaluations when component mounts
+  // Check if DeepSeek AI is available
+  const checkAIStatus = async () => {
+    try {
+      setAiStatus(prev => ({ ...prev, checking: true }));
+
+      // Check if puter.js is loaded
+      if (typeof puter === 'undefined') {
+        setAiStatus({ online: false, checking: false });
+        return;
+      }
+
+      // Check if DeepSeek AI is available
+      if (!puter.ai || !puter.ai.chat) {
+        setAiStatus({ online: false, checking: false });
+        return;
+      }
+
+      // Try a simple test call to verify the API is responsive
+      try {
+        const testResult = await puter.ai.chat("Test connection", {
+          model: 'deepseek-chat',
+          temperature: 0.1,
+          max_tokens: 10
+        });
+
+        // If we get a response, the AI is online
+        setAiStatus({ online: true, checking: false });
+      } catch (error) {
+        console.error("Error testing AI connection:", error);
+        setAiStatus({ online: false, checking: false });
+      }
+    } catch (error) {
+      console.error("Error checking AI status:", error);
+      setAiStatus({ online: false, checking: false });
+    }
+  };
+
+  // Fetch evaluations and check AI status when component mounts
   useEffect(() => {
     fetchEvaluations();
+    checkAIStatus();
   }, [user]);
 
   // Handle evaluation selection
@@ -206,6 +256,22 @@ const AmeliorationAI = () => {
       return;
     }
 
+    // Check if AI is available
+    if (!aiStatus.online && !aiStatus.checking) {
+      // Try to check AI status again
+      await checkAIStatus();
+
+      // If still not online, show error
+      if (!aiStatus.online) {
+        setSnackbar({
+          open: true,
+          message: 'DeepSeek AI n\'est pas disponible actuellement. Veuillez réessayer plus tard.',
+          severity: 'error'
+        });
+        return;
+      }
+    }
+
     try {
       setGenerating(true);
       setError(null);
@@ -213,28 +279,108 @@ const AmeliorationAI = () => {
       // Prepare user data for the AI
       const firstName = user.firstName || user.name?.split(' ')[0] || 'Collaborateur';
 
-      // Create a direct, raw prompt that passes chapter names without processing
+      // Helper function to classify comments as positive, negative, or neutral
+      const classifyComment = (comment, score) => {
+        if (!comment) return 'neutral';
+
+        // Consider the score as a factor (higher scores likely have positive comments)
+        const isHighScore = score >= 7;
+
+        // Look for positive keywords
+        const positiveKeywords = [
+          'bien', 'bon', 'excellent', 'bravo', 'félicitation', 'super', 'parfait',
+          'satisfaisant', 'progrès', 'amélioration', 'positif', 'fort', 'compétent',
+          'efficace', 'réussi', 'apprécié', 'qualité', 'force'
+        ];
+
+        // Look for negative keywords
+        const negativeKeywords = [
+          'insuffisant', 'faible', 'mauvais', 'problème', 'difficulté', 'manque',
+          'effort', 'attention', 'améliorer', 'décevant', 'insatisfaisant', 'erreur',
+          'retard', 'absent', 'négligent', 'incorrect', 'inapproprié', 'doit', 'devrait'
+        ];
+
+        // Count occurrences of positive and negative keywords
+        const lowerComment = comment.toLowerCase();
+        const positiveCount = positiveKeywords.filter(word => lowerComment.includes(word)).length;
+        const negativeCount = negativeKeywords.filter(word => lowerComment.includes(word)).length;
+
+        // Classify based on keyword counts and score
+        if (positiveCount > negativeCount || (positiveCount === negativeCount && isHighScore)) {
+          return 'positive';
+        } else if (negativeCount > positiveCount || (positiveCount === negativeCount && !isHighScore)) {
+          return 'negative';
+        } else {
+          return 'neutral';
+        }
+      };
+
+      // Create a direct, raw prompt that passes chapter names and comments with sentiment
       const rawChaptersText = selectedEvaluationDetails.chapters
-        .map(chapter => `- ${chapter.name}: ${chapter.score}/5`)
+        .map(chapter => {
+          let text = `- ${chapter.name}: ${chapter.score}/10`;
+          if (chapter.comment) {
+            const sentiment = classifyComment(chapter.comment, chapter.score);
+            text += `\n  Commentaire du chef (${sentiment}): "${chapter.comment}"`;
+          }
+          return text;
+        })
         .join('\n');
 
-      // This prompt is intentionally simple to ensure we're getting raw AI responses
+      // Enhanced prompt with personalization, supportive tone, and simpler language
       const systemPrompt = `
 Voici les résultats d'évaluation professionnelle de ${firstName}, employé chez Groupe Délice Centre Laitier Nord.
 
 Date: ${selectedEvaluationDetails.formattedDate}
 Score global: ${selectedEvaluationDetails.globalScore}/20
 
-Chapitres évalués:
+Chapitres évalués (chaque chapitre est noté sur 10 points):
 ${rawChaptersText}
 
-Génère un rapport d'amélioration de performance personnalisé basé UNIQUEMENT sur ces chapitres.
+Prends en compte les commentaires du chef pour chaque chapitre. J'ai classifié chaque commentaire comme "positive", "negative", ou "neutral" pour t'aider. Suis ces règles importantes:
+
+1. Pour les commentaires marqués "positive":
+   - Tu PEUX les citer directement en les introduisant par "Comme l'a souligné votre chef..." ou une formule similaire.
+   - Utilise-les pour renforcer la confiance de l'employé.
+
+2. Pour les commentaires marqués "negative":
+   - Ne les cite JAMAIS directement.
+   - Reformule-les de manière constructive et positive.
+   - Transforme-les en opportunités d'amélioration avec une formulation encourageante.
+   - Évite tout langage qui pourrait être perçu comme une critique.
+
+3. Pour les commentaires marqués "neutral":
+   - Utilise ton jugement pour les reformuler de manière positive si nécessaire.
+
+4. Pour tous les commentaires:
+   - Concentre-toi sur les solutions et les actions concrètes plutôt que sur les problèmes.
+   - Propose des conseils pratiques et réalisables.
+
+Génère un rapport d'amélioration de performance personnalisé qui soit motivant et constructif, tout en abordant les points d'amélioration de manière délicate et encourageante.
 
 IMPORTANT:
+- Utilise un langage simple et facile à comprendre. Évite les mots compliqués, le jargon technique ou les expressions sophistiquées. Préfère des phrases courtes et directes.
+
+- Formate clairement les titres des chapitres en utilisant le format markdown "## Nom du Chapitre: Score/5" pour qu'ils apparaissent en gras et soient bien visibles.
+
+- Commence par une introduction personnalisée et encourageante qui s'adapte au niveau de performance:
+  * Si le score global est élevé (≥ 16/20): Félicite chaleureusement ${firstName} pour son excellence, souligne ses forces exceptionnelles et encourage à maintenir ce niveau tout en visant encore plus haut
+  * Si le score global est bon (≥ 14/20 et < 16/20): Félicite ${firstName} pour sa bonne performance, souligne ses points forts et encourage à continuer sur cette voie
+  * Si le score global est moyen (≥ 10/20 et < 14/20): Adopte un ton positif et constructif, souligne les points forts tout en présentant les axes d'amélioration comme des opportunités de développement
+  * Si le score global est faible (< 10/20): Reste encourageant et bienveillant, évite tout ton négatif ou accusateur, présente les difficultés comme des défis à relever ensemble et mentionne les points positifs même minimes
+
+- Pour chaque chapitre:
+  * Commence par les points positifs avant d'aborder les axes d'amélioration
+  * Propose des recommandations concrètes, réalisables et personnalisées en utilisant des mots simples
+  * Utilise un ton constructif et motivant, jamais critique ou négatif
+  * Adapte le ton à la note du chapitre (félicitations pour les notes élevées, encouragement pour les notes faibles)
+  * Limite chaque analyse de chapitre à 3-4 phrases maximum pour rester concis et clair
+
+- Termine par un message d'encouragement personnalisé qui renforce la confiance de ${firstName} et sa capacité à progresser
+
 - Si tu ne comprends pas un nom de chapitre, indique-le clairement dans ton rapport
 - Analyse chaque chapitre individuellement, même s'il a un nom inhabituel
 - Ne fais pas de suppositions sur le contenu d'un chapitre si son nom n'est pas clair
-- Sois honnête si un nom de chapitre te semble inventé ou non standard
 `;
 
       // Create a simple user payload with raw chapter data
@@ -270,10 +416,10 @@ IMPORTANT:
       // Call DeepSeek AI directly with raw chapter names
       console.log('Sending RAW chapter names to DeepSeek AI:', selectedEvaluationDetails.chapters.map(c => c.name));
 
-      // Use a direct API call with minimal parameters to ensure we get raw AI responses
+      // Use a direct API call with optimized parameters for personalized responses
       const result = await puter.ai.chat(systemPrompt, {
         model: 'deepseek-chat',
-        temperature: 1.0,  // Maximum temperature for creativity
+        temperature: 0.9,  // High temperature for creativity while maintaining coherence
         max_tokens: 3000,
         user: JSON.stringify(userPayload)
       });
@@ -297,6 +443,409 @@ IMPORTANT:
     } finally {
       setGenerating(false);
     }
+  };
+
+  // Generate Action Plan using DeepSeek AI
+  const generateActionPlan = async () => {
+    if (!selectedEvaluationDetails) {
+      setSnackbar({
+        open: true,
+        message: 'Veuillez sélectionner une évaluation',
+        severity: 'warning'
+      });
+      return;
+    }
+
+    // Check if AI is available
+    if (!aiStatus.online && !aiStatus.checking) {
+      // Try to check AI status again
+      await checkAIStatus();
+
+      // If still not online, show error
+      if (!aiStatus.online) {
+        setSnackbar({
+          open: true,
+          message: 'DeepSeek AI n\'est pas disponible actuellement. Veuillez réessayer plus tard.',
+          severity: 'error'
+        });
+        return;
+      }
+    }
+
+    try {
+      setGeneratingPlan(true);
+      setError(null);
+
+      // Prepare user data for the AI
+      const firstName = user.firstName || user.name?.split(' ')[0] || 'Collaborateur';
+      const department = user.department || selectedEvaluationDetails.employeeDepartment || 'Non spécifié';
+      const position = user.position || selectedEvaluationDetails.employeePosition || 'Employé';
+
+      // Helper function to classify comments as positive, negative, or neutral
+      const classifyComment = (comment, score) => {
+        if (!comment) return 'neutral';
+
+        // Consider the score as a factor (higher scores likely have positive comments)
+        const isHighScore = score >= 7;
+
+        // Look for positive keywords
+        const positiveKeywords = [
+          'bien', 'bon', 'excellent', 'bravo', 'félicitation', 'super', 'parfait',
+          'satisfaisant', 'progrès', 'amélioration', 'positif', 'fort', 'compétent',
+          'efficace', 'réussi', 'apprécié', 'qualité', 'force'
+        ];
+
+        // Look for negative keywords
+        const negativeKeywords = [
+          'insuffisant', 'faible', 'mauvais', 'problème', 'difficulté', 'manque',
+          'effort', 'attention', 'améliorer', 'décevant', 'insatisfaisant', 'erreur',
+          'retard', 'absent', 'négligent', 'incorrect', 'inapproprié', 'doit', 'devrait'
+        ];
+
+        // Count occurrences of positive and negative keywords
+        const lowerComment = comment.toLowerCase();
+        const positiveCount = positiveKeywords.filter(word => lowerComment.includes(word)).length;
+        const negativeCount = negativeKeywords.filter(word => lowerComment.includes(word)).length;
+
+        // Classify based on keyword counts and score
+        if (positiveCount > negativeCount || (positiveCount === negativeCount && isHighScore)) {
+          return 'positive';
+        } else if (negativeCount > positiveCount || (positiveCount === negativeCount && !isHighScore)) {
+          return 'negative';
+        } else {
+          return 'neutral';
+        }
+      };
+
+      // Create a direct, raw prompt that passes chapter names and comments with sentiment
+      const rawChaptersText = selectedEvaluationDetails.chapters
+        .map(chapter => {
+          let text = `- ${chapter.name}: ${chapter.score}/10`;
+          if (chapter.comment) {
+            const sentiment = classifyComment(chapter.comment, chapter.score);
+            text += `\n  Commentaire du chef (${sentiment}): "${chapter.comment}"`;
+          }
+          return text;
+        })
+        .join('\n');
+
+      // Specialized prompt for action plan
+      const actionPlanPrompt = `
+Voici les résultats d'évaluation professionnelle de ${firstName}, employé chez Groupe Délice Centre Laitier Nord.
+
+Date: ${selectedEvaluationDetails.formattedDate}
+Score global: ${selectedEvaluationDetails.globalScore}/20
+Département: ${department}
+Poste: ${position}
+
+Chapitres évalués (chaque chapitre est noté sur 10 points):
+${rawChaptersText}
+
+Je veux que tu génères un PLAN D'ACTION DÉTAILLÉ et STRUCTURÉ pour aider ${firstName} à améliorer ses compétences professionnelles. Ce plan doit être TRÈS CONCRET avec des étapes précises et des ressources spécifiques.
+
+STRUCTURE DU PLAN D'ACTION:
+
+1. INTRODUCTION
+   - Résume brièvement la situation actuelle de ${firstName} en te basant sur son évaluation
+   - Présente l'objectif du plan d'action de manière motivante
+   - Explique comment ce plan va l'aider à progresser
+
+2. PLAN D'ACTION PAR CHAPITRE
+   Pour chaque chapitre ayant un score inférieur à 8/10, crée une section détaillée avec:
+
+   a) DIAGNOSTIC
+      - Identifie précisément les compétences à améliorer (basé sur les commentaires du chef)
+      - Explique pourquoi ces compétences sont importantes pour son poste
+
+   b) OBJECTIFS SMART
+      - Définis 2-3 objectifs spécifiques, mesurables, atteignables, pertinents et temporels
+
+   c) PLAN DE DÉVELOPPEMENT HEBDOMADAIRE (sur 4 semaines)
+      - Semaine 1: Actions précises à réaliser (3-5 tâches concrètes)
+      - Semaine 2: Actions précises à réaliser (3-5 tâches concrètes)
+      - Semaine 3: Actions précises à réaliser (3-5 tâches concrètes)
+      - Semaine 4: Actions précises à réaliser (3-5 tâches concrètes)
+
+   d) RESSOURCES SPÉCIFIQUES
+      - Cours en ligne GRATUITS (liens précis vers OpenClassrooms, Coursera, edX, YouTube)
+      - Livres ou articles (avec titres exacts et auteurs)
+      - Outils ou logiciels à maîtriser (avec liens vers tutoriels gratuits)
+      - Exercices pratiques à réaliser
+
+3. SUIVI ET ÉVALUATION
+   - Propose un système d'auto-évaluation hebdomadaire
+   - Suggère des points de contrôle avec le chef
+   - Inclus une checklist pour suivre les progrès
+
+CONSIGNES IMPORTANTES:
+- Sois ULTRA-SPÉCIFIQUE dans tes recommandations (pas de généralités)
+- Adapte le plan au secteur laitier/agroalimentaire quand c'est pertinent
+- Pour les compétences techniques mentionnées dans les commentaires (ex: "ne maîtrise pas Excel"), fournis un plan d'apprentissage DÉTAILLÉ
+
+CONCERNANT LES RESSOURCES:
+
+IMPORTANT: NE METS AUCUN LIEN HYPERTEXTE DANS LE DOCUMENT. N'utilise pas d'URLs.
+
+À la place:
+- Pour les vidéos: Indique simplement "Rechercher sur YouTube: [titre de la vidéo]"
+- Pour les cours: Indique simplement "Rechercher sur Google: [nom du cours]"
+- Pour les livres: Mentionne le titre et l'auteur
+- Pour les articles: Indique la source et le titre
+
+GARDE LES CHOSES SIMPLES. Ne donne pas de liens ou d'URLs complexes.
+
+- Propose un calendrier réaliste qui tient compte de la charge de travail normale
+- Utilise un ton encourageant et positif, jamais condescendant
+- Formate le document de manière professionnelle avec des titres, sous-titres et listes à puces
+
+IMPORTANT: Ce plan d'action sera converti en PDF professionnel, alors assure-toi qu'il soit bien structuré, facile à lire et à suivre.
+`;
+
+      console.log('Preparing Action Plan AI request...');
+
+      // Check if puter.js is loaded
+      if (typeof puter === 'undefined') {
+        setError('Puter.js n\'est pas disponible. Veuillez rafraîchir la page ou contacter le support.');
+        setGenerating(false);
+        return;
+      }
+
+      // Check if DeepSeek AI is available
+      if (!puter.ai || !puter.ai.chat) {
+        setError('DeepSeek AI n\'est pas disponible. Veuillez rafraîchir la page ou contacter le support.');
+        setGenerating(false);
+        return;
+      }
+
+      console.log('Calling DeepSeek AI for Action Plan...');
+
+      // Use a direct API call with optimized parameters for detailed action plan
+      const result = await puter.ai.chat(actionPlanPrompt, {
+        model: 'deepseek-chat',
+        temperature: 0.7,  // Balanced temperature for creativity and precision
+        max_tokens: 4000,  // Larger token limit for detailed plan
+      });
+
+      console.log('DeepSeek AI Action Plan response received');
+
+      if (result && result.message && result.message.content) {
+        // Generate and download the action plan PDF directly
+        generateActionPlanPDF(result.message.content);
+
+        setSnackbar({
+          open: true,
+          message: 'Plan d\'action généré et téléchargé avec succès',
+          severity: 'success'
+        });
+      } else {
+        throw new Error('Format de réponse AI invalide');
+      }
+    } catch (error) {
+      console.error('Error generating action plan:', error);
+      setError(`Erreur lors de la génération du plan d'action: ${error.message}`);
+
+      setSnackbar({
+        open: true,
+        message: `Erreur: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
+  // Generate and download the action plan PDF
+  const generateActionPlanPDF = (actionPlanContent) => {
+    if (!actionPlanContent) return;
+
+    const doc = new jsPDF();
+
+    // Set document properties
+    doc.setProperties({
+      title: 'Plan d\'Action Personnalisé',
+      subject: 'Plan d\'amélioration professionnelle',
+      author: 'Groupe Délice Centre Laitier Nord',
+      keywords: 'plan d\'action, amélioration, performance',
+      creator: 'Système GRH'
+    });
+
+    // Add header with company name and title
+    doc.setFillColor(0, 51, 153); // Dark blue color
+    doc.rect(0, 0, 210, 30, 'F');
+
+    doc.setTextColor(255, 255, 255); // White text
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PLAN D\'ACTION PERSONNALISÉ', 105, 15, { align: 'center' });
+
+    doc.setFontSize(14);
+    doc.text('GROUPE DÉLICE CENTRE LAITIER NORD', 105, 25, { align: 'center' });
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+
+    // Add employee info
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Date d'élaboration: ${format(new Date(), 'dd MMMM yyyy', { locale: fr })}`, 20, 45);
+    doc.text(`Collaborateur: ${user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Collaborateur'}`, 20, 52);
+    doc.text(`CIN: ${user.cin || selectedEvaluationDetails.employeeCIN || 'Non spécifié'}`, 20, 59);
+    doc.text(`Poste: ${user.position || 'Employé'}`, 20, 66);
+    doc.text(`Département: ${user.department || selectedEvaluationDetails.employeeDepartment || 'Non spécifié'}`, 20, 73);
+    doc.text(`Basé sur l'évaluation du: ${selectedEvaluationDetails.formattedDate}`, 20, 80);
+    doc.text(`Score global: ${selectedEvaluationDetails.globalScore}/20`, 20, 87);
+
+    // Add decorative element
+    doc.setDrawColor(0, 51, 153);
+    doc.setLineWidth(0.5);
+    doc.line(20, 95, 190, 95);
+
+    // Process the action plan content
+    const lines = actionPlanContent.split('\n');
+    let y = 105; // Starting y position
+    let currentPage = 1;
+
+    // Function to add a new page
+    const addNewPage = () => {
+      doc.addPage();
+      currentPage++;
+
+      // Add small header to new page
+      doc.setFillColor(0, 51, 153);
+      doc.rect(0, 0, 210, 15, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PLAN D\'ACTION PERSONNALISÉ', 105, 10, { align: 'center' });
+
+      // Reset text color
+      doc.setTextColor(0, 0, 0);
+
+      // Reset y position for new page
+      y = 25;
+    };
+
+    // Process each line
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Check if we need a new page
+      if (y > 270) {
+        addNewPage();
+      }
+
+      // Handle different line types
+      if (line.startsWith('# ')) {
+        // Main heading
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(0, 51, 153);
+
+        const text = line.substring(2);
+        const splitText = doc.splitTextToSize(text, 170);
+
+        doc.text(splitText, 20, y);
+        y += 8 * splitText.length;
+
+        // Add underline
+        doc.setDrawColor(0, 51, 153);
+        doc.line(20, y - 2, 190, y - 2);
+        y += 5;
+      } else if (line.startsWith('## ')) {
+        // Subheading
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(0, 51, 153);
+
+        const text = line.substring(3);
+        const splitText = doc.splitTextToSize(text, 170);
+
+        doc.text(splitText, 20, y);
+        y += 7 * splitText.length;
+      } else if (line.startsWith('### ')) {
+        // Sub-subheading
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(70, 70, 70);
+
+        const text = line.substring(4);
+        const splitText = doc.splitTextToSize(text, 170);
+
+        doc.text(splitText, 20, y);
+        y += 6 * splitText.length;
+      } else if (line.startsWith('- ')) {
+        // Bullet point
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        const text = line.substring(2);
+        const splitText = doc.splitTextToSize(text, 160);
+
+        doc.text('•', 20, y);
+        doc.text(splitText, 25, y);
+        y += 5 * splitText.length;
+      } else if (/^\d+\.\s/.test(line)) {
+        // Numbered list
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        const number = line.match(/^\d+/)[0];
+        const text = line.substring(number.length + 2);
+        const splitText = doc.splitTextToSize(text, 160);
+
+        doc.text(`${number}.`, 20, y);
+        doc.text(splitText, 25, y);
+        y += 5 * splitText.length;
+      } else if (line.startsWith('**') && line.endsWith('**')) {
+        // Bold text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        const text = line.substring(2, line.length - 2);
+        const splitText = doc.splitTextToSize(text, 170);
+
+        doc.text(splitText, 20, y);
+        y += 5 * splitText.length;
+      } else if (line === '---') {
+        // Horizontal line
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, y, 190, y);
+        y += 5;
+      } else if (line.trim() === '') {
+        // Empty line
+        y += 3;
+      } else {
+        // Regular text
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        // Remove any URLs from the text to avoid issues
+        const plainText = line.replace(/\*\*(.*?)\*\*/g, '$1')
+                              .replace(/(https?:\/\/[^\s]+)/g, '[lien]');
+
+        const splitText = doc.splitTextToSize(plainText, 170);
+        doc.text(splitText, 20, y);
+        y += 5 * splitText.length;
+      }
+    }
+
+    // Add footer with page numbers
+    const totalPages = currentPage;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${i} sur ${totalPages} - Groupe Délice Centre Laitier Nord`, 105, 285, { align: 'center' });
+    }
+
+    // Save the PDF
+    doc.save(`Plan_Action_${user.firstName || 'Employe'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   // Download report as PDF with improved formatting
@@ -378,11 +927,25 @@ IMPORTANT:
         // Main title - already handled in header
         continue;
       } else if (line.startsWith('## ')) {
-        // Section title
+        // Section title with improved styling
+        // Add background color
+        doc.setFillColor(230, 240, 255); // Light blue background
+        doc.rect(15, y - 6, 180, 10, 'F');
+
+        // Add border
+        doc.setDrawColor(0, 51, 102); // Dark blue border
+        doc.setLineWidth(0.5);
+        doc.line(15, y + 3, 195, y + 3);
+
+        // Add title text
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
+        doc.setTextColor(0, 51, 102); // Dark blue text
         doc.text(line.substring(3), 20, y);
-        y += 8;
+
+        // Reset text color
+        doc.setTextColor(0, 0, 0);
+        y += 10;
       } else if (line.startsWith('### ')) {
         // Subsection title
         doc.setFont('helvetica', 'bold');
@@ -390,7 +953,7 @@ IMPORTANT:
         doc.text(line.substring(4), 20, y);
         y += 7;
       } else if (line.startsWith('- ')) {
-        // Bullet point
+        // Bullet point with improved styling
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
 
@@ -398,12 +961,16 @@ IMPORTANT:
         const bulletText = line.substring(2);
         const splitText = doc.splitTextToSize(bulletText, 160);
 
-        doc.text('•', 20, y);
-        doc.text(splitText, 25, y);
+        // Draw a colored bullet point
+        doc.setFillColor(0, 102, 204); // Blue bullet
+        doc.circle(22, y - 1.5, 1.5, 'F');
+
+        // Add the text with slight indent
+        doc.text(splitText, 26, y);
 
         y += 5 * splitText.length; // Adjust based on number of lines
       } else if (/^\d+\.\s/.test(line)) {
-        // Numbered list
+        // Numbered list with improved styling
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
 
@@ -411,8 +978,19 @@ IMPORTANT:
         const listText = line.substring(number.length + 2);
         const splitText = doc.splitTextToSize(listText, 160);
 
-        doc.text(`${number}.`, 20, y);
-        doc.text(splitText, 25, y);
+        // Draw a colored circle for the number
+        doc.setFillColor(0, 51, 102); // Dark blue background
+        doc.circle(20, y - 1.5, 6, 'F');
+
+        // Add the number in white
+        doc.setTextColor(255, 255, 255); // White text
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${number}`, 20, y, { align: 'center' });
+
+        // Reset text color and font for the content
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.text(splitText, 28, y);
 
         y += 5 * splitText.length;
       } else if (line.startsWith('**') && line.endsWith('**')) {
@@ -463,9 +1041,35 @@ IMPORTANT:
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
-        Amélioration de Performance AI
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+          Amélioration de Performance AI
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ mr: 1 }}>
+            DeepSeek AI:
+          </Typography>
+          {aiStatus.checking ? (
+            <Tooltip title="Vérification de la connexion...">
+              <HourglassEmpty fontSize="small" color="action" />
+            </Tooltip>
+          ) : aiStatus.online ? (
+            <Tooltip title="DeepSeek AI est connecté et prêt">
+              <CheckCircle fontSize="small" color="success" />
+            </Tooltip>
+          ) : (
+            <Tooltip title="DeepSeek AI n'est pas disponible">
+              <Error fontSize="small" color="error" />
+            </Tooltip>
+          )}
+          <Tooltip title="Vérifier la connexion à l'IA">
+            <IconButton size="small" onClick={checkAIStatus} sx={{ ml: 1 }}>
+              <Refresh fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -563,12 +1167,25 @@ IMPORTANT:
                   </Typography>
                   <Button
                     variant="contained"
-                    color="primary"
-                    startIcon={generating ? <CircularProgress size={20} color="inherit" /> : <Psychology />}
+                    color={aiStatus.online ? "primary" : "warning"}
+                    startIcon={
+                      generating ? <CircularProgress size={20} color="inherit" /> :
+                      aiStatus.checking ? <HourglassEmpty /> :
+                      aiStatus.online ? <Psychology /> :
+                      <Error />
+                    }
                     onClick={generateAIReport}
-                    disabled={generating}
+                    disabled={generating || (!aiStatus.online && !aiStatus.checking)}
+                    title={
+                      !aiStatus.online && !aiStatus.checking ?
+                      "DeepSeek AI n'est pas disponible actuellement" :
+                      "Générer un rapport d'amélioration personnalisé"
+                    }
                   >
-                    {generating ? 'Génération en cours...' : 'Générer Rapport AI'}
+                    {generating ? 'Génération en cours...' :
+                     aiStatus.checking ? 'Vérification de l\'IA...' :
+                     aiStatus.online ? 'Générer Rapport AI' :
+                     'IA non disponible'}
                   </Button>
                 </Box>
 
@@ -605,7 +1222,7 @@ IMPORTANT:
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <Box key={star} sx={{ color: theme.palette.warning.main }}>
-                                  {star <= Math.round(chapter.score) ? (
+                                  {star <= Math.round(chapter.score / 2) ? (
                                     <Star fontSize="small" />
                                   ) : (
                                     <StarBorder fontSize="small" />
@@ -613,9 +1230,28 @@ IMPORTANT:
                                 </Box>
                               ))}
                               <Typography variant="body2" sx={{ ml: 1 }}>
-                                ({chapter.score}/5)
+                                ({chapter.score}/10)
                               </Typography>
                             </Box>
+                            {chapter.comment && (
+                              <Box sx={{ mt: 1, pt: 1, borderTop: `1px dashed ${alpha(theme.palette.divider, 0.5)}` }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                  Commentaire du chef:
+                                </Typography>
+                                <Typography variant="body2" sx={{
+                                  fontStyle: 'italic',
+                                  fontSize: '0.85rem',
+                                  color: alpha(theme.palette.text.primary, 0.8),
+                                  backgroundColor: alpha(theme.palette.background.default, 0.5),
+                                  p: 1,
+                                  borderRadius: 1,
+                                  maxHeight: '80px',
+                                  overflow: 'auto'
+                                }}>
+                                  {chapter.comment}
+                                </Typography>
+                              </Box>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -639,14 +1275,30 @@ IMPORTANT:
                             GROUPE DÉLICE CENTRE LAITIER NORD
                           </Typography>
                         </Box>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<Download />}
-                          onClick={handleDownloadPDF}
-                        >
-                          Télécharger PDF
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            startIcon={generatingPlan ? <CircularProgress size={20} color="inherit" /> : <Assignment />}
+                            onClick={generateActionPlan}
+                            disabled={generating || generatingPlan || (!aiStatus.online && !aiStatus.checking)}
+                            title={
+                              !aiStatus.online && !aiStatus.checking ?
+                              "DeepSeek AI n'est pas disponible actuellement" :
+                              "Générer un plan d'action détaillé"
+                            }
+                          >
+                            {generatingPlan ? 'Génération en cours...' : 'Plan d\'Action'}
+                          </Button>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<Download />}
+                            onClick={handleDownloadPDF}
+                          >
+                            Télécharger PDF
+                          </Button>
+                        </Box>
                       </Box>
 
                       <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), p: 2, borderRadius: 1, mb: 3 }}>
@@ -697,12 +1349,15 @@ IMPORTANT:
                           },
                           '& h2': {
                             fontSize: '1.4rem',
-                            color: theme.palette.primary.dark,
+                            color: theme.palette.primary.main,
                             mt: 4,
                             mb: 2,
-                            fontWeight: 600,
-                            borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                            pb: 1
+                            fontWeight: 700,
+                            borderBottom: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+                            pb: 1,
+                            borderRadius: '0 0 4px 0',
+                            paddingLeft: '8px',
+                            background: alpha(theme.palette.primary.main, 0.05)
                           },
                           '& h3': {
                             fontSize: '1.2rem',
@@ -723,7 +1378,19 @@ IMPORTANT:
                             mb: 2
                           },
                           '& li': {
-                            mb: 1
+                            mb: 1.5,
+                            position: 'relative',
+                            paddingLeft: '5px'
+                          },
+                          '& ul li::before': {
+                            content: '""',
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: theme.palette.primary.main,
+                            position: 'absolute',
+                            left: '-15px',
+                            top: '8px'
                           },
                           '& hr': {
                             my: 3,

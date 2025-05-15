@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   useTheme,
@@ -29,7 +29,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-const TaskProgress = () => {
+const TaskProgress = ({ setActiveView }) => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -139,16 +139,13 @@ const TaskProgress = () => {
   };
 
   return (
-    <Paper
+    <Card
       elevation={0}
+      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 4,
+        borderRadius: 2,
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
         display: 'flex',
         flexDirection: 'column'
       }}
@@ -365,13 +362,13 @@ const TaskProgress = () => {
               textTransform: 'none',
               fontWeight: 'medium'
             }}
-            onClick={() => window.location.href = '/employee-dashboard/tasks'}
+            onClick={() => setActiveView && setActiveView("taskChat")}
           >
             Voir toutes les tâches
           </Button>
         </>
       )}
-    </Paper>
+    </Card>
   );
 };
 

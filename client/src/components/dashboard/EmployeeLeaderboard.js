@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
-  Paper,
+  Card,
   Typography,
   CircularProgress,
   useTheme,
@@ -282,18 +282,16 @@ const EmployeeLeaderboard = () => {
   };
 
   return (
-    <Paper
+    <Card
       elevation={0}
+      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 4,
+        borderRadius: 2,
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        bgcolor: theme.palette.background.paper
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
@@ -495,7 +493,7 @@ const EmployeeLeaderboard = () => {
           ))}
         </List>
       )}
-    </Paper>
+    </Card>
   );
 };
 

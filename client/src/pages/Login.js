@@ -1,5 +1,5 @@
 // src/pages/Login.js
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,8 +9,6 @@ import {
   Box,
   CssBaseline,
   FormControl,
-  FormControlLabel,
-  Checkbox,
   Stack,
   IconButton,
   styled,
@@ -67,10 +65,27 @@ const Login = () => {
 
   const theme = createAppTheme(mode);
 
+  // Apply theme to document body to prevent white flash during transitions
+  const applyThemeToBody = (mode) => {
+    if (mode === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.style.backgroundColor = 'hsl(220, 30%, 5%)';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.style.backgroundColor = '';
+    }
+  };
+
+  // Apply theme to body on component mount
+  useEffect(() => {
+    applyThemeToBody(mode);
+  }, [mode]);
+
   const toggleTheme = () => {
     const newMode = mode === "light" ? "dark" : "light";
     setMode(newMode);
     localStorage.setItem("themeMode", newMode);
+    applyThemeToBody(newMode);
   };
 
   const validateInputs = () => {
@@ -104,7 +119,14 @@ const Login = () => {
 
     // Gestion de la connexion admin
     if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      const adminUser = { email, role: "admin", firstLogin: false }; // Objet utilisateur admin
+      // Generate a fake token for admin
+      const adminToken = "admin-token-" + Date.now();
+      const adminUser = {
+        email,
+        role: "admin",
+        firstLogin: false,
+        token: adminToken
+      }; // Objet utilisateur admin
       localStorage.setItem("employee", JSON.stringify(adminUser));
       setUser(adminUser);
       navigate("/dashboard");
@@ -209,12 +231,6 @@ const Login = () => {
                 }}
               />
             </FormControl>
-
-            <FormControlLabel
-              control={<Checkbox value="remember" color="primary" />}
-              label="Remember me"
-              sx={{ mb: 2, color: theme.palette.text.secondary }}
-            />
 
             <Button
               type="submit"

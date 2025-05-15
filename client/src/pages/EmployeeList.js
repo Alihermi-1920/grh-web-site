@@ -55,6 +55,9 @@ import {
   Work,
   CreditCard,
   SupervisorAccount,
+  Cake,
+  Wc,
+  CalendarMonth,
 } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -109,6 +112,9 @@ const EmployeeListPage = () => {
     role: "",
     phone: "",
     cin: "",
+    birthDate: "",
+    gender: "",
+    hireDate: "",
   });
 
   // États pour la modale de confirmation de suppression
@@ -124,7 +130,8 @@ const EmployeeListPage = () => {
 
   // Récupération de la liste des employés depuis l'API
   useEffect(() => {
-    fetch("http://localhost:5000/api/employees")
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+    fetch(`${API_URL}/api/employees`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Erreur lors de la récupération des employés");
@@ -132,8 +139,18 @@ const EmployeeListPage = () => {
         return res.json();
       })
       .then((data) => {
-        setEmployees(data);
-        setFilteredEmployees(data);
+        // Sort employees to show newest first (assuming they have createdAt or _id with timestamp)
+        const sortedData = [...data].sort((a, b) => {
+          // If createdAt exists, use it for sorting
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+          }
+          // Otherwise use _id which contains a timestamp in MongoDB
+          return b._id.localeCompare(a._id);
+        });
+
+        setEmployees(sortedData);
+        setFilteredEmployees(sortedData);
 
         // Extraire les départements et les rôles uniques pour les filtres
         const uniqueDepartments = [...new Set(data.map(emp => emp.department))].filter(Boolean);
@@ -156,7 +173,8 @@ const EmployeeListPage = () => {
   const fetchChefs = async () => {
     setLoadingChefs(true);
     try {
-      const response = await fetch("http://localhost:5000/api/employees/chefs");
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/employees/chefs`);
       if (!response.ok) {
         throw new Error("Erreur lors de la récupération des chefs");
       }
@@ -235,77 +253,207 @@ const EmployeeListPage = () => {
 
   // Fonction pour exporter la liste des employés en PDF
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-
-    // Ajouter un en-tête pour le document
-    doc.setFontSize(20);
-    doc.setTextColor(44, 62, 80);
-    doc.text("HRMS - Liste des employés", 105, 15, { align: "center" });
-
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    const date = new Date().toLocaleDateString();
-    doc.text(`Généré le: ${date}`, 105, 22, { align: "center" });
-
-    doc.line(14, 25, 196, 25); // Ligne de séparation
-
-    // Préparer les colonnes
-    const tableColumn = [
-      "N°",
-      "Prénom",
-      "Nom",
-      "CIN",
-      "Département",
-      "Email",
-      "Rôle",
-      "Téléphone",
-    ];
-
-    // Préparer les données (utiliser les employés filtrés)
-    const tableRows = filteredEmployees.map((emp, index) => [
-      index + 1,
-      emp.firstName || "-",
-      emp.lastName || "-",
-      emp.cin || "-",
-      emp.department || "-",
-      emp.email || "-",
-      emp.role || "-",
-      emp.phone || "-",
-    ]);
-
-    // Générer la table dans le PDF
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        lineColor: [44, 62, 80],
-      },
-      headStyles: {
-        fillColor: [44, 62, 80],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [240, 240, 240],
-      },
+    // Créer un nouveau document PDF en orientation paysage pour mieux accommoder toutes les colonnes
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
     });
 
-    // Ajouter un pied de page
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} sur ${pageCount}`, 105, doc.internal.pageSize.height - 10, {
-        align: "center",
-      });
+    // Définir les couleurs professionnelles
+    const primaryColor = [52, 73, 94]; // #34495e
+    const secondaryColor = [41, 128, 185]; // #2980b9
+    const lightGrayColor = [245, 245, 245]; // #f5f5f5
+    const darkGrayColor = [100, 100, 100]; // #646464
+    const blackColor = [0, 0, 0]; // #000000
+
+    // Ajouter le logo et l'en-tête
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Ajouter un rectangle de couleur en haut de la page
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+
+    // Ajouter le titre
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.text("HRMS - Liste des Employés", pageWidth / 2, 12, { align: "center" });
+
+    // Ajouter les informations du document
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...darkGrayColor);
+
+    // Ajouter la date et les informations de filtrage
+    const date = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    doc.text(`Date d'exportation: ${date}`, 15, 35);
+
+    // Ajouter les informations de filtrage
+    let filterInfo = "Filtres appliqués: ";
+    if (departmentFilter !== "all") {
+      filterInfo += `Département: ${departmentFilter}, `;
+    }
+    if (roleFilter !== "all") {
+      filterInfo += `Rôle: ${roleFilter}, `;
+    }
+    if (chefFilter !== "all") {
+      const selectedChef = chefs.find(chef => chef._id === chefFilter);
+      if (selectedChef) {
+        filterInfo += `Chef: ${selectedChef.firstName} ${selectedChef.lastName}, `;
+      }
+    }
+    if (filterValue) {
+      filterInfo += `Recherche: "${filterValue}", `;
     }
 
-    // Sauvegarder le PDF
-    doc.save("employees-list.pdf");
+    // Si aucun filtre n'est appliqué
+    if (filterInfo === "Filtres appliqués: ") {
+      filterInfo += "Aucun";
+    } else {
+      // Supprimer la virgule finale
+      filterInfo = filterInfo.slice(0, -2);
+    }
+
+    doc.text(filterInfo, 15, 42);
+
+    // Ajouter le nombre total d'employés
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Nombre total d'employés: ${filteredEmployees.length}`, pageWidth - 15, 35, { align: "right" });
+
+    // Ajouter la date d'impression
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Imprimé le: ${date}`, pageWidth - 15, 42, { align: "right" });
+
+    // Préparer les colonnes avec des largeurs optimisées
+    const tableColumn = [
+      { header: "N°", dataKey: "num", width: 10 },
+      { header: "Prénom", dataKey: "firstName", width: 25 },
+      { header: "Nom", dataKey: "lastName", width: 25 },
+      { header: "CIN", dataKey: "cin", width: 20 },
+      { header: "Département", dataKey: "department", width: 30 },
+      { header: "Rôle", dataKey: "role", width: 25 },
+      { header: "Email", dataKey: "email", width: 45 },
+      { header: "Téléphone", dataKey: "phone", width: 25 },
+      { header: "Date d'embauche", dataKey: "hireDate", width: 25 },
+      { header: "Chef", dataKey: "chef", width: 30 }
+    ];
+
+    // Préparer les données sous forme d'objets pour une meilleure lisibilité
+    const tableData = filteredEmployees.map((emp, index) => {
+      let chefName = "-";
+      if (emp.chefId && typeof emp.chefId === 'object' && emp.chefId.firstName) {
+        chefName = `${emp.chefId.firstName} ${emp.chefId.lastName}`;
+      }
+
+      return {
+        num: index + 1,
+        firstName: emp.firstName || "-",
+        lastName: emp.lastName || "-",
+        cin: emp.cin || "-",
+        department: emp.department || "-",
+        role: emp.role || "-",
+        email: emp.email || "-",
+        phone: emp.phone || "-",
+        hireDate: emp.hireDate ? new Date(emp.hireDate).toLocaleDateString('fr-FR') : "-",
+        chef: chefName
+      };
+    });
+
+    // Générer la table dans le PDF avec un design professionnel
+    autoTable(doc, {
+      columns: tableColumn,
+      body: tableData,
+      startY: 50,
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [...primaryColor, 0.3],
+        lineWidth: 0.1,
+        font: 'helvetica',
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        halign: 'center',
+        cellPadding: 5
+      },
+      bodyStyles: {
+        textColor: blackColor
+      },
+      alternateRowStyles: {
+        fillColor: lightGrayColor
+      },
+      columnStyles: {
+        num: { halign: 'center' },
+        cin: { halign: 'center' },
+        phone: { halign: 'center' },
+        hireDate: { halign: 'center' }
+      },
+      didDrawPage: function(data) {
+        // Ajouter un pied de page sur chaque page
+        const pageNumber = doc.internal.getNumberOfPages();
+        const totalPages = doc.internal.getNumberOfPages();
+
+        // Ajouter une ligne de séparation
+        doc.setDrawColor(...darkGrayColor);
+        doc.setLineWidth(0.5);
+        doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
+
+        // Ajouter le numéro de page
+        doc.setFontSize(9);
+        doc.setTextColor(...darkGrayColor);
+        doc.text(
+          `Page ${pageNumber} sur ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: "center" }
+        );
+
+        // Ajouter le nom de l'entreprise
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          "Delice Centre Laitier Nord - HRMS",
+          15,
+          pageHeight - 10
+        );
+
+        // Ajouter la date d'impression
+        doc.text(
+          `Exporté le ${date}`,
+          pageWidth - 15,
+          pageHeight - 10,
+          { align: "right" }
+        );
+
+        // Ajouter l'en-tête sur chaque page sauf la première
+        if (pageNumber > 1) {
+          // Ajouter un rectangle de couleur en haut de la page
+          doc.setFillColor(...primaryColor);
+          doc.rect(0, 0, pageWidth, 15, 'F');
+
+          // Ajouter le titre
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(255, 255, 255);
+          doc.text("HRMS - Liste des Employés (suite)", pageWidth / 2, 10, { align: "center" });
+        }
+      }
+    });
+
+    // Sauvegarder le PDF avec un nom incluant la date
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    doc.save(`liste-employes-${dateStr}.pdf`);
 
     // Notification de succès
     setSnackbar({
@@ -327,6 +475,9 @@ const EmployeeListPage = () => {
       role: employee.role || "",
       phone: employee.phone || "",
       cin: employee.cin || "",
+      birthDate: employee.birthDate ? new Date(employee.birthDate).toISOString().split('T')[0] : "",
+      gender: employee.gender || "",
+      hireDate: employee.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : "",
     });
     setEditOpen(true);
   };
@@ -340,10 +491,11 @@ const EmployeeListPage = () => {
   // Sauvegarder la modification de l'employé via l'API
   const handleEditSave = async () => {
     const updatedEmployee = { ...selectedEmployee, ...editedEmployee };
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/employees/${selectedEmployee._id}`,
+        `${API_URL}/api/employees/${selectedEmployee._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -397,10 +549,11 @@ const EmployeeListPage = () => {
   // Confirmer la suppression de l'employé via l'API
   const handleDeleteConfirm = async () => {
     if (!employeeToDelete) return;
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/employees/${employeeToDelete._id}`,
+        `${API_URL}/api/employees/${employeeToDelete._id}`,
         {
           method: "DELETE",
         }
@@ -490,29 +643,72 @@ const EmployeeListPage = () => {
         </Breadcrumbs>
 
         {/* Titre de la page et statistiques */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            Gestion des Employés
-          </Typography>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', md: 'center' },
+          mb: 4,
+          gap: 2
+        }}>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: 'bold',
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1
+              }}
+            >
+              Gestion des Employés
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Gérez tous vos employés en un seul endroit
+            </Typography>
+          </Box>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Card sx={{ minWidth: 120, bgcolor: 'primary.light' }}>
-              <CardContent sx={{ p: 1.5 }}>
-                <Typography variant="overline" sx={{ color: 'primary.contrastText' }}>
-                  Total
+          <Box sx={{
+            display: 'flex',
+            gap: 2,
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'space-between', md: 'flex-end' }
+          }}>
+            <Card
+              elevation={0}
+              sx={{
+                minWidth: 140,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%)',
+                boxShadow: '0 8px 16px rgba(142, 45, 226, 0.2)'
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="overline" sx={{ color: 'white', opacity: 0.8 }}>
+                  Total Employés
                 </Typography>
-                <Typography variant="h5" sx={{ color: 'primary.contrastText' }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
                   {employees.length}
                 </Typography>
               </CardContent>
             </Card>
 
-            <Card sx={{ minWidth: 120, bgcolor: 'info.light' }}>
-              <CardContent sx={{ p: 1.5 }}>
-                <Typography variant="overline" sx={{ color: 'info.contrastText' }}>
+            <Card
+              elevation={0}
+              sx={{
+                minWidth: 140,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #00B4DB 0%, #0083B0 100%)',
+                boxShadow: '0 8px 16px rgba(0, 131, 176, 0.2)'
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="overline" sx={{ color: 'white', opacity: 0.8 }}>
                   Départements
                 </Typography>
-                <Typography variant="h5" sx={{ color: 'info.contrastText' }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
                   {departments.length}
                 </Typography>
               </CardContent>
@@ -521,123 +717,187 @@ const EmployeeListPage = () => {
         </Box>
 
         {/* Filtres et boutons d'action */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={7}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Rechercher par nom, email, téléphone ou CIN..."
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={6} md={1.5}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel id="department-filter-label">Département</InputLabel>
-              <Select
-                labelId="department-filter-label"
-                value={departmentFilter}
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                label="Département"
-              >
-                <MenuItem value="all">Tous</MenuItem>
-                {departments.map((dept) => (
-                  <MenuItem key={dept} value={dept}>
-                    {dept}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={6} md={1.5}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel id="role-filter-label">Rôle</InputLabel>
-              <Select
-                labelId="role-filter-label"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                label="Rôle"
-              >
-                <MenuItem value="all">Tous</MenuItem>
-                {roles.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={6} md={2}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel id="chef-filter-label">Chef responsable</InputLabel>
-              <Select
-                labelId="chef-filter-label"
-                value={chefFilter}
-                onChange={(e) => setChefFilter(e.target.value)}
-                label="Chef responsable"
-                disabled={loadingChefs}
-                startAdornment={
-                  loadingChefs ? (
-                    <InputAdornment position="start">
-                      <CircularProgress size={20} />
-                    </InputAdornment>
-                  ) : (
-                    <InputAdornment position="start">
-                      <SupervisorAccount />
-                    </InputAdornment>
-                  )
-                }
-              >
-                <MenuItem value="all">Tous les chefs</MenuItem>
-                {chefs.map((chef) => (
-                  <MenuItem key={chef._id} value={chef._id}>
-                    {chef.firstName} {chef.lastName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={6} md={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleExportPDF}
-              startIcon={<PictureAsPdf />}
-              sx={{ height: '100%' }}
-            >
-              Exporter PDF
-            </Button>
-          </Grid>
-        </Grid>
-
-        {/* Tableau des employés */}
         <Paper
-          elevation={3}
+          elevation={0}
+          sx={{
+            mb: 4,
+            p: 3,
+            borderRadius: 3,
+            background: theme => theme.palette.mode === 'dark'
+              ? 'linear-gradient(to right bottom, rgba(30, 30, 60, 0.7), rgba(20, 20, 40, 0.7))'
+              : 'linear-gradient(to right bottom, rgba(240, 249, 255, 0.7), rgba(224, 243, 255, 0.7))',
+            backdropFilter: 'blur(10px)',
+            border: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          }}
+        >
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Rechercher par nom, email, téléphone ou CIN..."
+                value={filterValue}
+                onChange={(e) => setFilterValue(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.9)',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    },
+                    '&.Mui-focused': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', gap: 2, height: '100%' }}>
+                <FormControl
+                  variant="outlined"
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.9)',
+                    }
+                  }}
+                >
+                  <InputLabel id="department-filter-label">Département</InputLabel>
+                  <Select
+                    labelId="department-filter-label"
+                    value={departmentFilter}
+                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                    label="Département"
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Business fontSize="small" />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="all">Tous les départements</MenuItem>
+                    {departments.map((dept) => (
+                      <MenuItem key={dept} value={dept}>
+                        {dept}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl
+                  variant="outlined"
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.9)',
+                    }
+                  }}
+                >
+                  <InputLabel id="role-filter-label">Rôle</InputLabel>
+                  <Select
+                    labelId="role-filter-label"
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    label="Rôle"
+                    startAdornment={
+                      <InputAdornment position="start">
+                        <Work fontSize="small" />
+                      </InputAdornment>
+                    }
+                  >
+                    <MenuItem value="all">Tous les rôles</MenuItem>
+                    {roles.map((role) => (
+                      <MenuItem key={role} value={role}>
+                        {role}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.9)',
+                  }
+                }}
+              >
+                <InputLabel id="chef-filter-label">Chef responsable</InputLabel>
+                <Select
+                  labelId="chef-filter-label"
+                  value={chefFilter}
+                  onChange={(e) => setChefFilter(e.target.value)}
+                  label="Chef responsable"
+                  disabled={loadingChefs}
+                  startAdornment={
+                    loadingChefs ? (
+                      <InputAdornment position="start">
+                        <CircularProgress size={20} />
+                      </InputAdornment>
+                    ) : (
+                      <InputAdornment position="start">
+                        <SupervisorAccount fontSize="small" />
+                      </InputAdornment>
+                    )
+                  }
+                >
+                  <MenuItem value="all">Tous les chefs</MenuItem>
+                  {chefs.map((chef) => (
+                    <MenuItem key={chef._id} value={chef._id}>
+                      {chef.firstName} {chef.lastName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleExportPDF}
+                startIcon={<PictureAsPdf />}
+                sx={{
+                  height: '100%',
+                  borderRadius: 2,
+                  backgroundColor: theme => theme.palette.mode === 'dark' ? '#2c3e50' : '#34495e',
+                  color: 'white',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  '&:hover': {
+                    backgroundColor: theme => theme.palette.mode === 'dark' ? '#34495e' : '#2c3e50',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  }
+                }}
+              >
+                Exporter PDF
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        {/* Tableau des employés - Design professionnel */}
+        <Paper
+          elevation={0}
           sx={{
             overflow: 'hidden',
             borderRadius: 2,
-            '& .MuiTableCell-head': {
-              backgroundColor: 'primary.main',
-              color: 'primary.contrastText',
-              fontWeight: 'bold',
-            },
+            border: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
           }}
         >
           {filteredEmployees.length === 0 ? (
@@ -645,37 +905,191 @@ const EmployeeListPage = () => {
               <Typography variant="h6" color="text.secondary">
                 Aucun employé trouvé avec les critères sélectionnés.
               </Typography>
-              <Button
-                sx={{ mt: 2 }}
-                variant="outlined"
-                onClick={() => {
-                  setFilterValue('');
-                  setDepartmentFilter('all');
-                  setRoleFilter('all');
-                  setChefFilter('all');
-                }}
-              >
-                Réinitialiser les filtres
-              </Button>
             </Box>
           ) : (
             <>
-              <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
-                <Table stickyHeader aria-label="employee table">
-                  <TableHead>
+              <TableContainer
+                sx={{
+                  maxHeight: 'calc(100vh - 250px)', // Adjusted for better balance
+                  '& .MuiTableHead-root': {
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10
+                  }
+                }}
+              >
+                <Table
+                  stickyHeader
+                  aria-label="employee table"
+                  sx={{
+                    '& .MuiTableCell-body': {
+                      padding: '16px 12px',
+                      fontSize: '0.95rem'
+                    }
+                  }}>
+                  <TableHead sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                    '& .MuiTableCell-root': {
+                      backgroundColor: theme => theme.palette.mode === 'dark'
+                        ? '#1e2a3a'
+                        : '#f5f5f7',
+                      fontWeight: 600,
+                      color: 'text.primary',
+                      borderBottom: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      padding: '16px 12px',
+                      fontSize: '0.95rem'
+                    }
+                  }}>
                     <TableRow>
-                      <TableCell align="center" width={50}>N°</TableCell>
-                      <TableCell align="center" width={80}>Photo</TableCell>
-                      <TableCell>Prénom</TableCell>
-                      <TableCell>Nom</TableCell>
-                      <TableCell>CIN</TableCell>
-                      <TableCell>Département</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell align="center">Mot de passe</TableCell>
-                      <TableCell>Rôle</TableCell>
-                      <TableCell>Chef responsable</TableCell>
-                      <TableCell>Téléphone</TableCell>
-                      <TableCell align="center" width={120}>Actions</TableCell>
+                      <TableCell
+                        align="center"
+                        width={50}
+                      >
+                        N°
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        width={80}
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Photo
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Prénom
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Nom
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        CIN
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Cake fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
+                          Date de naissance
+                        </Box>
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Wc fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
+                          Genre
+                        </Box>
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Département
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Email
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Mot de passe
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Rôle
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Chef responsable
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Téléphone
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CalendarMonth fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
+                          Date d'embauche
+                        </Box>
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        width={120}
+                        sx={{
+                          fontWeight: 600,
+                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Actions
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -684,9 +1098,18 @@ const EmployeeListPage = () => {
                         key={emp._id}
                         hover
                         sx={{
+                          transition: 'background-color 0.2s',
                           '&:nth-of-type(odd)': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                            backgroundColor: theme => theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.02)'
+                              : 'rgba(0, 0, 0, 0.01)',
                           },
+                          '&:hover': {
+                            backgroundColor: theme => theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.05)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                          },
+                          borderBottom: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
                         }}
                       >
                         <TableCell align="center">
@@ -697,10 +1120,10 @@ const EmployeeListPage = () => {
                             <Avatar
                               src={`/${emp.photo.split(/(\\|\/)/g).pop()}`}
                               alt={`${emp.firstName} ${emp.lastName}`}
-                              sx={{ width: 50, height: 50, mx: 'auto' }}
+                              sx={{ width: 45, height: 45, mx: 'auto' }}
                             />
                           ) : (
-                            <Avatar sx={{ width: 50, height: 50, mx: 'auto', bgcolor: 'primary.main' }}>
+                            <Avatar sx={{ width: 45, height: 45, mx: 'auto', bgcolor: 'primary.main' }}>
                               {emp.firstName?.[0] || ''}{emp.lastName?.[0] || ''}
                             </Avatar>
                           )}
@@ -712,21 +1135,19 @@ const EmployeeListPage = () => {
                             <Chip
                               label={emp.cin}
                               size="small"
-                              color="info"
                               variant="outlined"
                               sx={{ fontFamily: 'monospace' }}
                             />
                           ) : "-"}
                         </TableCell>
                         <TableCell>
-                          {emp.department ? (
-                            <Chip
-                              label={emp.department}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                          ) : "-"}
+                          {emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('fr-FR') : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {emp.gender || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {emp.department || "-"}
                         </TableCell>
                         <TableCell>{emp.email || "-"}</TableCell>
                         <TableCell align="center">
@@ -737,51 +1158,50 @@ const EmployeeListPage = () => {
                             <Chip
                               label={emp.role}
                               size="small"
-                              color="secondary"
                               variant="outlined"
+                              color="primary"
                             />
                           ) : "-"}
                         </TableCell>
                         <TableCell>
                           {emp.chefId ? (
-                            <Tooltip title={`ID: ${emp.chefId._id}`}>
-                              <Chip
-                                icon={<SupervisorAccount />}
-                                label={`${emp.chefId.firstName} ${emp.chefId.lastName}`}
-                                size="small"
-                                variant="outlined"
-                                color="primary"
-                              />
-                            </Tooltip>
+                            <Typography variant="body2">
+                              {emp.chefId.firstName} {emp.chefId.lastName}
+                            </Typography>
                           ) : (
-                            emp.role === "Chef" ? (
-                              <Chip label="N/A" size="small" variant="outlined" />
-                            ) : (
-                              <Chip label="Non assigné" size="small" variant="outlined" color="error" />
-                            )
+                            emp.role === "Chef" ? "N/A" : "Non assigné"
                           )}
                         </TableCell>
                         <TableCell>{emp.phone || "-"}</TableCell>
+                        <TableCell>
+                          {emp.hireDate ? new Date(emp.hireDate).toLocaleDateString('fr-FR') : "-"}
+                        </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Modifier">
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleEditModalOpen(emp)}
-                              size="small"
-                              sx={{ mr: 1 }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Supprimer">
-                            <IconButton
-                              color="error"
-                              onClick={() => handleDeleteModalOpen(emp)}
-                              size="small"
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                            <Tooltip title="Modifier">
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleEditModalOpen(emp)}
+                                size="medium"
+                                sx={{
+                                  mr: 1.5,
+                                  p: 1.5
+                                }}
+                              >
+                                <EditIcon fontSize="medium" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Supprimer">
+                              <IconButton
+                                color="error"
+                                onClick={() => handleDeleteModalOpen(emp)}
+                                size="medium"
+                                sx={{ p: 1.5 }}
+                              >
+                                <DeleteIcon fontSize="medium" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -789,17 +1209,38 @@ const EmployeeListPage = () => {
                 </Table>
               </TableContainer>
 
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                component="div"
-                count={filteredEmployees.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="Lignes par page:"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
-              />
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                p: 2,
+                borderTop: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+              }}>
+                <Typography variant="body2" color="text.secondary">
+                  Total: <strong>{filteredEmployees.length}</strong> employés
+                </Typography>
+
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 15, 20]}
+                  component="div"
+                  count={filteredEmployees.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  labelRowsPerPage="Lignes par page:"
+                  labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
+                  sx={{
+                    '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                      margin: 0,
+                    },
+                    '.MuiTablePagination-toolbar': {
+                      paddingLeft: 1,
+                      paddingRight: 1,
+                    }
+                  }}
+                />
+              </Box>
             </>
           )}
         </Paper>
@@ -936,6 +1377,60 @@ const EmployeeListPage = () => {
                   startAdornment: (
                     <InputAdornment position="start">
                       <CreditCard fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Date de naissance"
+                type="date"
+                fullWidth
+                value={editedEmployee.birthDate}
+                onChange={(e) => setEditedEmployee({...editedEmployee, birthDate: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Cake fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Genre</InputLabel>
+                <Select
+                  value={editedEmployee.gender}
+                  onChange={(e) => setEditedEmployee({...editedEmployee, gender: e.target.value})}
+                  label="Genre"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Wc fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                >
+                  <MenuItem value="Homme">Homme</MenuItem>
+                  <MenuItem value="Femme">Femme</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Date d'embauche"
+                type="date"
+                fullWidth
+                value={editedEmployee.hireDate}
+                onChange={(e) => setEditedEmployee({...editedEmployee, hireDate: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CalendarMonth fontSize="small" />
                     </InputAdornment>
                   ),
                 }}

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Box, Typography, Grid, Paper, useTheme } from '@mui/material';
 import { PeopleAlt, Assignment, Business } from '@mui/icons-material';
-import DashboardChart from '../components/DashboardChart';
+
 import PieChart from '../components/PieChart';
 import MonthlyRecruitmentChart from '../components/MonthlyRecruitmentChart';
 import WelcomeBanner from '../components/WelcomeBanner';
@@ -25,7 +25,7 @@ const DashboardHome = ({
       <WelcomeBanner />
 
       <Typography variant="h4" fontWeight="bold" color="primary" sx={{ mt: 4, mb: 2 }}>
-        Tableau de bord
+        Espace de Travail Delice
       </Typography>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -158,30 +158,7 @@ const DashboardHome = ({
           </Paper>
         </Grid>
 
-        <Grid item xs={12}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 3,
-              borderRadius: 4,
-              boxShadow: darkMode
-                ? '0 8px 24px rgba(0,0,0,0.2)'
-                : '0 8px 24px rgba(0,0,0,0.05)',
-            }}
-          >
-            <Typography variant="h6" fontWeight="600" gutterBottom>
-              Vue d'ensemble des statistiques
-            </Typography>
-            <Box sx={{ height: 350, mt: 2 }}>
-              <DashboardChart
-                employeeCount={employeeCount}
-                projectCount={projectCount}
-                departmentCount={departmentCount}
-                darkMode={darkMode}
-              />
-            </Box>
-          </Paper>
-        </Grid>
+
       </Grid>
     </Box>
   );

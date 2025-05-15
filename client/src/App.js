@@ -1,30 +1,19 @@
 // src/App.js
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./App.css"; // Styles propres à App (optionnel)
+import "./App.css";
 
 const App = () => {
-  // On ne se sert pas du "user" pour l'instant, mais on l'enregistre dans l'état
-  const [, setUser] = useState(null);
   const navigate = useNavigate();
 
+  // Redirect to login page immediately
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    // Si aucun token, on redirige vers la page de login
-    if (!token) {
-      navigate("/login");
-    } else {
-      // Sinon, on peut stocker un utilisateur fictif
-      setUser("Utilisateur connecté");
-    }
+    // Always redirect to login page
+    navigate("/login");
   }, [navigate]);
 
-  return (
-    <div className="app-container">
-      <h1>Bienvenue dans l'application GRH</h1>
-      <p>Ceci est la page d'accueil.</p>
-    </div>
-  );
+  // This return statement won't be visible as we're redirecting
+  return null;
 };
 
 export default App;

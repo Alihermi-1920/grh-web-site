@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#121212" />
     <meta
       name="description"
       content="Web site created using create-react-app"
@@ -19,6 +19,37 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Prevent white flash in dark mode -->
+    <script>
+      (function() {
+        // Check if user has dark mode preference
+        const isDarkMode = localStorage.getItem('themeMode') === 'dark';
+        if (isDarkMode) {
+          document.documentElement.style.backgroundColor = 'hsl(220, 30%, 5%)';
+          document.documentElement.style.color = '#fff';
+        }
+      })();
+    </script>
+
+    <style>
+      /* Base styles to prevent white flash */
+      body {
+        transition: background-color 0.3s ease;
+      }
+
+      /* Apply dark background if dark mode is enabled */
+      html[data-theme='dark'] {
+        background-color: hsl(220, 30%, 5%);
+        color: #fff;
+      }
+
+      /* Ensure the root div covers the entire viewport */
+      #root {
+        min-height: 100vh;
+      }
+    </style>
+
     <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -33,6 +64,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
+    <script>
+      // Apply theme class to body
+      const isDarkMode = localStorage.getItem('themeMode') === 'dark';
+      if (isDarkMode) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.style.backgroundColor = 'hsl(220, 30%, 5%)';
+      }
+    </script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <!--

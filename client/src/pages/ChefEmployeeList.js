@@ -229,77 +229,189 @@ const ChefEmployeeList = () => {
 
   // Fonction pour exporter la liste des employés en PDF
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-
-    // Ajouter un en-tête pour le document
-    doc.setFontSize(20);
-    doc.setTextColor(44, 62, 80);
-    doc.text("HRMS - Liste des employés", 105, 15, { align: "center" });
-
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    const date = new Date().toLocaleDateString();
-    doc.text(`Généré le: ${date}`, 105, 22, { align: "center" });
-
-    doc.line(14, 25, 196, 25); // Ligne de séparation
-
-    // Préparer les colonnes
-    const tableColumn = [
-      "N°",
-      "Prénom",
-      "Nom",
-      "CIN",
-      "Département",
-      "Email",
-      "Rôle",
-      "Téléphone",
-    ];
-
-    // Préparer les données (utiliser les employés filtrés)
-    const tableRows = filteredEmployees.map((emp, index) => [
-      index + 1,
-      emp.firstName || "-",
-      emp.lastName || "-",
-      emp.cin || "-",
-      emp.department || "-",
-      emp.email || "-",
-      emp.role || "-",
-      emp.phone || "-",
-    ]);
-
-    // Générer la table dans le PDF
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        lineColor: [44, 62, 80],
-      },
-      headStyles: {
-        fillColor: [44, 62, 80],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [240, 240, 240],
-      },
+    // Créer un nouveau document PDF en orientation paysage pour mieux accommoder toutes les colonnes
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
     });
 
-    // Ajouter un pied de page
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} sur ${pageCount}`, 105, doc.internal.pageSize.height - 10, {
-        align: "center",
-      });
+    // Définir les couleurs professionnelles
+    const primaryColor = [52, 73, 94]; // #34495e
+    const secondaryColor = [41, 128, 185]; // #2980b9
+    const lightGrayColor = [245, 245, 245]; // #f5f5f5
+    const darkGrayColor = [100, 100, 100]; // #646464
+    const blackColor = [0, 0, 0]; // #000000
+
+    // Ajouter le logo et l'en-tête
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Ajouter un rectangle de couleur en haut de la page
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+
+    // Ajouter le titre
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.text("HRMS - Liste de Mes Employés", pageWidth / 2, 12, { align: "center" });
+
+    // Ajouter les informations du document
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(...darkGrayColor);
+
+    // Ajouter la date et les informations de filtrage
+    const date = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    doc.text(`Date d'exportation: ${date}`, 15, 35);
+
+    // Ajouter les informations de filtrage
+    let filterInfo = "Filtres appliqués: ";
+    if (filterValue) {
+      filterInfo += `Recherche: "${filterValue}", `;
     }
 
-    // Sauvegarder le PDF
-    doc.save("employees-list.pdf");
+    // Si aucun filtre n'est appliqué
+    if (filterInfo === "Filtres appliqués: ") {
+      filterInfo += "Aucun";
+    } else {
+      // Supprimer la virgule finale
+      filterInfo = filterInfo.slice(0, -2);
+    }
+
+    doc.text(filterInfo, 15, 42);
+
+    // Ajouter le nombre total d'employés
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Nombre total d'employés: ${filteredEmployees.length}`, pageWidth - 15, 35, { align: "right" });
+
+    // Ajouter la date d'impression
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Imprimé le: ${date}`, pageWidth - 15, 42, { align: "right" });
+
+    // Préparer les colonnes avec des largeurs optimisées
+    const tableColumn = [
+      { header: "N°", dataKey: "num", width: 8 },
+      { header: "Prénom", dataKey: "firstName", width: 20 },
+      { header: "Nom", dataKey: "lastName", width: 20 },
+      { header: "CIN", dataKey: "cin", width: 18 },
+      { header: "Genre", dataKey: "gender", width: 15 },
+      { header: "Date de naissance", dataKey: "birthDate", width: 25 },
+      { header: "Département", dataKey: "department", width: 25 },
+      { header: "Email", dataKey: "email", width: 40 },
+      { header: "Téléphone", dataKey: "phone", width: 20 }
+    ];
+
+    // Préparer les données sous forme d'objets pour une meilleure lisibilité
+    const tableData = filteredEmployees.map((emp, index) => {
+      return {
+        num: index + 1,
+        firstName: emp.firstName || "-",
+        lastName: emp.lastName || "-",
+        cin: emp.cin || "-",
+        gender: emp.gender || "-",
+        birthDate: emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('fr-FR') : "-",
+        department: emp.department || "-",
+        email: emp.email || "-",
+        phone: emp.phone || "-"
+      };
+    });
+
+    // Générer la table dans le PDF avec un design professionnel
+    autoTable(doc, {
+      columns: tableColumn,
+      body: tableData,
+      startY: 50,
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [...primaryColor, 0.3],
+        lineWidth: 0.1,
+        font: 'helvetica',
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        halign: 'center',
+        cellPadding: 5
+      },
+      bodyStyles: {
+        textColor: blackColor
+      },
+      alternateRowStyles: {
+        fillColor: lightGrayColor
+      },
+      columnStyles: {
+        num: { halign: 'center' },
+        cin: { halign: 'center' },
+        gender: { halign: 'center' },
+        birthDate: { halign: 'center' },
+        phone: { halign: 'center' }
+      },
+      didDrawPage: function(data) {
+        // Ajouter un pied de page sur chaque page
+        const pageNumber = doc.internal.getNumberOfPages();
+        const totalPages = doc.internal.getNumberOfPages();
+
+        // Ajouter une ligne de séparation
+        doc.setDrawColor(...darkGrayColor);
+        doc.setLineWidth(0.5);
+        doc.line(15, pageHeight - 15, pageWidth - 15, pageHeight - 15);
+
+        // Ajouter le numéro de page
+        doc.setFontSize(9);
+        doc.setTextColor(...darkGrayColor);
+        doc.text(
+          `Page ${pageNumber} sur ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: "center" }
+        );
+
+        // Ajouter le nom de l'entreprise
+        doc.setFont('helvetica', 'italic');
+        doc.text(
+          "Delice Centre Laitier Nord - HRMS",
+          15,
+          pageHeight - 10
+        );
+
+        // Ajouter la date d'impression
+        doc.text(
+          `Exporté le ${date}`,
+          pageWidth - 15,
+          pageHeight - 10,
+          { align: "right" }
+        );
+
+        // Ajouter l'en-tête sur chaque page sauf la première
+        if (pageNumber > 1) {
+          // Ajouter un rectangle de couleur en haut de la page
+          doc.setFillColor(...primaryColor);
+          doc.rect(0, 0, pageWidth, 15, 'F');
+
+          // Ajouter le titre
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(255, 255, 255);
+          doc.text("HRMS - Liste de Mes Employés (suite)", pageWidth / 2, 10, { align: "center" });
+        }
+      }
+    });
+
+    // Sauvegarder le PDF avec un nom incluant la date
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    doc.save(`mes-employes-${dateStr}.pdf`);
 
     // Notification de succès
     setSnackbar({
@@ -481,18 +593,53 @@ const ChefEmployeeList = () => {
         </Breadcrumbs>
 
         {/* Titre de la page et statistiques */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            Gestion des Employés
-          </Typography>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', md: 'center' },
+          mb: 4,
+          gap: 2
+        }}>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: 'bold',
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1
+              }}
+            >
+              Mes Employés
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Gérez vos employés en un seul endroit
+            </Typography>
+          </Box>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Card sx={{ minWidth: 120, bgcolor: 'primary.light' }}>
-              <CardContent sx={{ p: 1.5 }}>
-                <Typography variant="overline" sx={{ color: 'primary.contrastText' }}>
-                  Total
+          <Box sx={{
+            display: 'flex',
+            gap: 2,
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'space-between', md: 'flex-end' }
+          }}>
+            <Card
+              elevation={0}
+              sx={{
+                minWidth: 140,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%)',
+                boxShadow: '0 8px 16px rgba(142, 45, 226, 0.2)'
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="overline" sx={{ color: 'white', opacity: 0.8 }}>
+                  Total Employés
                 </Typography>
-                <Typography variant="h5" sx={{ color: 'primary.contrastText' }}>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
                   {employees.length}
                 </Typography>
               </CardContent>
@@ -501,54 +648,81 @@ const ChefEmployeeList = () => {
         </Box>
 
         {/* Filtres et boutons d'action */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={10}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Rechercher par nom, email, téléphone ou CIN..."
-              value={filterValue}
-              onChange={(e) => setFilterValue(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2
-                }
-              }}
-            />
-          </Grid>
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 4,
+            p: 3,
+            borderRadius: 3,
+            background: theme => theme.palette.mode === 'dark'
+              ? 'linear-gradient(to right bottom, rgba(30, 30, 60, 0.7), rgba(20, 20, 40, 0.7))'
+              : 'linear-gradient(to right bottom, rgba(240, 249, 255, 0.7), rgba(224, 243, 255, 0.7))',
+            backdropFilter: 'blur(10px)',
+            border: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          }}
+        >
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={9}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Rechercher par nom, email, téléphone ou CIN..."
+                value={filterValue}
+                onChange={(e) => setFilterValue(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.9)',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    },
+                    '&.Mui-focused': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
 
-          <Grid item xs={12} md={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={handleExportPDF}
-              startIcon={<PictureAsPdf />}
-              sx={{ height: '100%' }}
-            >
-              Exporter PDF
-            </Button>
+            <Grid item xs={12} md={3}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleExportPDF}
+                startIcon={<PictureAsPdf />}
+                sx={{
+                  height: '100%',
+                  borderRadius: 2,
+                  background: theme => theme.palette.primary.main,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  '&:hover': {
+                    background: theme => theme.palette.primary.dark,
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)'
+                  }
+                }}
+              >
+                Exporter PDF
+              </Button>
+            </Grid>
           </Grid>
-        </Grid>
+        </Paper>
 
         {/* Tableau des employés */}
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
             overflow: 'hidden',
-            borderRadius: 2,
-            '& .MuiTableCell-head': {
-              backgroundColor: 'primary.main',
-              color: 'primary.contrastText',
-              fontWeight: 'bold',
-            },
+            borderRadius: 3,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            border: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
           }}
         >
           {filteredEmployees.length === 0 ? (
@@ -571,15 +745,50 @@ const ChefEmployeeList = () => {
             </Box>
           ) : (
             <>
-              <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
-                <Table stickyHeader aria-label="employee table">
-                  <TableHead>
+              <TableContainer
+                sx={{
+                  maxHeight: 'calc(100vh - 250px)',
+                  '& .MuiTableHead-root': {
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10
+                  }
+                }}
+              >
+                <Table
+                  stickyHeader
+                  aria-label="employee table"
+                  sx={{
+                    '& .MuiTableCell-body': {
+                      padding: '16px 12px',
+                      fontSize: '0.95rem'
+                    }
+                  }}
+                >
+                  <TableHead sx={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                    '& .MuiTableCell-root': {
+                      backgroundColor: theme => theme.palette.mode === 'dark'
+                        ? '#1e2a3a'
+                        : '#f5f5f7',
+                      fontWeight: 600,
+                      color: 'text.primary',
+                      borderBottom: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      padding: '16px 12px',
+                      fontSize: '0.95rem'
+                    }
+                  }}>
                     <TableRow>
                       <TableCell align="center" width={50}>N°</TableCell>
                       <TableCell align="center" width={80}>Photo</TableCell>
                       <TableCell>Prénom</TableCell>
                       <TableCell>Nom</TableCell>
                       <TableCell>CIN</TableCell>
+                      <TableCell>Genre</TableCell>
+                      <TableCell>Date de naissance</TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>Téléphone</TableCell>
                       <TableCell align="center" width={80}>Actions</TableCell>
@@ -591,9 +800,18 @@ const ChefEmployeeList = () => {
                         key={emp._id}
                         hover
                         sx={{
+                          transition: 'background-color 0.2s',
                           '&:nth-of-type(odd)': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                            backgroundColor: theme => theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.02)'
+                              : 'rgba(0, 0, 0, 0.01)',
                           },
+                          '&:hover': {
+                            backgroundColor: theme => theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.05)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                          },
+                          borderBottom: theme => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
                         }}
                       >
                         <TableCell align="center">
@@ -604,39 +822,37 @@ const ChefEmployeeList = () => {
                             <Avatar
                               src={`/${emp.photo.split(/(\\|\/)/g).pop()}`}
                               alt={`${emp.firstName} ${emp.lastName}`}
-                              sx={{ width: 50, height: 50, mx: 'auto' }}
+                              sx={{ width: 45, height: 45, mx: 'auto' }}
                             />
                           ) : (
-                            <Avatar sx={{ width: 50, height: 50, mx: 'auto', bgcolor: 'primary.main' }}>
+                            <Avatar sx={{ width: 45, height: 45, mx: 'auto', bgcolor: 'primary.main' }}>
                               {emp.firstName?.[0] || ''}{emp.lastName?.[0] || ''}
                             </Avatar>
                           )}
                         </TableCell>
                         <TableCell>{emp.firstName || "-"}</TableCell>
                         <TableCell>{emp.lastName || "-"}</TableCell>
-                        <TableCell>
-                          {emp.cin ? (
-                            <Chip
-                              label={emp.cin}
-                              size="small"
-                              color="info"
-                              variant="outlined"
-                              sx={{ fontFamily: 'monospace' }}
-                            />
-                          ) : "-"}
-                        </TableCell>
+                        <TableCell>{emp.cin || "-"}</TableCell>
+                        <TableCell>{emp.gender || "-"}</TableCell>
+                        <TableCell>{emp.birthDate ? new Date(emp.birthDate).toLocaleDateString('fr-FR') : "-"}</TableCell>
                         <TableCell>{emp.email || "-"}</TableCell>
                         <TableCell>{emp.phone || "-"}</TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Modifier">
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleEditModalOpen(emp)}
-                              size="small"
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                            <Tooltip title="Modifier">
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleEditModalOpen(emp)}
+                                size="medium"
+                                sx={{
+                                  mr: 1.5,
+                                  p: 1.5
+                                }}
+                              >
+                                <EditIcon fontSize="medium" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -644,17 +860,32 @@ const ChefEmployeeList = () => {
                 </Table>
               </TableContainer>
 
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                component="div"
-                count={filteredEmployees.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="Lignes par page:"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
-              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Total: <strong>{filteredEmployees.length}</strong> employés
+                </Typography>
+
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 15, 20]}
+                  component="div"
+                  count={filteredEmployees.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  labelRowsPerPage="Lignes par page:"
+                  labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
+                  sx={{
+                    '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                      margin: 0,
+                    },
+                    '.MuiTablePagination-toolbar': {
+                      paddingLeft: 1,
+                      paddingRight: 1,
+                    }
+                  }}
+                />
+              </Box>
             </>
           )}
         </Paper>

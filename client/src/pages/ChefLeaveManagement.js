@@ -39,7 +39,8 @@ import {
   AttachFileOutlined,
   InfoOutlined,
   Image,
-  PictureAsPdf
+  PictureAsPdf,
+  Email
 } from "@mui/icons-material";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -67,8 +68,11 @@ const ChefLeaveManagement = () => {
     try {
       console.log("Fetching leave requests for chef:", user._id);
 
+      // Utiliser l'API_URL pour être cohérent avec le reste de l'application
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
       // Make sure we're using the correct parameter name (chef instead of chefId)
-      const response = await fetch("http://localhost:5000/api/conges?chef=" + user._id);
+      const response = await fetch(`${API_URL}/api/conges?chef=${user._id}`);
 
       if (!response.ok) {
         let errorMessage = "Erreur lors de la récupération des demandes de congé";
@@ -199,6 +203,8 @@ const ChefLeaveManagement = () => {
     setDialogOpen(true);
   };
 
+
+
   // Fermer la boîte de dialogue
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -212,10 +218,15 @@ const ChefLeaveManagement = () => {
 
     setActionLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/conges/" + selectedLeave._id + "/status", {
+      // Utiliser l'API_URL pour être cohérent avec le reste de l'application
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+      // Mettre à jour le statut de la demande
+      const response = await fetch(`${API_URL}/api/conges/${selectedLeave._id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         body: JSON.stringify({
           status: selectedLeave.action === "approve" ? "Approuvé" : "Rejeté",
@@ -223,14 +234,27 @@ const ChefLeaveManagement = () => {
         }),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
         let errorMessage = "Erreur lors de la mise à jour du statut";
+        let errorDetails = "";
+
         try {
           // Try to parse as JSON first
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+
+            if (errorData.error === "Solde de congé insuffisant") {
+              errorMessage = "Solde de congé insuffisant";
+              if (errorData.remainingDays !== undefined && errorData.requestedDays !== undefined) {
+                errorDetails = `L'employé ne dispose que de ${errorData.remainingDays} jour(s) de congé, mais la demande est de ${errorData.requestedDays} jour(s).`;
+              }
+            } else {
+              errorMessage = errorData.error || errorMessage;
+              errorDetails = errorData.message || errorData.details || "";
+            }
           } else {
             // If not JSON, get text
             const errorText = await response.text();
@@ -239,12 +263,17 @@ const ChefLeaveManagement = () => {
         } catch (parseError) {
           console.error("Error parsing error response:", parseError);
         }
-        throw new Error(errorMessage);
+
+        const fullErrorMessage = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
+        throw new Error(fullErrorMessage);
       }
 
+      console.log("Response data:", responseData);
+
+      // Show success message (email notifications are now sent manually)
       setFeedback({
         type: "success",
-        message: "Demande " + (selectedLeave.action === "approve" ? "approuvée" : "rejetée") + " avec succès"
+        message: `Demande ${selectedLeave.action === "approve" ? "approuvée" : "rejetée"} avec succès`
       });
 
       // Rafraîchir les données
@@ -417,6 +446,119 @@ const ChefLeaveManagement = () => {
         return <AccessTime fontSize="small" />;
     }
   };
+
+  // Envoyer une notification par email
+  const handleSendEmail = async (leave) => {
+    try {
+      setActionLoading(true);
+
+      // Utiliser l'API_URL pour être cohérent avec le reste de l'application
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+      console.log(`Sending email notification for leave request: ${leave._id}`);
+
+      // Récupérer les informations de l'employé et de la demande de congé
+      const employeeEmail = leave.employee?.email || 'huiihyii212@gmail.com';
+      const employeeName = leave.employee?.firstName && leave.employee?.lastName
+        ? `${leave.employee.firstName} ${leave.employee.lastName}`
+        : "Employé";
+
+      // Essayer d'abord l'endpoint de notification de congé
+      try {
+        // Construire l'URL avec tous les paramètres nécessaires
+        const params = new URLSearchParams({
+          email: employeeEmail,
+          name: employeeName,
+          status: leave.status,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          days: leave.numberOfDays || '1',
+          type: leave.leaveType || 'Congé payé',
+          reason: leave.reason || 'Non spécifiée'
+        });
+
+        // Ajouter la justification si elle existe
+        if (leave.justification) {
+          params.append('justification', leave.justification);
+        }
+
+        const leaveNotificationUrl = `${API_URL}/api/leave-notification?${params.toString()}`;
+        console.log(`Trying leave notification endpoint: ${leaveNotificationUrl}`);
+
+        // Appeler l'API pour envoyer l'email
+        const response = await fetch(leaveNotificationUrl, {
+          // Ajouter un timeout pour éviter que la requête ne reste bloquée
+          signal: AbortSignal.timeout(5000) // 5 secondes
+        });
+
+        if (response.ok) {
+          console.log('Leave notification endpoint successful');
+
+          // Afficher un message de succès
+          setFeedback({
+            type: "success",
+            message: (
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Email sx={{ mr: 1, fontSize: 18 }} />
+                <span>Notification envoyée avec succès à l'employé</span>
+              </Box>
+            )
+          });
+
+          return; // Sortir de la fonction si l'envoi a réussi
+        } else {
+          const errorText = await response.text();
+          console.error('Leave notification endpoint error:', errorText);
+          console.log('Falling back to test email endpoint...');
+        }
+      } catch (leaveNotificationError) {
+        console.error('Error with leave notification endpoint:', leaveNotificationError);
+        console.log('Falling back to test email endpoint...');
+      }
+
+      // Si l'endpoint de notification de congé a échoué, essayer l'endpoint de test email
+      try {
+        const encodedEmail = encodeURIComponent(employeeEmail);
+        const testEmailUrl = `${API_URL}/api/test-email?email=${encodedEmail}`;
+        console.log(`Trying test email endpoint: ${testEmailUrl}`);
+
+        const response = await fetch(testEmailUrl);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Test email endpoint error:', errorText);
+          throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        }
+
+        console.log('Test email endpoint successful');
+
+        // Afficher un message de succès
+        setFeedback({
+          type: "success",
+          message: (
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Email sx={{ mr: 1, fontSize: 18 }} />
+              <span>Notification envoyée avec succès à l'employé</span>
+            </Box>
+          )
+        });
+      } catch (testEmailError) {
+        console.error('Error with test email endpoint:', testEmailError);
+        throw testEmailError; // Relancer l'erreur pour qu'elle soit traitée par le bloc catch principal
+      }
+
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'email:", error);
+      setFeedback({
+        type: "error",
+        message: `Erreur: ${error.message}`
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
 
   return (
     <Box sx={{ p: 3 }}>
@@ -633,7 +775,7 @@ const ChefLeaveManagement = () => {
                       )}
                     </Stack>
 
-                    {leave.status === "En attente" && (
+                    {leave.status === "En attente" ? (
                       <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
                         <Button
                           variant="outlined"
@@ -652,6 +794,19 @@ const ChefLeaveManagement = () => {
                           onClick={() => handleOpenDialog(leave, "approve")}
                         >
                           Approuver
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                          startIcon={<Email />}
+                          onClick={() => handleSendEmail(leave)}
+                          disabled={actionLoading}
+                        >
+                          Envoyer notification
                         </Button>
                       </Box>
                     )}

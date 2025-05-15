@@ -7,17 +7,14 @@ import MotivationalLeaderboard from "../components/employee-dashboard/Motivation
 import PersonalPerformanceCard from "../components/employee-dashboard/PersonalPerformanceCard";
 import TaskProgress from "../components/employee-dashboard/TaskProgress";
 
-const DashboardHomeEmployee = () => {
+const DashboardHomeEmployee = ({ setActiveView }) => {
   const theme = useTheme();
 
   return (
-    <Box 
-      sx={{ 
+    <Box
+      sx={{
         minHeight: '100%',
         p: 3,
-        background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, rgba(20,30,48,0.95) 0%, rgba(36,59,85,0.95) 100%)' 
-          : 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
         animation: 'fadeIn 0.5s ease-in-out',
         '@keyframes fadeIn': {
           '0%': {
@@ -42,12 +39,12 @@ const DashboardHomeEmployee = () => {
       {/* Main dashboard grid */}
       <Grid container spacing={3}>
         {/* Motivational Leaderboard */}
-        <Grid 
-          item 
-          xs={12} 
-          md={7} 
+        <Grid
+          item
+          xs={12}
+          md={7}
           lg={8}
-          sx={{ 
+          sx={{
             animation: 'fadeIn 0.5s ease-in-out 0.1s both',
           }}
         >
@@ -55,16 +52,16 @@ const DashboardHomeEmployee = () => {
         </Grid>
 
         {/* Task Progress */}
-        <Grid 
-          item 
-          xs={12} 
-          md={5} 
+        <Grid
+          item
+          xs={12}
+          md={5}
           lg={4}
-          sx={{ 
+          sx={{
             animation: 'fadeIn 0.5s ease-in-out 0.2s both',
           }}
         >
-          <TaskProgress />
+          <TaskProgress setActiveView={setActiveView} />
         </Grid>
       </Grid>
     </Box>

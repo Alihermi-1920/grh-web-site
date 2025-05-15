@@ -14,6 +14,8 @@ const EmployeeSchema = new mongoose.Schema({
   password: { type: String, required: true }, // stockera "iv:encrypted"
   phone: String,
   cin: String,
+  birthDate: Date, // Date de naissance
+  gender: { type: String, enum: ['Homme', 'Femme'] }, // Genre
   department: String,
   role: String,
   position: String,

@@ -213,8 +213,8 @@ const Evaluation = () => {
   const calculateCurrentChapterScore = (chapter) => {
     const chapterAnswers = answers[chapter] || {};
     const obtained = Object.values(chapterAnswers).reduce((a, b) => a + b, 0);
-    const totalPossible = groupedQuestions[chapter]?.length * 5 || 0;
-    return totalPossible > 0 ? (obtained / totalPossible) * pointsPerChapter : 0;
+    const totalPossible = groupedQuestions[chapter]?.length * 10 || 0; // Changed from 5 to 10
+    return totalPossible > 0 ? (obtained / totalPossible) * 10 : 0; // Each chapter is worth 10 points
   };
 
   const calculateCompletionPercentage = (chapter) => {
@@ -254,14 +254,20 @@ const Evaluation = () => {
     }
 
     const computedResults = {};
-    let globalObtained = 0;
+    let chapterScoresSum = 0;
+    let numChaptersWithAnswers = 0;
 
     Object.entries(groupedQuestions).forEach(([chapter, qs]) => {
       const totalObtained = qs.reduce((sum, q) => sum + (answers[chapter]?.[q._id] || 0), 0);
-      const chapterScore = (totalObtained / (qs.length * 5)) * pointsPerChapter;
+      // Calculate chapter score out of 10 points
+      const chapterScore = (totalObtained / (qs.length * 10)) * 10;
       computedResults[chapter] = parseFloat(chapterScore.toFixed(2));
-      globalObtained += chapterScore;
+      chapterScoresSum += chapterScore;
+      numChaptersWithAnswers++;
     });
+
+    // Calculate global score: (sum of chapter scores * 2) / number of chapters
+    const globalObtained = numChaptersWithAnswers > 0 ? (chapterScoresSum * 2) / numChaptersWithAnswers : 0;
 
     try {
       setLoading(true);
@@ -330,9 +336,9 @@ const Evaluation = () => {
       body: Object.entries(results).map(([chap, score]) => [
         chap,
         score.toFixed(2),
-        pointsPerChapter.toFixed(2),
-        score >= pointsPerChapter * 0.8 ? 'Excellent' :
-        score >= pointsPerChapter * 0.6 ? 'Good' : 'Needs Improvement'
+        '10.00',
+        score >= 8 ? 'Excellent' :
+        score >= 6 ? 'Good' : 'Needs Improvement'
       ]),
       theme: 'grid',
       headStyles: {
@@ -418,14 +424,19 @@ const Evaluation = () => {
     }
   };
 
-  const getScoreColor = (score, scoreRange = pointsPerChapter) => {
-    if (score >= scoreRange * 0.8) return theme.palette.success.main;
-    if (score >= scoreRange * 0.6) return theme.palette.warning.main;
+  const getScoreColor = (score, isChapterScore = true) => {
+    const scoreRange = isChapterScore ? 10 : 20; // 10 for chapter scores, 20 for global score
+    const percentage = score / scoreRange;
+
+    if (percentage >= 0.8) return theme.palette.success.main;
+    if (percentage >= 0.6) return theme.palette.warning.main;
     return theme.palette.error.main;
   };
 
-  const getPerformanceRating = (score, scoreRange = pointsPerChapter) => {
+  const getPerformanceRating = (score, isChapterScore = true) => {
+    const scoreRange = isChapterScore ? 10 : 20; // 10 for chapter scores, 20 for global score
     const percentage = score / scoreRange;
+
     if (percentage >= 0.8) return "Excellent";
     if (percentage >= 0.6) return "Good";
     return "Needs Improvement";
@@ -441,8 +452,8 @@ const Evaluation = () => {
 
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Scoring System</Typography>
       <Typography variant="body2" sx={{ mb: 2 }}>
-        Each chapter is worth {pointsPerChapter.toFixed(2)} points, for a total of 20 points.
-        Rate employees on a scale of 1-5 for each question.
+        Each chapter is worth 10 points. Rate employees on a scale of 0-10 for each question.
+        The final score (out of 20) is calculated as: (sum of chapter scores × 2) / number of chapters.
       </Typography>
 
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Performance Ratings</Typography>
@@ -918,11 +929,11 @@ const Evaluation = () => {
                               {activeChapter}
                             </Typography>
                             <Chip
-                              label={`Score: ${calculateCurrentChapterScore(activeChapter).toFixed(2)}/${pointsPerChapter.toFixed(2)}`}
+                              label={`Score: ${calculateCurrentChapterScore(activeChapter).toFixed(2)}/10.00`}
                               size="small"
                               sx={{
-                                bgcolor: alpha(getScoreColor(calculateCurrentChapterScore(activeChapter)), 0.1),
-                                color: getScoreColor(calculateCurrentChapterScore(activeChapter)),
+                                bgcolor: alpha(getScoreColor(calculateCurrentChapterScore(activeChapter), true), 0.1),
+                                color: getScoreColor(calculateCurrentChapterScore(activeChapter), true),
                                 fontWeight: 600
                               }}
                             />
@@ -953,31 +964,61 @@ const Evaluation = () => {
                                     gap: 1,
                                     flexWrap: 'wrap'
                                   }}>
-                                    {[1, 2, 3, 4, 5].map((value) => (
+                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
                                       <Button
                                         key={value}
                                         variant={answers[activeChapter]?.[q._id] === value ? "contained" : "outlined"}
                                         onClick={() => handleAnswerChange(activeChapter, q._id, value)}
                                         sx={{
-                                          minWidth: '48px',
-                                          height: '48px',
+                                          minWidth: '36px',
+                                          height: '36px',
                                           borderRadius: '4px',
                                           p: 0,
                                           fontWeight: 'bold',
+                                          fontSize: '0.75rem',
+                                          mx: 0.25,
                                           ...(answers[activeChapter]?.[q._id] === value
                                             ? {
-                                                bgcolor: theme.palette.primary.main,
+                                                bgcolor: value === 0 ? theme.palette.error.main :
+                                                         value <= 3 ? theme.palette.error.light :
+                                                         value <= 6 ? theme.palette.warning.main :
+                                                         value <= 8 ? theme.palette.success.light :
+                                                         theme.palette.success.main,
                                                 color: 'white',
                                                 '&:hover': {
-                                                  bgcolor: theme.palette.primary.dark,
+                                                  bgcolor: value === 0 ? theme.palette.error.dark :
+                                                           value <= 3 ? theme.palette.error.main :
+                                                           value <= 6 ? theme.palette.warning.dark :
+                                                           value <= 8 ? theme.palette.success.main :
+                                                           theme.palette.success.dark,
                                                 }
                                               }
                                             : {
-                                                borderColor: alpha(theme.palette.primary.main, 0.5),
-                                                color: theme.palette.primary.main,
+                                                borderColor: alpha(
+                                                  value === 0 ? theme.palette.error.main :
+                                                  value <= 3 ? theme.palette.error.light :
+                                                  value <= 6 ? theme.palette.warning.main :
+                                                  value <= 8 ? theme.palette.success.light :
+                                                  theme.palette.success.main,
+                                                  0.5),
+                                                color: value === 0 ? theme.palette.error.main :
+                                                       value <= 3 ? theme.palette.error.light :
+                                                       value <= 6 ? theme.palette.warning.main :
+                                                       value <= 8 ? theme.palette.success.light :
+                                                       theme.palette.success.main,
                                                 '&:hover': {
-                                                  borderColor: theme.palette.primary.main,
-                                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                  borderColor: value === 0 ? theme.palette.error.main :
+                                                              value <= 3 ? theme.palette.error.light :
+                                                              value <= 6 ? theme.palette.warning.main :
+                                                              value <= 8 ? theme.palette.success.light :
+                                                              theme.palette.success.main,
+                                                  bgcolor: alpha(
+                                                    value === 0 ? theme.palette.error.main :
+                                                    value <= 3 ? theme.palette.error.light :
+                                                    value <= 6 ? theme.palette.warning.main :
+                                                    value <= 8 ? theme.palette.success.light :
+                                                    theme.palette.success.main,
+                                                    0.1),
                                                 }
                                               }
                                           )

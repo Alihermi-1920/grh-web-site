@@ -51,6 +51,8 @@ import {
   Forum,
   Chat,
   AssignmentTurnedIn,
+  Person,
+  Business
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import ChefEmployeeList from "./ChefEmployeeList";
@@ -157,32 +159,32 @@ const ChefDashboard = () => {
   // Function to generate consistent menu item styles
   const getMenuItemStyles = (isSelected) => ({
     py: 1.2,
-    transition: 'all 0.2s ease-in-out',
+    borderRadius: 1,
+    mb: 0.5,
+    backgroundColor: isSelected ?
+      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+      'transparent',
+    color: isSelected ?
+      (darkMode ? 'white' : '#333') :
+      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      transform: 'translateX(5px)'
-    },
-    '&.Mui-selected': {
-      backgroundColor: 'rgba(25, 118, 210, 0.25)',
-      borderLeft: '4px solid #1976d2',
-      paddingLeft: '12px'
+      backgroundColor: isSelected ?
+        (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+        (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
     }
   });
 
   // Function to generate consistent icon styles
   const getIconStyles = (isSelected) => ({
     minWidth: 40,
-    color: "inherit",
-    transition: 'transform 0.2s ease-in-out',
-    transform: isSelected ? 'scale(1.2)' : 'scale(1)'
+    color: isSelected ?
+      (darkMode ? 'white' : '#333') :
+      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
   });
 
   // Function to generate consistent text styles
   const getTextStyles = (isSelected) => ({
-    fontWeight: isSelected ? 600 : 500,
-    transition: 'all 0.2s ease-in-out',
-    fontSize: '0.95rem',
-    letterSpacing: 0.3
+    fontWeight: isSelected ? 600 : 500
   });
 
   const Sidebar = () => (
@@ -196,87 +198,109 @@ const ChefDashboard = () => {
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
-          background: darkMode
-            ? "radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))"
-            : "#f8f9fa",
-          color: darkMode ? "white" : "#333333",
+          background: darkMode ? "#121212" : "#f8f9fa",
+          color: darkMode ? "#e0e0e0" : "#333333",
           borderRight: `1px solid ${darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
           overflow: "hidden",
         },
       }}
     >
-      {/* Logo & App Name */}
+      {/* Logo & App Name with Profile */}
       <Box sx={{
-        p: 3,
+        pt: 2,
+        pb: 1,
+        px: 2,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
       }}>
-        <Box display="flex" flexDirection="column" alignItems="center">
-          <img
-            src="/logo.png"
-            alt="GRH Logo"
-            style={{
-              width: 100,
-              marginBottom: 10,
-            }}
-          />
-          <Typography variant="h6" component="div" sx={{
-            fontWeight: 700,
-            letterSpacing: 1,
-            color: darkMode ? 'white' : '#333',
-          }}>
-            HRMS
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Profil */}
-      <Box sx={{
-        p: 3,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-      }}>
-        <Avatar
-          src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
-          sx={{
-            width: 50,
-            height: 50,
-            bgcolor: darkMode ? '#1976d2' : '#1976d2',
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.05)",
-            }
+        <img
+          src="/logo.png"
+          alt="GRH Logo"
+          style={{
+            width: 80,
+            marginBottom: 8,
           }}
-        >
-          {!user?.photo && (user ? `${user.firstName[0]}${user.lastName[0]}` : "CD")}
-        </Avatar>
-        <Box>
-          <Typography variant="subtitle1" fontWeight="600" sx={{
-            color: darkMode ? 'white' : '#333',
-          }}>
-            {user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"}
-          </Typography>
-          <Typography
-            variant="caption"
+        />
+        <Typography variant="subtitle1" component="div" sx={{
+          fontWeight: 700,
+          letterSpacing: 0.5,
+          color: darkMode ? 'white' : '#333',
+          mb: 1
+        }}>
+          HRMS
+        </Typography>
+
+        {/* Compact Profile */}
+        <Box sx={{
+          width: '100%',
+          mt: 1,
+          py: 1.5,
+          px: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          borderRadius: 2,
+          backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+        }}>
+          <Avatar
+            src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
             sx={{
-              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
-              fontWeight: 500,
+              width: 38,
+              height: 38,
+              bgcolor: darkMode ? '#1976d2' : '#1976d2',
             }}
           >
-            {user?.role || "Chef de service"}
-            {user?.department && ` - ${user.department}`}
-          </Typography>
+            {!user?.photo && (user ? `${user.firstName[0]}${user.lastName[0]}` : "CD")}
+          </Avatar>
+          <Box sx={{ overflow: 'hidden' }}>
+            <Typography variant="body2" fontWeight="600" sx={{
+              color: darkMode ? 'white' : '#333',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"}
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
+            }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Person fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
+                {user?.role || "Chef de service"}
+              </Typography>
+              {user?.department && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Business fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
+                  {user.department}
+                </Typography>
+              )}
+            </Box>
+          </Box>
         </Box>
       </Box>
 
       <List sx={{
         px: 2,
-        py: 3,
-        height: 'calc(100vh - 280px)',
+        py: 2,
+        height: 'calc(100vh - 220px)',
         overflowY: 'auto',
         '&::-webkit-scrollbar': {
           width: '0px',
@@ -415,22 +439,26 @@ const ChefDashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  transition: 'all 0.2s ease-in-out',
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "attendance" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "attendance" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    transform: 'translateX(5px)'
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.15)',
-                    borderLeft: '3px solid #1976d2',
+                    backgroundColor: activeView === "attendance" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
                   }
                 }}
               >
                 <ListItemIcon sx={{
                   minWidth: 36,
-                  color: "inherit",
-                  transition: 'transform 0.2s ease-in-out',
-                  transform: activeView === "attendance" ? 'scale(1.2)' : 'scale(1)'
+                  color: activeView === "attendance" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
                 }}>
                   <ListAlt fontSize="small" />
                 </ListItemIcon>
@@ -438,9 +466,7 @@ const ChefDashboard = () => {
                   primary="Liste de présences"
                   primaryTypographyProps={{
                     fontWeight: activeView === "attendance" ? 600 : 500,
-                    fontSize: 14,
-                    transition: 'all 0.2s ease-in-out',
-                    letterSpacing: 0.3
+                    fontSize: 14
                   }}
                 />
               </ListItemButton>
@@ -452,22 +478,26 @@ const ChefDashboard = () => {
                 sx={{
                   pl: 5,
                   py: 1,
-                  transition: 'all 0.2s ease-in-out',
+                  borderRadius: 1,
+                  mb: 0.5,
+                  backgroundColor: activeView === "attendanceCalendar" ?
+                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                    'transparent',
+                  color: activeView === "attendanceCalendar" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    transform: 'translateX(5px)'
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.15)',
-                    borderLeft: '3px solid #1976d2',
+                    backgroundColor: activeView === "attendanceCalendar" ?
+                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
+                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
                   }
                 }}
               >
                 <ListItemIcon sx={{
                   minWidth: 36,
-                  color: "inherit",
-                  transition: 'transform 0.2s ease-in-out',
-                  transform: activeView === "attendanceCalendar" ? 'scale(1.2)' : 'scale(1)'
+                  color: activeView === "attendanceCalendar" ?
+                    (darkMode ? 'white' : '#333') :
+                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
                 }}>
                   <CalendarMonth fontSize="small" />
                 </ListItemIcon>
@@ -475,9 +505,7 @@ const ChefDashboard = () => {
                   primary="Calendrier de présence"
                   primaryTypographyProps={{
                     fontWeight: activeView === "attendanceCalendar" ? 600 : 500,
-                    fontSize: 14,
-                    transition: 'all 0.2s ease-in-out',
-                    letterSpacing: 0.3
+                    fontSize: 14
                   }}
                 />
               </ListItemButton>
@@ -561,7 +589,7 @@ const ChefDashboard = () => {
                   </IconButton>
                 )}
                 <Typography variant="h5" fontWeight="600" color="primary.main">
-                  {activeView === "dashboardHomeChef" && "Tableau de Bord Chef"}
+                  {activeView === "dashboardHomeChef" && "Espace de Travail Delice"}
                   {activeView === "employeeList" && "Mes Employés"}
                   {activeView === "projectList" && "Mes Projets"}
                   {activeView === "evaluation" && "Évaluation"}
@@ -570,53 +598,24 @@ const ChefDashboard = () => {
                   {activeView === "leaveManagement" && "Gestion des Congés"}
                   {activeView === "taskManagement" && "Gestion des Tâches"}
                   {activeView === "taskDetail" && "Détail de la Tâche"}
-                  {!activeView && "Tableau de Bord Chef"}
+                  {!activeView && "Espace de Travail Delice"}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={2} alignItems="center">
-                {!isMobile && (
-                  <Tooltip title={darkMode ? "Passer au mode clair" : "Passer au mode sombre"} arrow>
-                    <IconButton
-                      onClick={handleThemeToggle}
-                      sx={{
-                        bgcolor: "rgba(0,0,0,0.05)",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
-                      }}
-                    >
-                      {darkMode ? <LightMode /> : <DarkMode />}
-                    </IconButton>
-                  </Tooltip>
-                )}
-                <Tooltip title={`${newProjectNotifications} notifications`} arrow>
+                <Tooltip title={darkMode ? "Passer au mode clair" : "Passer au mode sombre"} arrow>
                   <IconButton
-                    onClick={handleNotificationClick}
-                    size="large"
+                    onClick={handleThemeToggle}
                     sx={{
-                      bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+                      bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
                       "&:hover": {
-                        bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+                        bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                        transform: 'scale(1.05)'
                       },
+                      transition: 'all 0.2s'
                     }}
                   >
-                    <Badge badgeContent={newProjectNotifications} color="error">
-                      <Notifications />
-                    </Badge>
+                    {darkMode ? <LightMode /> : <DarkMode />}
                   </IconButton>
-                </Tooltip>
-                <Tooltip title={user ? `${user.firstName} ${user.lastName}` : "Chef Dupont"} arrow>
-                  <Avatar
-                    src={user?.photo ? `/${user.photo.split(/(\\|\/)/g).pop()}` : undefined}
-                    sx={{
-                      bgcolor: theme.palette.primary.light,
-                      width: 40,
-                      height: 40,
-                      fontSize: 16,
-                      border: `2px solid ${darkMode ? "#333333" : "#e0e0e0"}`,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {user ? `${user.firstName[0]}${user.lastName[0]}` : "CD"}
-                  </Avatar>
                 </Tooltip>
               </Stack>
             </Toolbar>
@@ -680,73 +679,6 @@ const ChefDashboard = () => {
           />
         </Box>
       </Box>
-
-      {/* Dialogue des notifications */}
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            backgroundColor: theme.palette.background.paper,
-            backgroundImage: "none",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            color: "white",
-            m: 0,
-            p: 2,
-          }}
-        >
-          Historique des notifications
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpenDialog(false)}
-            sx={{ position: "absolute", right: 8, top: 8, color: "white" }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 2 }}>
-          {notificationsList.length ? (
-            <MuiList>
-              {notificationsList.map((notif) => (
-                <ListItem key={notif._id} divider>
-                  <ListItemText
-                    primary={notif.message}
-                    secondary={new Date(notif.createdAt).toLocaleString()}
-                  />
-                </ListItem>
-              ))}
-            </MuiList>
-          ) : (
-            <Typography align="center">Aucune notification à afficher.</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, justifyContent: "center" }}>
-          <Button
-            onClick={() => setOpenDialog(false)}
-            variant="contained"
-            sx={{
-              backgroundImage: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 90%)`,
-              px: 3,
-              py: 1,
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 8px 18px 0 rgba(26, 35, 126, 0.25)",
-              },
-            }}
-          >
-            Fermer
-          </Button>
-        </DialogActions>
-      </Dialog>
     </ThemeProvider>
   );
 };
