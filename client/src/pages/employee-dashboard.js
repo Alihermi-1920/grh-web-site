@@ -24,18 +24,18 @@ import {
   Fade,
 } from "@mui/material";
 import {
-  People,
+  PeopleAlt,
   AdminPanelSettings,
-  EventNote,
+  BeachAccess,
   WorkOutline,
   LightMode,
   DarkMode,
-  ExitToApp,
+  Logout,
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
+  Home,
   Forum,
   Chat,
-  AssignmentTurnedIn,
+  TaskAlt,
   Psychology,
   Person,
   Business,
@@ -115,25 +115,20 @@ const EmployeeDashboard = ({ initialView }) => {
     py: 1.2,
     borderRadius: 1,
     mb: 0.5,
-    backgroundColor: isSelected ?
-      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-      'transparent',
-    color: isSelected ?
-      (darkMode ? 'white' : '#333') :
-      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+    backgroundColor: isSelected ? '#685cfe' : 'transparent',
+    color: isSelected ? '#ffffff' : (darkMode ? '#aaaaaa' : '#555555'),
     '&:hover': {
-      backgroundColor: isSelected ?
-        (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-        (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
-    }
+      backgroundColor: '#685cfe',
+      color: '#ffffff'
+    },
+    transition: 'all 0.2s ease'
   });
 
   // Function to generate consistent icon styles
-  const getIconStyles = (isSelected) => ({
+  const getIconStyles = () => ({
     minWidth: 40,
-    color: isSelected ?
-      (darkMode ? 'white' : '#333') :
-      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+    color: 'inherit',
+    transition: 'all 0.2s ease'
   });
 
   // Function to generate consistent text styles
@@ -269,7 +264,7 @@ const EmployeeDashboard = ({ initialView }) => {
             sx={getMenuItemStyles(activeView === "dashboard")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "dashboard")}>
-              <DashboardIcon />
+              <Home />
             </ListItemIcon>
             <ListItemText
               primary="Dashboard"
@@ -287,7 +282,7 @@ const EmployeeDashboard = ({ initialView }) => {
             sx={getMenuItemStyles(activeView === "profile")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "profile")}>
-              <People />
+              <PeopleAlt />
             </ListItemIcon>
             <ListItemText
               primary="Mon Profil"
@@ -321,7 +316,7 @@ const EmployeeDashboard = ({ initialView }) => {
             sx={getMenuItemStyles(activeView === "leaves")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "leaves")}>
-              <EventNote />
+              <BeachAccess />
             </ListItemIcon>
             <ListItemText
               primary="Mes Congés"
@@ -341,7 +336,7 @@ const EmployeeDashboard = ({ initialView }) => {
             sx={getMenuItemStyles(activeView === "taskChat")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "taskChat")}>
-              <AssignmentTurnedIn />
+              <TaskAlt />
             </ListItemIcon>
             <ListItemText
               primary="Mes Tâches"
@@ -375,12 +370,17 @@ const EmployeeDashboard = ({ initialView }) => {
           variant="contained"
           fullWidth
           onClick={handleLogout}
-          startIcon={<ExitToApp />}
+          startIcon={<Logout />}
           sx={{
             py: 1.2,
-            backgroundColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-            color: darkMode ? "white" : "rgba(0,0,0,0.87)",
-            "&:hover": { backgroundColor: darkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)" },
+            backgroundColor: 'transparent',
+            color: darkMode ? "#aaaaaa" : "#555555",
+            "&:hover": {
+              backgroundColor: "#685cfe",
+              color: "#ffffff"
+            },
+            transition: 'all 0.2s ease',
+            borderRadius: 1
           }}
         >
           Déconnexion

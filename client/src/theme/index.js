@@ -43,6 +43,17 @@ export const createAppTheme = (mode = getThemeMode()) => {
             '& .MuiInput-underline:after': {
               borderBottomColor: "#1976d2",
             },
+            // Fix for autocomplete background in dark mode
+            '& input:-webkit-autofill': {
+              WebkitBoxShadow: mode === 'dark' ? '0 0 0 1000px #121212 inset !important' : 'none',
+              WebkitTextFillColor: mode === 'dark' ? '#fff !important' : 'inherit',
+              caretColor: mode === 'dark' ? '#fff' : 'inherit',
+              borderRadius: 'inherit',
+              transition: 'background-color 5000s ease-in-out 0s',
+            },
+            '& .MuiInputBase-input': {
+              color: mode === 'dark' ? '#fff' : 'inherit',
+            },
           }
         }
       },
@@ -90,10 +101,33 @@ export const createAppTheme = (mode = getThemeMode()) => {
           root: {
             borderRadius: 8,
             '&.Mui-selected': {
-              backgroundColor: mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.1)' 
-                : 'rgba(25, 118, 210, 0.1)',
-            }
+              backgroundColor: '#685cfe',
+              color: '#ffffff',
+              '&:hover': {
+                backgroundColor: '#685cfe',
+                color: '#ffffff'
+              }
+            },
+            '&:hover': {
+              backgroundColor: '#685cfe',
+              color: '#ffffff'
+            },
+            transition: 'all 0.2s ease'
+          }
+        }
+      },
+      MuiListItemIcon: {
+        styleOverrides: {
+          root: {
+            color: 'inherit',
+            minWidth: 40,
+            '.MuiListItemButton-root.Mui-selected &': {
+              color: '#ffffff'
+            },
+            '.MuiListItemButton-root:hover &': {
+              color: '#ffffff'
+            },
+            transition: 'all 0.2s ease'
           }
         }
       }

@@ -69,6 +69,25 @@ router.get("/chefs", async (req, res) => {
   }
 });
 
+// Endpoint pour vérifier si un CIN existe déjà
+router.get("/check-cin/:cin", async (req, res) => {
+  try {
+    const { cin } = req.params;
+    const employee = await Employee.findOne({ cin });
+
+    if (employee) {
+      // CIN existe déjà
+      return res.status(200).json({ exists: true, message: "Ce CIN est déjà utilisé par un autre employé" });
+    }
+
+    // CIN n'existe pas
+    res.status(200).json({ exists: false });
+  } catch (error) {
+    console.error("Erreur lors de la vérification du CIN:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Endpoint pour récupérer les employés d'un chef spécifique
 router.get("/chef/:chefId", async (req, res) => {
   try {
@@ -129,7 +148,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ===============================================
-// Endpoint pour la connexion d'un employé/chef
+// Endpoint pour la connexion d'un employé/chef/admin
 // ===============================================
 router.post("/login", async (req, res) => {
   try {
@@ -142,7 +161,31 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email et mot de passe requis" });
     }
 
-    // Recherche de l'employé par email
+    // Vérifier si c'est l'admin qui se connecte
+    const ADMIN_CREDENTIALS = {
+      email: "admin@grh.com",
+      password: "admin123",
+    };
+
+    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      console.log("Authentification admin réussie");
+
+      // Créer un objet admin avec un token
+      const adminToken = "admin-token-" + Date.now();
+      const adminUser = {
+        _id: "admin-" + Date.now(),
+        email: ADMIN_CREDENTIALS.email,
+        firstName: "Admin",
+        lastName: "Système",
+        role: "admin",
+        firstLogin: false,
+        token: adminToken
+      };
+
+      return res.status(200).json(adminUser);
+    }
+
+    // Si ce n'est pas l'admin, rechercher l'employé par email
     const employee = await Employee.findOne({ email });
     if (!employee) {
       console.log("Employé non trouvé avec l'email:", email);

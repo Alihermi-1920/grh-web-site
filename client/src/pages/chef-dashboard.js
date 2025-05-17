@@ -31,28 +31,29 @@ import {
   Fade,
 } from "@mui/material";
 import {
-  People,
-  Assignment,
+  PeopleAlt,
+  WorkOutline,
   AdminPanelSettings,
-  RateReview,
+  AssessmentOutlined,
   Notifications,
-  ListAlt,
+  FormatListBulleted,
   Close as CloseIcon,
   ExpandLess,
   ExpandMore,
-  Dashboard as DashboardIcon,
-  EventNote,
-  CalendarMonth,
-  ExitToApp,
+  Home,
+  EventAvailable,
+  CalendarViewMonth,
+  Logout,
   Menu,
   LightMode,
   DarkMode,
-  Assessment,
+  BarChart,
   Forum,
   Chat,
-  AssignmentTurnedIn,
+  TaskAlt,
   Person,
-  Business
+  Business,
+  BeachAccess
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import ChefEmployeeList from "./ChefEmployeeList";
@@ -161,25 +162,35 @@ const ChefDashboard = () => {
     py: 1.2,
     borderRadius: 1,
     mb: 0.5,
-    backgroundColor: isSelected ?
-      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-      'transparent',
-    color: isSelected ?
-      (darkMode ? 'white' : '#333') :
-      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
+    backgroundColor: isSelected ? '#685cfe' : 'transparent',
+    color: isSelected ? '#ffffff' : (darkMode ? '#aaaaaa' : '#555555'),
     '&:hover': {
-      backgroundColor: isSelected ?
-        (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-        (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
-    }
+      backgroundColor: '#685cfe',
+      color: '#ffffff'
+    },
+    transition: 'all 0.2s ease'
   });
 
   // Function to generate consistent icon styles
-  const getIconStyles = (isSelected) => ({
+  const getIconStyles = () => ({
     minWidth: 40,
-    color: isSelected ?
-      (darkMode ? 'white' : '#333') :
-      (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
+    color: 'inherit',
+    transition: 'all 0.2s ease'
+  });
+
+  // Function to generate consistent submenu item styles
+  const getSubmenuItemStyles = (isSelected) => ({
+    pl: 5,
+    py: 1,
+    borderRadius: 1,
+    mb: 0.5,
+    backgroundColor: isSelected ? '#685cfe' : 'transparent',
+    color: isSelected ? '#ffffff' : (darkMode ? '#aaaaaa' : '#555555'),
+    '&:hover': {
+      backgroundColor: '#685cfe',
+      color: '#ffffff'
+    },
+    transition: 'all 0.2s ease'
   });
 
   // Function to generate consistent text styles
@@ -315,7 +326,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "dashboardHomeChef")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "dashboardHomeChef")}>
-              <DashboardIcon />
+              <Home />
             </ListItemIcon>
             <ListItemText
               primary="Dashboard"
@@ -334,7 +345,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "employeeList")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "employeeList")}>
-              <People />
+              <PeopleAlt />
             </ListItemIcon>
             <ListItemText
               primary="Mes Employés"
@@ -351,7 +362,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "evaluation")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "evaluation")}>
-              <RateReview />
+              <AssessmentOutlined />
             </ListItemIcon>
             <ListItemText
               primary="Évaluation"
@@ -368,7 +379,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "evaluationResults")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "evaluationResults")}>
-              <Assessment />
+              <BarChart />
             </ListItemIcon>
             <ListItemText
               primary="Résultats d'évaluations"
@@ -385,7 +396,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "projectList")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "projectList")}>
-              <Assignment />
+              <WorkOutline />
             </ListItemIcon>
             <ListItemText
               primary="Mes Projets"
@@ -402,7 +413,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "taskManagement")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "taskManagement")}>
-              <AssignmentTurnedIn />
+              <TaskAlt />
             </ListItemIcon>
             <ListItemText
               primary="Gestion des tâches"
@@ -421,7 +432,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(["attendance", "attendanceCalendar"].includes(activeView))}
           >
             <ListItemIcon sx={getIconStyles(["attendance", "attendanceCalendar"].includes(activeView))}>
-              <EventNote />
+              <EventAvailable />
             </ListItemIcon>
             <ListItemText
               primary="Présence"
@@ -436,31 +447,10 @@ const ChefDashboard = () => {
               <ListItemButton
                 onClick={() => setActiveView("attendance")}
                 selected={activeView === "attendance"}
-                sx={{
-                  pl: 5,
-                  py: 1,
-                  borderRadius: 1,
-                  mb: 0.5,
-                  backgroundColor: activeView === "attendance" ?
-                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-                    'transparent',
-                  color: activeView === "attendance" ?
-                    (darkMode ? 'white' : '#333') :
-                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
-                  '&:hover': {
-                    backgroundColor: activeView === "attendance" ?
-                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
-                  }
-                }}
+                sx={getSubmenuItemStyles(activeView === "attendance")}
               >
-                <ListItemIcon sx={{
-                  minWidth: 36,
-                  color: activeView === "attendance" ?
-                    (darkMode ? 'white' : '#333') :
-                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
-                }}>
-                  <ListAlt fontSize="small" />
+                <ListItemIcon sx={{ minWidth: 36, color: 'inherit', transition: 'all 0.2s ease' }}>
+                  <FormatListBulleted fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
                   primary="Liste de présences"
@@ -475,31 +465,10 @@ const ChefDashboard = () => {
               <ListItemButton
                 onClick={() => setActiveView("attendanceCalendar")}
                 selected={activeView === "attendanceCalendar"}
-                sx={{
-                  pl: 5,
-                  py: 1,
-                  borderRadius: 1,
-                  mb: 0.5,
-                  backgroundColor: activeView === "attendanceCalendar" ?
-                    (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-                    'transparent',
-                  color: activeView === "attendanceCalendar" ?
-                    (darkMode ? 'white' : '#333') :
-                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'),
-                  '&:hover': {
-                    backgroundColor: activeView === "attendanceCalendar" ?
-                      (darkMode ? 'rgba(66, 66, 66, 0.9)' : 'rgba(200, 200, 200, 0.9)') :
-                      (darkMode ? 'rgba(66, 66, 66, 0.5)' : 'rgba(200, 200, 200, 0.5)')
-                  }
-                }}
+                sx={getSubmenuItemStyles(activeView === "attendanceCalendar")}
               >
-                <ListItemIcon sx={{
-                  minWidth: 36,
-                  color: activeView === "attendanceCalendar" ?
-                    (darkMode ? 'white' : '#333') :
-                    (darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)')
-                }}>
-                  <CalendarMonth fontSize="small" />
+                <ListItemIcon sx={{ minWidth: 36, color: 'inherit', transition: 'all 0.2s ease' }}>
+                  <CalendarViewMonth fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
                   primary="Calendrier de présence"
@@ -521,7 +490,7 @@ const ChefDashboard = () => {
             sx={getMenuItemStyles(activeView === "leaveManagement")}
           >
             <ListItemIcon sx={getIconStyles(activeView === "leaveManagement")}>
-              <EventNote />
+              <BeachAccess />
             </ListItemIcon>
             <ListItemText
               primary="Gestion des Congés"
@@ -541,12 +510,17 @@ const ChefDashboard = () => {
           variant="contained"
           fullWidth
           onClick={handleLogout}
-          startIcon={<ExitToApp />}
+          startIcon={<Logout />}
           sx={{
             py: 1.2,
-            backgroundColor: darkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-            color: darkMode ? "white" : "rgba(0,0,0,0.87)",
-            "&:hover": { backgroundColor: darkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)" },
+            backgroundColor: 'transparent',
+            color: darkMode ? "#aaaaaa" : "#555555",
+            "&:hover": {
+              backgroundColor: "#685cfe",
+              color: "#ffffff"
+            },
+            transition: 'all 0.2s ease',
+            borderRadius: 1
           }}
         >
           Déconnexion

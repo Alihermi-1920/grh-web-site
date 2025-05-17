@@ -127,6 +127,8 @@ const AddEmployee = ({ onSuccess, departments }) => {
     } else if (!/^\d{8}$/.test(formData.cin)) {
       newErrors.cin = "CIN invalide (exactement 8 chiffres requis)";
     }
+    // Note: La vérification de l'unicité du CIN est faite de manière asynchrone
+    // dans handleNumberInput et handleSubmit
 
     if (!formData.department) newErrors.department = "Sélectionnez un département";
     if (!formData.role) newErrors.role = "Sélectionnez un rôle";
@@ -150,6 +152,30 @@ const AddEmployee = ({ onSuccess, departments }) => {
     // Limiter la longueur à maxLength
     if (e.target.value.length <= maxLength) {
       setFormData({ ...formData, [e.target.name]: e.target.value });
+
+      // Si c'est le CIN et qu'il a 8 chiffres, vérifier s'il existe déjà
+      if (e.target.name === "cin" && e.target.value.length === 8) {
+        checkCinExists(e.target.value);
+      }
+    }
+  };
+
+  // Fonction pour vérifier si un CIN existe déjà
+  const checkCinExists = async (cin) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/employees/check-cin/${cin}`);
+      const data = await response.json();
+
+      if (data.exists) {
+        setErrors({...errors, cin: "Ce CIN est déjà utilisé par un autre employé"});
+      } else {
+        // Si le CIN n'existe pas, on supprime l'erreur s'il y en avait une
+        const newErrors = {...errors};
+        delete newErrors.cin;
+        setErrors(newErrors);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification du CIN:", error);
     }
   };
 
@@ -171,6 +197,24 @@ const AddEmployee = ({ onSuccess, departments }) => {
           severity: "error"
         });
         return;
+      }
+
+      // Vérifier si le CIN existe déjà
+      try {
+        const cinResponse = await fetch(`http://localhost:5000/api/employees/check-cin/${formData.cin}`);
+        const cinData = await cinResponse.json();
+
+        if (cinData.exists) {
+          setErrors({...errors, cin: "Ce CIN est déjà utilisé par un autre employé"});
+          setSnackbar({
+            open: true,
+            message: "Ce CIN est déjà utilisé par un autre employé",
+            severity: "error"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification du CIN:", error);
       }
 
       // Afficher un message de chargement

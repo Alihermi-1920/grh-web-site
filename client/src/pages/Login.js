@@ -24,10 +24,7 @@ import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import PasswordChangeDialog from "../components/PasswordChangeDialog";
 
-const ADMIN_CREDENTIALS = {
-  email: "admin@grh.com",
-  password: "admin123",
-};
+// Admin credentials moved to server side for security
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -117,24 +114,8 @@ const Login = () => {
 
     if (!validateInputs()) return;
 
-    // Gestion de la connexion admin
-    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      // Generate a fake token for admin
-      const adminToken = "admin-token-" + Date.now();
-      const adminUser = {
-        email,
-        role: "admin",
-        firstLogin: false,
-        token: adminToken
-      }; // Objet utilisateur admin
-      localStorage.setItem("employee", JSON.stringify(adminUser));
-      setUser(adminUser);
-      navigate("/dashboard");
-      return;
-    }
-
     try {
-      // Connexion pour les autres employés
+      // Connexion pour tous les utilisateurs (y compris admin)
       const res = await axios.post("http://localhost:5000/api/employees/login", {
         email,
         password,
@@ -151,8 +132,15 @@ const Login = () => {
         // until the user changes their password
       }
 
+      // Rediriger en fonction du rôle
       const role = res.data.role.trim().toLowerCase();
-      navigate(role === "chef" ? "/chef-dashboard" : "/employee-dashboard");
+      if (role === "admin") {
+        navigate("/dashboard");
+      } else if (role === "chef") {
+        navigate("/chef-dashboard");
+      } else {
+        navigate("/employee-dashboard");
+      }
     } catch (error) {
       alert("Erreur : " + (error.response?.data?.message || "Erreur lors de la connexion"));
     }
@@ -211,6 +199,27 @@ const Login = () => {
                 InputLabelProps={{
                   sx: { color: theme.palette.text.secondary }
                 }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    color: theme.palette.text.primary,
+                  },
+                  '& .MuiInput-underline:before': {
+                    borderBottomColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.42)',
+                  },
+                  '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                    borderBottomColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.87)',
+                  },
+                  '& .MuiInput-underline:after': {
+                    borderBottomColor: theme.palette.primary.main,
+                  },
+                  // Fix for autocomplete background
+                  '& input:-webkit-autofill': {
+                    WebkitBoxShadow: theme.palette.mode === 'dark' ? '0 0 0 1000px #121212 inset !important' : 'none',
+                    WebkitTextFillColor: theme.palette.mode === 'dark' ? '#fff !important' : 'inherit',
+                    caretColor: theme.palette.mode === 'dark' ? '#fff' : 'inherit',
+                    borderRadius: 'inherit',
+                  },
+                }}
               />
             </FormControl>
 
@@ -228,6 +237,27 @@ const Login = () => {
                 fullWidth
                 InputLabelProps={{
                   sx: { color: theme.palette.text.secondary }
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    color: theme.palette.text.primary,
+                  },
+                  '& .MuiInput-underline:before': {
+                    borderBottomColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.42)',
+                  },
+                  '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
+                    borderBottomColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.87)',
+                  },
+                  '& .MuiInput-underline:after': {
+                    borderBottomColor: theme.palette.primary.main,
+                  },
+                  // Fix for autocomplete background
+                  '& input:-webkit-autofill': {
+                    WebkitBoxShadow: theme.palette.mode === 'dark' ? '0 0 0 1000px #121212 inset !important' : 'none',
+                    WebkitTextFillColor: theme.palette.mode === 'dark' ? '#fff !important' : 'inherit',
+                    caretColor: theme.palette.mode === 'dark' ? '#fff' : 'inherit',
+                    borderRadius: 'inherit',
+                  },
                 }}
               />
             </FormControl>
