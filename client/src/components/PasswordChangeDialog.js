@@ -21,6 +21,7 @@ import {
   LockReset as LockResetIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/apiConfig';
 
 const PasswordChangeDialog = ({ open, onClose }) => {
   const theme = useTheme();
@@ -101,7 +102,7 @@ const PasswordChangeDialog = ({ open, onClose }) => {
 
     try {
       // Use the existing login endpoint to verify credentials first
-      const loginResponse = await axios.post('http://localhost:5000/api/employees/login', {
+      const loginResponse = await axios.post(API_ENDPOINTS.LOGIN, {
         email,
         password: currentPassword
       });
@@ -109,7 +110,7 @@ const PasswordChangeDialog = ({ open, onClose }) => {
       if (loginResponse.status === 200) {
         // If login is successful, update the password using the update endpoint
         const userId = loginResponse.data._id;
-        const updateResponse = await axios.put(`http://localhost:5000/api/employees/${userId}`, {
+        const updateResponse = await axios.put(API_ENDPOINTS.EMPLOYEE_BY_ID(userId), {
           password: newPassword
         });
 

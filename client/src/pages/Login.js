@@ -2,6 +2,7 @@
 import React, { useState, useContext, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS } from "../utils/apiConfig";
 import {
   TextField,
   Button,
@@ -116,7 +117,7 @@ const Login = () => {
 
     try {
       // Connexion pour tous les utilisateurs (y compris admin)
-      const res = await axios.post("http://localhost:5000/api/employees/login", {
+      const res = await axios.post(API_ENDPOINTS.LOGIN, {
         email,
         password,
       });

@@ -21,6 +21,7 @@ import {
   Security as SecurityIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/apiConfig';
 
 const FirstLoginPasswordChange = ({ open, user, onSuccess }) => {
   const theme = useTheme();
@@ -85,7 +86,7 @@ const FirstLoginPasswordChange = ({ open, user, onSuccess }) => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/employees/change-password', {
+      const response = await axios.post(API_ENDPOINTS.CHANGE_PASSWORD, {
         email: user.email,
         newPassword,
         isFirstLogin: true

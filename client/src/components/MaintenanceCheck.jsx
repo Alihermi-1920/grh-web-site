@@ -5,6 +5,7 @@ import axios from 'axios';
 import { CircularProgress, Box } from '@mui/material';
 import MaintenancePage from '../pages/MaintenancePage';
 import { AuthContext } from '../context/AuthContext';
+import API_BASE_URL from '../utils/apiConfig';
 
 // Apply theme to document body to prevent white flash during transitions
 const applyDarkTheme = () => {
@@ -14,8 +15,6 @@ const applyDarkTheme = () => {
     document.body.style.backgroundColor = 'hsl(220, 30%, 5%)';
   }
 };
-
-const API_URL = 'http://localhost:5000';
 
 const MaintenanceCheck = ({ children }) => {
   // Start with initialLoading=true to prevent showing content before maintenance check
@@ -59,7 +58,7 @@ const MaintenanceCheck = ({ children }) => {
       setLoading(true);
       try {
         // First check global maintenance status
-        const response = await axios.get(`${API_URL}/api/maintenance/status`);
+        const response = await axios.get(`${API_BASE_URL}/api/maintenance/status`);
 
         if (response.data.success) {
           const { isGlobalMaintenance, globalMessage, pageSettings } = response.data;
