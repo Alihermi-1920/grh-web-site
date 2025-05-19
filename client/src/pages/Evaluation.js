@@ -89,6 +89,12 @@ const Evaluation = () => {
     setPeriode(currentDate);
   }, []);
 
+  // Store user info in state to make it accessible throughout the component
+  const [userInfo, setUserInfo] = useState({
+    isChef: false,
+    chefId: null
+  });
+
   // Fetch employees and evaluated employees
   useEffect(() => {
     // Trigger fade-in animation after component mounts
@@ -100,25 +106,51 @@ const Evaluation = () => {
     const isChef = currentUser.role === "Chef";
     const chefId = currentUser._id;
 
+    // Store user info in state
+    setUserInfo({
+      isChef,
+      chefId
+    });
+
     // Fetch employees data - if chef, only get their employees
     const fetchEmployees = async () => {
       try {
         let employeesData = [];
+        console.log("Fetching employees data...");
+        console.log(`User role: ${isChef ? 'Chef' : 'Admin'}, Chef ID: ${chefId || 'N/A'}`);
 
         if (isChef && chefId) {
           // Fetch only employees belonging to this chef
-          const response = await fetch(`http://localhost:5000/api/employees/chef/${chefId}`);
+          console.log(`Fetching employees for chef: ${chefId}`);
+          const response = await fetch(`http://localhost:5000/api/employees/chef/${chefId}`, {
+            // Add cache control to prevent caching
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
           if (!response.ok) {
             throw new Error(`Failed to fetch employees: ${response.status}`);
           }
           employeesData = await response.json();
+          console.log(`Found ${employeesData.length} employees for chef ${chefId}`);
         } else {
           // For admin, fetch all employees
-          const response = await fetch("http://localhost:5000/api/employees");
+          console.log("Fetching all employees (admin)");
+          const response = await fetch("http://localhost:5000/api/employees", {
+            // Add cache control to prevent caching
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
           if (!response.ok) {
             throw new Error(`Failed to fetch employees: ${response.status}`);
           }
           employeesData = await response.json();
+          console.log(`Found ${employeesData.length} total employees`);
         }
 
         if (!Array.isArray(employeesData)) {
@@ -126,6 +158,7 @@ const Evaluation = () => {
           employeesData = [];
         }
 
+        console.log("Setting employees data:", employeesData);
         setEmployees(employeesData);
 
         // Now fetch evaluated employees for the current period
@@ -138,28 +171,92 @@ const Evaluation = () => {
               url += `&chefId=${chefId}`;
             }
 
-            const evalResponse = await fetch(url);
+            // Add timestamp to prevent caching
+            url += `&_t=${Date.now()}`;
+
+            console.log(`Fetching evaluated employees from: ${url}`);
+            const evalResponse = await fetch(url, {
+              // Add cache control to prevent caching
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            });
             if (!evalResponse.ok) {
               throw new Error(`Failed to fetch evaluated employees: ${evalResponse.status}`);
             }
 
             const evaluatedIds = await evalResponse.json();
+            console.log(`Received evaluated employee IDs:`, evaluatedIds);
+
             if (!Array.isArray(evaluatedIds)) {
               console.warn("Evaluated IDs is not an array:", evaluatedIds);
               setEvaluatedEmployeeIds([]);
               setFilteredEmployees(employeesData);
             } else {
+              console.log(`Setting ${evaluatedIds.length} evaluated employee IDs`);
+
+              // Store evaluated IDs in localStorage for persistence
+              localStorage.setItem(`evaluatedEmployees_${formattedPeriod}`, JSON.stringify(evaluatedIds));
+
               setEvaluatedEmployeeIds(evaluatedIds);
 
-              // Filter out already evaluated employees
-              const filtered = employeesData.filter(emp => {
-                // Check if this employee's ID is in the evaluated IDs list
-                return !evaluatedIds.some(evalId => evalId === emp._id);
+              // Filter out already evaluated employees - only show employees who haven't been evaluated yet
+              const notEvaluatedEmployees = employeesData.filter(emp => {
+                // Include employee only if their ID is NOT in the evaluated IDs list
+                const empIdStr = emp._id.toString();
+                const isEvaluated = evaluatedIds.includes(empIdStr);
+                console.log(`Employee ${emp.firstName} ${emp.lastName} (${empIdStr}) evaluated: ${isEvaluated}`);
+                return !isEvaluated;
               });
-              setFilteredEmployees(filtered);
+
+              console.log("Filtered employees (not evaluated):", notEvaluatedEmployees);
+              console.log("Evaluated IDs:", evaluatedIds);
+
+              // Set the filtered employees list to only show unevaluated employees
+              setFilteredEmployees(notEvaluatedEmployees);
+
+              // Log the final filtered list for debugging
+              console.log(`Final filtered employee list has ${notEvaluatedEmployees.length} employees`);
+              notEvaluatedEmployees.forEach(emp => {
+                console.log(`- ${emp.firstName} ${emp.lastName} (${emp._id})`);
+              });
+
+              // If the selected employee has already been evaluated, clear the selection
+              if (selectedEmployee && evaluatedIds.includes(selectedEmployee._id.toString())) {
+                setSelectedEmployee(null);
+                setAnswers({});
+              }
             }
           } catch (evalErr) {
             console.error("Error loading evaluated employees:", evalErr);
+
+            // Try to load from localStorage as fallback
+            if (periode) {
+              const formattedPeriod = format(periode, 'yyyy-MM');
+              const cachedEvaluatedIds = localStorage.getItem(`evaluatedEmployees_${formattedPeriod}`);
+
+              if (cachedEvaluatedIds) {
+                try {
+                  const evaluatedIds = JSON.parse(cachedEvaluatedIds);
+                  console.log("Using cached evaluated employee IDs from localStorage:", evaluatedIds);
+
+                  setEvaluatedEmployeeIds(evaluatedIds);
+
+                  // Filter employees using cached data
+                  const notEvaluatedEmployees = employeesData.filter(emp =>
+                    !evaluatedIds.includes(emp._id.toString())
+                  );
+
+                  setFilteredEmployees(notEvaluatedEmployees);
+                  return;
+                } catch (e) {
+                  console.error("Error parsing cached evaluated employees:", e);
+                }
+              }
+            }
+
             // If we can't get evaluated employees, just show all employees
             setFilteredEmployees(employeesData);
           }
@@ -240,7 +337,7 @@ const Evaluation = () => {
     setError("");
 
     if (!periode) {
-      setError("Please select evaluation period");
+      setError("Veuillez sélectionner une période d'évaluation");
       return;
     }
 
@@ -249,7 +346,7 @@ const Evaluation = () => {
     );
 
     if (!allAnswered) {
-      setError("Please answer all questions before submitting");
+      setError("Veuillez répondre à toutes les questions avant de soumettre");
       return;
     }
 
@@ -289,16 +386,30 @@ const Evaluation = () => {
       setSubmitted(true);
 
       // Add the current employee ID to the evaluated employees list
-      setEvaluatedEmployeeIds(prev => {
-        if (!prev || !Array.isArray(prev)) return [selectedEmployee._id];
-        return [...prev, selectedEmployee._id];
-      });
+      const employeeIdStr = selectedEmployee._id.toString();
 
-      // Update the filtered employees list
-      setFilteredEmployees(prev => {
-        if (!prev || !Array.isArray(prev)) return [];
-        return prev.filter(emp => emp._id !== selectedEmployee._id);
-      });
+      // Force immediate update of evaluated employees list
+      const newEvaluatedIds = [...(Array.isArray(evaluatedEmployeeIds) ? evaluatedEmployeeIds : []), employeeIdStr];
+      setEvaluatedEmployeeIds(newEvaluatedIds);
+      console.log("Updated evaluated employee IDs:", newEvaluatedIds);
+
+      // Store in localStorage for persistence
+      if (periode) {
+        const formattedPeriod = format(periode, 'yyyy-MM');
+        localStorage.setItem(`evaluatedEmployees_${formattedPeriod}`, JSON.stringify(newEvaluatedIds));
+        console.log(`Saved evaluated employees to localStorage for period ${formattedPeriod}`);
+      }
+
+      // Force immediate update of filtered employees list
+      const newFilteredList = filteredEmployees.filter(emp => emp._id.toString() !== employeeIdStr);
+      setFilteredEmployees(newFilteredList);
+      console.log(`Filtered employees list updated. Removed ${selectedEmployee.firstName} ${selectedEmployee.lastName}. New count: ${newFilteredList.length}`);
+
+      console.log(`Employee ${selectedEmployee.firstName} ${selectedEmployee.lastName} (${employeeIdStr}) has been evaluated and removed from the list`);
+
+      // Force component re-render
+      setFadeIn(false);
+      setTimeout(() => setFadeIn(true), 10);
     } catch (err) {
       setError("Error saving evaluation");
     } finally {
@@ -403,9 +514,28 @@ const Evaluation = () => {
     setGlobalScore(null);
     setSubmitted(false);
     setError("");
-    setPeriode(null);
     setChapterComments({});
     setActiveChapter(null);
+
+    // Refresh the employee list to make sure it's up to date
+    if (periode) {
+      // Force a complete refresh by setting a new date object
+      const newPeriode = new Date(periode.getTime());
+      console.log("Refreshing employee list with new period:", newPeriode);
+
+      // First clear the period to trigger a complete refresh cycle
+      setPeriode(null);
+
+      // Then set it back after a short delay
+      setTimeout(() => {
+        setPeriode(newPeriode);
+        console.log("Period reset complete");
+
+        // Force component re-render
+        setFadeIn(false);
+        setTimeout(() => setFadeIn(true), 10);
+      }, 50);
+    }
   };
 
   const navigateToNextChapter = () => {
@@ -553,7 +683,7 @@ const Evaluation = () => {
                       WebkitTextFillColor: 'transparent'
                     }}
                   >
-                    Employee Evaluation
+                    Évaluation des Employés
                   </Typography>
                   <Typography
                     variant="body2"
@@ -562,22 +692,37 @@ const Evaluation = () => {
                       display: { xs: 'none', sm: 'block' }
                     }}
                   >
-                    Assess employee performance and provide valuable feedback
+                    Évaluez les performances des employés et fournissez des commentaires précieux
                   </Typography>
                 </Box>
               </Box>
 
-              <Tooltip title="Help Guide">
-                <IconButton
-                  onClick={() => setHelpDrawerOpen(true)}
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Chip
+                  icon={<CalendarMonth />}
+                  label={formattedPeriode ? format(new Date(formattedPeriode), 'MMMM yyyy') : 'Mois actuel'}
+                  color="primary"
                   sx={{
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                    mr: 2,
+                    px: 2,
+                    py: 2.5,
+                    fontSize: '1rem',
+                    fontWeight: 'medium',
+                    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`
                   }}
-                >
-                  <HelpOutline />
-                </IconButton>
-              </Tooltip>
+                />
+                <Tooltip title="Guide d'aide">
+                  <IconButton
+                    onClick={() => setHelpDrawerOpen(true)}
+                    sx={{
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                    }}
+                  >
+                    <HelpOutline />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
 
             {/* Employee Selection */}
@@ -611,9 +756,17 @@ const Evaluation = () => {
                     </Box>
 
                     <Autocomplete
-                      options={filteredEmployees}
+                      key={`employee-select-${Date.now()}`} // Force re-render every time
+                      options={filteredEmployees.filter(emp =>
+                        !evaluatedEmployeeIds.includes(emp._id.toString())
+                      )} // Double-filter to ensure no evaluated employees appear
                       getOptionLabel={(opt) => `${opt.firstName} ${opt.lastName}${opt.department ? ` - ${opt.department}` : ''}`}
-                      onChange={(_, v) => setSelectedEmployee(v)}
+                      onChange={(_, v) => {
+                        if (v) {
+                          setSelectedEmployee(v);
+                        }
+                      }}
+                      noOptionsText="Tous les employés ont été évalués pour cette période"
                       renderOption={(props, option) => (
                         <Box component="li" {...props} sx={{
                           display: 'flex',
@@ -664,22 +817,33 @@ const Evaluation = () => {
                       pt: 2,
                       borderTop: `1px dashed ${alpha(theme.palette.divider, 0.5)}`
                     }}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <Dashboard sx={{ mr: 1, fontSize: 18 }} />
-                        Employees available: {filteredEmployees.length}
-                        {employees.length !== filteredEmployees.length && (
-                          <Typography component="span" variant="body2" sx={{ ml: 1, color: theme.palette.info.main }}>
-                            ({employees.length - filteredEmployees.length} already evaluated this period)
-                          </Typography>
-                        )}
-                      </Typography>
+                      {filteredEmployees.filter(emp => !evaluatedEmployeeIds.includes(emp._id.toString())).length > 0 ? (
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            color: theme.palette.primary.main,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          <Person sx={{ mr: 1, fontSize: 18 }} />
+                          Employés non évalués ({filteredEmployees.filter(emp => !evaluatedEmployeeIds.includes(emp._id.toString())).length})
+                        </Typography>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.success.main,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 'medium'
+                          }}
+                        >
+                          <CheckCircle sx={{ mr: 1, fontSize: 18 }} />
+                          Tous les employés ont été évalués pour {formattedPeriode ? format(new Date(formattedPeriode), 'MMMM yyyy') : 'ce mois'}
+                        </Typography>
+                      )}
                     </Box>
                   </CardContent>
                 </Card>
@@ -766,7 +930,10 @@ const Evaluation = () => {
                               label="Select Period"
                               type="month"
                               value={formattedPeriode}
-                              onChange={(e) => setPeriode(new Date(e.target.value))}
+                              onChange={(e) => {
+                                const newPeriode = new Date(e.target.value);
+                                setPeriode(newPeriode);
+                              }}
                               fullWidth
                               required
                               helperText="Select year and month for this evaluation"
@@ -1325,33 +1492,43 @@ const Evaluation = () => {
                         flexWrap: 'wrap'
                       }}>
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           startIcon={<Refresh />}
                           onClick={resetForm}
                           sx={{
                             borderRadius: 2,
                             px: 3,
-                            textTransform: 'none'
+                            py: 1.5,
+                            textTransform: 'none',
+                            bgcolor: theme.palette.success.main,
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.3)}`,
+                            '&:hover': {
+                              bgcolor: theme.palette.success.dark,
+                              boxShadow: `0 6px 16px ${alpha(theme.palette.success.main, 0.4)}`
+                            }
                           }}
                         >
-                          New Evaluation
+                          Nouvelle Évaluation
                         </Button>
 
                         <Button
-                          variant="contained"
+                          variant="outlined"
                           startIcon={<PictureAsPdf />}
                           onClick={generatePDF}
                           sx={{
                             borderRadius: 2,
                             px: 3,
+                            py: 1.5,
                             textTransform: 'none',
-                            bgcolor: theme.palette.success.main,
+                            borderColor: theme.palette.primary.main,
+                            color: theme.palette.primary.main,
                             '&:hover': {
-                              bgcolor: theme.palette.success.dark
+                              borderColor: theme.palette.primary.dark,
+                              bgcolor: alpha(theme.palette.primary.main, 0.05)
                             }
                           }}
                         >
-                          Export to PDF
+                          Télécharger PDF
                         </Button>
                       </Box>
                     </Paper>

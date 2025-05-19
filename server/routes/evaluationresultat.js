@@ -12,6 +12,22 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Certains champs requis sont manquants." });
     }
 
+    // Check if this employee has already been evaluated this month
+    const existingEvaluation = await EvaluationResultat.findOne({
+      employeeId,
+      periode
+    });
+
+    if (existingEvaluation) {
+      console.log(`Employee ${employeeId} already evaluated for ${periode}. Evaluation ID: ${existingEvaluation._id}`);
+      return res.status(400).json({
+        message: "Cet employé a déjà été évalué ce mois-ci.",
+        existingEvaluation: existingEvaluation._id
+      });
+    }
+
+    console.log(`Creating new evaluation for employee ${employeeId} for period ${periode}`);
+
     const newResult = new EvaluationResultat({
       employeeId,
       employeeName,
@@ -111,32 +127,47 @@ router.get("/:id", async (req, res) => {
 router.get("/evaluated-employees", async (req, res) => {
   try {
     const { periode, chefId } = req.query;
+    console.log(`Getting evaluated employees for period: ${periode}, chefId: ${chefId || 'none'}`);
 
     let query = {};
 
     // Filter by period if specified
     if (periode) {
       query.periode = periode;
+      console.log(`Filtering by period: ${periode}`);
     }
 
     // If chef ID is provided, only get evaluations for their employees
     if (chefId) {
+      console.log(`Filtering by chef: ${chefId}`);
       // First get all employees for this chef
       const Employee = require("../models/Employee");
       const chefEmployees = await Employee.find({ chefId });
+      console.log(`Found ${chefEmployees.length} employees for chef ${chefId}`);
+
       const employeeIds = chefEmployees.map(emp => emp._id.toString());
+      console.log(`Employee IDs for chef ${chefId}: ${employeeIds.join(', ')}`);
 
       // Add to query to only include these employees
       query.employeeId = { $in: employeeIds.map(id => mongoose.Types.ObjectId(id)) };
     }
 
+    console.log(`Final query for evaluations:`, query);
+
     // Get all evaluations matching the query
     const evaluations = await EvaluationResultat.find(query);
+    console.log(`Found ${evaluations.length} evaluations matching the query`);
 
-    // Extract unique employee IDs
-    const evaluatedEmployeeIds = [...new Set(evaluations.map(eval =>
-      eval.employeeId ? eval.employeeId.toString() : null
-    ).filter(id => id !== null))];
+    // Extract unique employee IDs and ensure they are strings
+    const evaluatedEmployeeIds = [...new Set(evaluations.map(eval => {
+      // Make sure we're returning a string ID regardless of whether employeeId is an ObjectId or string
+      if (!eval.employeeId) return null;
+      return typeof eval.employeeId === 'object' && eval.employeeId._id
+        ? eval.employeeId._id.toString()
+        : eval.employeeId.toString();
+    }).filter(id => id !== null))];
+
+    console.log(`Returning ${evaluatedEmployeeIds.length} evaluated employee IDs: ${evaluatedEmployeeIds.join(', ')}`);
 
     res.status(200).json(evaluatedEmployeeIds);
   } catch (error) {

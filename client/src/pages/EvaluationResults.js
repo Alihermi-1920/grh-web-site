@@ -29,7 +29,12 @@ import {
   useTheme,
   alpha,
   Fade,
-  Autocomplete
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemButton,
+  ListItemSecondaryAction
 } from "@mui/material";
 import {
   Assessment,
@@ -44,11 +49,14 @@ import {
   Download,
   Close,
   Refresh,
-  Info
+  Info,
+  ArrowBack,
+  ArrowForward,
+  BarChart,
+  TrendingUp,
+  Comment
 } from "@mui/icons-material";
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { format, getYear, getMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -63,21 +71,25 @@ const EvaluationResults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [employees, setEmployees] = useState([]);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState("none"); // Options: none, highToLow, lowToHigh
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [employeeEvaluations, setEmployeeEvaluations] = useState([]);
+  const [mobileView, setMobileView] = useState(window.innerWidth < 960);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [sortOption, setSortOption] = useState("none");
+  const [years, setYears] = useState(() => {
+    const currentYear = new Date().getFullYear();
+    return [currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4];
+  });
 
-  // Years for filter dropdown (last 5 years)
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-
-  // Months for filter dropdown
+  // Months array for dropdown
   const months = [
     { value: 1, label: "Janvier" },
     { value: 2, label: "Février" },
@@ -93,6 +105,22 @@ const EvaluationResults = () => {
     { value: 12, label: "Décembre" }
   ];
 
+  // Helper function to get color based on score
+  const getScoreColor = (score) => {
+    if (score >= 16) return theme.palette.success.main;
+    if (score >= 12) return theme.palette.info.main;
+    if (score >= 8) return theme.palette.warning.main;
+    return theme.palette.error.main;
+  };
+
+  // Helper function to get performance rating based on score
+  const getPerformanceRating = (score) => {
+    if (score >= 16) return "Excellent";
+    if (score >= 12) return "Bon";
+    if (score >= 8) return "Moyen";
+    return "À améliorer";
+  };
+
   // Fetch evaluations from the server
   const fetchEvaluations = async () => {
     setLoading(true);
@@ -105,7 +133,6 @@ const EvaluationResults = () => {
       // Add filters if they exist
       if (selectedYear) queryParams.append("year", selectedYear);
       if (selectedMonth) queryParams.append("month", selectedMonth);
-      if (selectedEmployee) queryParams.append("employeeId", selectedEmployee._id);
 
       // Add user role and chef ID if user is a chef
       if (user && user.role === "Chef") {
@@ -113,19 +140,53 @@ const EvaluationResults = () => {
         queryParams.append("chefId", user._id);
       }
 
-      const response = await fetch(`http://localhost:5000/api/evaluationresultat?${queryParams}`);
+      // Add timestamp to prevent caching
+      queryParams.append("_t", Date.now());
+
+      const response = await fetch(`http://localhost:5000/api/evaluationresultat?${queryParams}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch evaluations");
       }
 
       const data = await response.json();
+
+      // Group evaluations by employee
+      const groupedByEmployee = data.reduce((acc, evaluation) => {
+        const employeeId = evaluation.employeeId?._id || evaluation.employeeId;
+        if (!acc[employeeId]) {
+          acc[employeeId] = [];
+        }
+        acc[employeeId].push(evaluation);
+        return acc;
+      }, {});
+
       setEvaluations(data);
       setFilteredEvaluations(data);
+
+      // If there are evaluations and no employee is selected, select the first one
+      if (data.length > 0 && !selectedEmployeeId) {
+        const firstEmployeeId = data[0].employeeId?._id || data[0].employeeId;
+        setSelectedEmployeeId(firstEmployeeId);
+        setEmployeeEvaluations(groupedByEmployee[firstEmployeeId] || []);
+
+        if (groupedByEmployee[firstEmployeeId]?.length > 0) {
+          setSelectedEvaluation(groupedByEmployee[firstEmployeeId][0]);
+        }
+      } else if (selectedEmployeeId) {
+        setEmployeeEvaluations(groupedByEmployee[selectedEmployeeId] || []);
+      }
+
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching evaluations:", error);
       setError("Failed to load evaluations. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -140,7 +201,13 @@ const EvaluationResults = () => {
         url = `http://localhost:5000/api/employees/chef/${user._id}`;
       }
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch employees");
@@ -150,67 +217,45 @@ const EvaluationResults = () => {
       setEmployees(data);
     } catch (error) {
       console.error("Error fetching employees:", error);
-      // Don't set error state here to avoid blocking the main functionality
     }
   };
 
-  // Apply filters to the evaluations
-  const applyFilters = () => {
-    if (!evaluations.length) return;
+  // Handle employee selection
+  const handleEmployeeSelect = (employeeId) => {
+    setSelectedEmployeeId(employeeId);
 
-    let filtered = [...evaluations];
+    // Find evaluations for this employee
+    const employeeEvals = evaluations.filter(evaluation =>
+      (evaluation.employeeId?._id || evaluation.employeeId) === employeeId
+    );
 
-    // Filter by employee
-    if (selectedEmployee) {
-      filtered = filtered.filter(evaluation =>
-        evaluation.employeeId && evaluation.employeeId._id === selectedEmployee._id
-      );
+    setEmployeeEvaluations(employeeEvals);
+
+    // Select the first evaluation if available
+    if (employeeEvals.length > 0) {
+      setSelectedEvaluation(employeeEvals[0]);
+    } else {
+      setSelectedEvaluation(null);
     }
-
-    // Filter by search query (employee name)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(evaluation => {
-        const employeeName = evaluation.employeeName.toLowerCase();
-        return employeeName.includes(query);
-      });
-    }
-
-    // Sort by score if option is selected
-    if (sortOption !== "none") {
-      filtered.sort((a, b) => {
-        const scoreA = parseFloat(a.globalScore);
-        const scoreB = parseFloat(b.globalScore);
-
-        if (sortOption === "highToLow") {
-          return scoreB - scoreA; // Descending order (high to low)
-        } else {
-          return scoreA - scoreB; // Ascending order (low to high)
-        }
-      });
-    }
-
-    // Set the filtered evaluations
-    setFilteredEvaluations(filtered);
   };
 
-  // Handle filter reset
-  const handleResetFilters = () => {
-    setSelectedEmployee(null);
-    setSelectedYear(new Date().getFullYear());
-    setSelectedMonth("");
-    setSearchQuery("");
-    setSortOption("none");
-    fetchEvaluations();
+  // Handle evaluation selection
+  const handleEvaluationSelect = (evaluation) => {
+    setSelectedEvaluation(evaluation);
   };
 
-  // Delete an evaluation
+  // Handle view evaluation
+  const handleViewEvaluation = (evaluation) => {
+    setSelectedEvaluation(evaluation);
+    setDetailDialogOpen(true);
+  };
+
+  // Handle delete evaluation
   const handleDeleteEvaluation = async (id) => {
     setDeleteLoading(true);
-
     try {
       const response = await fetch(`http://localhost:5000/api/evaluationresultat/${id}`, {
-        method: "DELETE"
+        method: 'DELETE'
       });
 
       if (!response.ok) {
@@ -218,10 +263,14 @@ const EvaluationResults = () => {
       }
 
       // Remove the deleted evaluation from state
-      setEvaluations(prev => prev.filter(evaluation => evaluation._id !== id));
-      setFilteredEvaluations(prev => prev.filter(evaluation => evaluation._id !== id));
+      setEvaluations(evaluations.filter(evaluation => evaluation._id !== id));
+      setFilteredEvaluations(filteredEvaluations.filter(evaluation => evaluation._id !== id));
 
-      // Close the confirmation dialog
+      // If the deleted evaluation was selected, clear selection
+      if (selectedEvaluation && selectedEvaluation._id === id) {
+        setSelectedEvaluation(null);
+      }
+
       setConfirmDeleteOpen(false);
     } catch (error) {
       console.error("Error deleting evaluation:", error);
@@ -231,10 +280,45 @@ const EvaluationResults = () => {
     }
   };
 
-  // Open evaluation detail dialog
-  const handleViewEvaluation = (evaluation) => {
-    setSelectedEvaluation(evaluation);
-    setDetailDialogOpen(true);
+  // Handle search
+  const handleSearch = (event) => {
+    const query = event.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    if (!query) {
+      setFilteredEvaluations(evaluations);
+      return;
+    }
+
+    const filtered = evaluations.filter(evaluation => {
+      const employeeName = evaluation.employeeName.toLowerCase();
+      return employeeName.includes(query);
+    });
+
+    setFilteredEvaluations(filtered);
+
+    // If there are results and no employee is selected, select the first one
+    if (filtered.length > 0 && !selectedEmployeeId) {
+      const firstEmployeeId = filtered[0].employeeId?._id || filtered[0].employeeId;
+      handleEmployeeSelect(firstEmployeeId);
+    }
+  };
+
+  // Handle month change
+  const handleMonthChange = (event) => {
+    setSelectedMonth(event.target.value);
+  };
+
+  // Handle year change
+  const handleYearChange = (event) => {
+    setSelectedYear(event.target.value);
+  };
+
+  // Handle reset filters
+  const handleResetFilters = () => {
+    setSelectedYear(new Date().getFullYear());
+    setSelectedMonth(new Date().getMonth() + 1);
+    setSearchQuery("");
   };
 
   // Generate PDF for an evaluation
@@ -242,26 +326,19 @@ const EvaluationResults = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Header
-    doc.setFontSize(22);
+    // Add company logo or header
+    doc.setFontSize(20);
     doc.setTextColor(theme.palette.primary.main);
-    doc.text("Employee Evaluation Report", pageWidth/2, 20, { align: "center" });
+    doc.text("Rapport d'Évaluation", pageWidth/2, 20, { align: "center" });
 
-    // Employee Info
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text(`Employee: ${evaluation.employeeName}`, 20, 35);
-
-    if (evaluation.employeeId && evaluation.employeeId.position) {
-      doc.text(`Position: ${evaluation.employeeId.position}`, 20, 43);
-    }
-
-    if (evaluation.employeeId && evaluation.employeeId.department) {
-      doc.text(`Department: ${evaluation.employeeId.department}`, 20, 51);
-    }
-
-    doc.text(`Period: ${evaluation.periode || format(new Date(evaluation.date), 'yyyy-MM')}`, 20, 59);
-    doc.text(`Overall Score: ${evaluation.globalScore}/20`, 20, 67);
+    // Employee info
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Employé: ${evaluation.employeeName}`, 20, 35);
+    doc.text(`Poste: ${evaluation.employeeId?.position || "N/A"}`, 20, 43);
+    doc.text(`Département: ${evaluation.employeeId?.department || "N/A"}`, 20, 51);
+    doc.text(`Période: ${evaluation.periode || format(new Date(evaluation.date), 'yyyy-MM')}`, 20, 59);
+    doc.text(`Score Global: ${evaluation.globalScore}/20`, 20, 67);
 
     // Horizontal line
     doc.setDrawColor(theme.palette.primary.main);
@@ -276,7 +353,7 @@ const EvaluationResults = () => {
     // Scores Table
     autoTable(doc, {
       startY: 77,
-      head: [['Chapter', 'Score', 'Performance']],
+      head: [['Chapitre', 'Score', 'Performance']],
       body: chapterScores.map(([chapter, score, performance]) => [
         chapter,
         `${score}/10`,
@@ -300,25 +377,25 @@ const EvaluationResults = () => {
       }
     });
 
-    // Comments Section if available
+    // Comments section if available
     if (evaluation.chapterComments && Object.keys(evaluation.chapterComments).length > 0) {
-      let yPos = doc.lastAutoTable.finalY + 15;
-      doc.setFontSize(16);
-      doc.setTextColor(theme.palette.primary.main);
-      doc.text("Manager Comments:", 20, yPos);
-      yPos += 10;
+      const finalY = doc.lastAutoTable.finalY || 150;
 
+      doc.text("Commentaires:", 20, finalY + 10);
+
+      let commentY = finalY + 20;
       Object.entries(evaluation.chapterComments).forEach(([chapter, comment]) => {
-        if (comment) {
-          doc.setFontSize(12);
-          doc.setTextColor(theme.palette.text.primary);
-          doc.text(`${chapter}:`, 20, yPos);
-
+        if (comment && comment.trim()) {
           doc.setFontSize(10);
-          doc.setTextColor(theme.palette.text.secondary);
-          const splitText = doc.splitTextToSize(comment, 170);
-          doc.text(splitText, 25, yPos + 8);
-          yPos += splitText.length * 5 + 20;
+          doc.setFont(undefined, 'bold');
+          doc.text(`${chapter}:`, 20, commentY);
+          doc.setFont(undefined, 'normal');
+
+          // Handle multiline comments
+          const textLines = doc.splitTextToSize(comment, 170);
+          doc.text(textLines, 20, commentY + 5);
+
+          commentY += 10 + (textLines.length * 5);
         }
       });
     }
@@ -326,209 +403,107 @@ const EvaluationResults = () => {
     // Footer
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth/2, 280, { align: "center" });
-    doc.text("HRMS Evaluation System", pageWidth/2, 285, { align: "center" });
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth/2, 280, { align: "center" });
+    doc.text("Système d'Évaluation HRMS", pageWidth/2, 285, { align: "center" });
 
     doc.save(`evaluation_${evaluation.employeeName.replace(/\s+/g, '_')}_${evaluation.periode || format(new Date(evaluation.date), 'yyyy-MM')}.pdf`);
   };
 
-  // Helper function to determine performance rating based on score
-  const getPerformanceRating = (score) => {
-    const scoreNum = parseFloat(score);
-    if (scoreNum >= 8) return "Excellent";
-    if (scoreNum >= 6) return "Good";
-    if (scoreNum >= 4) return "Average";
-    return "Needs Improvement";
-  };
+  // Initial data loading
+  useEffect(() => {
+    fetchEmployees();
+  }, [user]);
 
-  // Helper function to get color based on score
-  const getScoreColor = (score) => {
-    const scoreNum = parseFloat(score);
-    if (scoreNum >= 8) return theme.palette.success.main;
-    if (scoreNum >= 6) return theme.palette.info.main;
-    if (scoreNum >= 4) return theme.palette.warning.main;
-    return theme.palette.error.main;
-  };
-
-  // Fetch evaluations and employees on component mount
   useEffect(() => {
     fetchEvaluations();
-    fetchEmployees();
+  }, [selectedYear, selectedMonth]);
+
+  // Handle window resize for responsive design
+  useEffect(() => {
+    const handleResize = () => {
+      setMobileView(window.innerWidth < 960);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
-  // Apply filters when filter criteria change
-  useEffect(() => {
-    applyFilters();
-  }, [evaluations, selectedEmployee, selectedYear, selectedMonth, searchQuery, sortOption]);
+  // Group evaluations by employee for the sidebar
+  const groupedEvaluations = evaluations.reduce((acc, evaluation) => {
+    const employeeId = evaluation.employeeId?._id || evaluation.employeeId;
+    const employeeName = evaluation.employeeName;
+
+    if (!acc[employeeId]) {
+      acc[employeeId] = {
+        id: employeeId,
+        name: employeeName,
+        department: evaluation.employeeId?.department || "",
+        position: evaluation.employeeId?.position || "",
+        evaluations: []
+      };
+    }
+
+    acc[employeeId].evaluations.push(evaluation);
+    return acc;
+  }, {});
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Fade in={true} timeout={800}>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{
+          fontWeight: 700,
+          background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <Assessment fontSize="large" sx={{ color: theme.palette.primary.main }} />
+          Résultats d'Évaluation
+        </Typography>
+      </Box>
+
+      <Grid container spacing={3}>
+        {/* Left Panel - Employee List with Filters */}
+        <Grid item xs={12} md={5} lg={4}>
           <Paper
-            elevation={3}
+            elevation={4}
             sx={{
-              p: { xs: 2, md: 4 },
-              borderRadius: 2,
-              background: localStorage.getItem("themeMode") === "dark"
-                ? `linear-gradient(135deg, rgba(66, 66, 66, 0.95), rgba(33, 33, 33, 0.9))`
-                : `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)}, ${alpha(theme.palette.background.default, 0.9)})`,
-              boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.1)}`,
+              borderRadius: 3,
               overflow: 'hidden',
-              position: 'relative',
-              color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit'
+              height: 'calc(100vh - 180px)',
+              display: 'flex',
+              flexDirection: 'column',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)}, ${alpha(theme.palette.background.paper, 0.95)})`,
+              backdropFilter: 'blur(10px)',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`
             }}
           >
-            {/* Background decorative elements */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -80,
-                right: -80,
-                width: 200,
-                height: 200,
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${alpha(theme.palette.primary.light, 0.15)}, transparent 70%)`,
-                zIndex: 0
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -100,
-                left: -100,
-                width: 250,
-                height: 250,
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${alpha(theme.palette.secondary.light, 0.12)}, transparent 70%)`,
-                zIndex: 0
-              }}
-            />
-
-            {/* Header */}
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 4,
-              pb: 2,
-              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar
-                  sx={{
-                    bgcolor: theme.palette.primary.main,
-                    mr: 2,
-                    width: 56,
-                    height: 56,
-                    boxShadow: `0 4px 8px ${alpha(theme.palette.primary.main, 0.4)}`
-                  }}
-                >
-                  <Assessment />
-                </Avatar>
-                <Box>
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      fontWeight: 700,
-                      background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent'
-                    }}
-                  >
-                    Evaluation Results
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: theme.palette.text.secondary
-                    }}
-                  >
-                    View and manage employee performance evaluations
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
             {/* Filters Section */}
-            <Paper
-              elevation={0}
+            <Box
               sx={{
-                p: 3,
-                mb: 4,
-                borderRadius: 2,
-                bgcolor: localStorage.getItem("themeMode") === "dark"
-                  ? 'rgba(55, 55, 55, 0.5)'
-                  : alpha(theme.palette.primary.light, 0.05),
-                border: `1px solid ${localStorage.getItem("themeMode") === "dark"
-                  ? alpha(theme.palette.primary.main, 0.3)
-                  : alpha(theme.palette.primary.main, 0.1)}`,
-                position: 'relative',
-                zIndex: 1
+                p: 2,
+                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                background: alpha(theme.palette.primary.main, 0.03)
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <FilterList sx={{ color: theme.palette.primary.main, mr: 1 }} />
-                <Typography variant="h6">Filters</Typography>
-              </Box>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.primary.main }}>
+                Filtres
+              </Typography>
 
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Autocomplete
-                    options={employees}
-                    getOptionLabel={(option) => `${option.firstName} ${option.lastName}`}
-                    value={selectedEmployee}
-                    onChange={(_, newValue) => setSelectedEmployee(newValue)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Employee"
-                        variant="outlined"
-                        fullWidth
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <>
-                              <Person color="action" sx={{ ml: 1, mr: 0.5 }} />
-                              {params.InputProps.startAdornment}
-                            </>
-                          )
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="year-select-label">Year</InputLabel>
-                    <Select
-                      labelId="year-select-label"
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      label="Year"
-                      startAdornment={<CalendarMonth color="action" sx={{ ml: 1, mr: 0.5 }} />}
-                    >
-                      {years.map((year) => (
-                        <MenuItem key={year} value={year}>{year}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="month-select-label">Month</InputLabel>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="month-select-label">Mois</InputLabel>
                     <Select
                       labelId="month-select-label"
                       value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      label="Month"
-                      startAdornment={<CalendarMonth color="action" sx={{ ml: 1, mr: 0.5 }} />}
+                      onChange={handleMonthChange}
+                      label="Mois"
                     >
-                      <MenuItem value="">All Months</MenuItem>
                       {months.map((month) => (
                         <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
                       ))}
@@ -536,550 +511,393 @@ const EvaluationResults = () => {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={2}>
-                  <TextField
-                    fullWidth
-                    label="Search by name"
-                    variant="outlined"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                      startAdornment: <Search color="action" sx={{ mr: 0.5 }} />
-                    }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={2}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="sort-select-label">Trier par score</InputLabel>
+                <Grid item xs={6}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="year-select-label">Année</InputLabel>
                     <Select
-                      labelId="sort-select-label"
-                      value={sortOption}
-                      onChange={(e) => setSortOption(e.target.value)}
-                      label="Trier par score"
-                      startAdornment={<Grade color="action" sx={{ ml: 1, mr: 0.5 }} />}
+                      labelId="year-select-label"
+                      value={selectedYear}
+                      onChange={handleYearChange}
+                      label="Année"
                     >
-                      <MenuItem value="none">Aucun tri</MenuItem>
-                      <MenuItem value="highToLow">Score élevé à faible</MenuItem>
-                      <MenuItem value="lowToHigh">Score faible à élevé</MenuItem>
+                      {[...Array(5)].map((_, i) => {
+                        const year = new Date().getFullYear() - i;
+                        return (
+                          <MenuItem key={year} value={year}>{year}</MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12} md={1} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Rechercher par nom ou CIN..."
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    InputProps={{
+                      startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     variant="outlined"
-                    color="primary"
                     startIcon={<Refresh />}
                     onClick={handleResetFilters}
-                    fullWidth
-                    sx={{ height: '56px' }}
+                    size="small"
                   >
-                    Reset
+                    Réinitialiser
                   </Button>
                 </Grid>
               </Grid>
-            </Paper>
-
-            {/* Results Section */}
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
-              {loading ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
-                  <CircularProgress size={60} />
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                    Loading evaluations...
-                  </Typography>
-                </Box>
-              ) : error ? (
-                <Alert severity="error" sx={{ mb: 4 }}>
-                  {error}
-                </Alert>
-              ) : filteredEvaluations.length === 0 ? (
-                <Paper
-                  sx={{
-                    p: 4,
-                    textAlign: 'center',
-                    borderRadius: 2,
-                    bgcolor: alpha(theme.palette.info.light, 0.1),
-                    border: `1px dashed ${alpha(theme.palette.info.main, 0.4)}`
-                  }}
-                >
-                  <Info sx={{ fontSize: 60, color: theme.palette.info.main, opacity: 0.7, mb: 2 }} />
-                  <Typography variant="h5" gutterBottom>
-                    No evaluations found
-                  </Typography>
-                  <Typography variant="body1" color="textSecondary">
-                    Try adjusting your filters or create new evaluations
-                  </Typography>
-                </Paper>
-              ) : (
-                <>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h6">
-                      {filteredEvaluations.length} {filteredEvaluations.length === 1 ? 'Evaluation' : 'Evaluations'} Found
-                    </Typography>
-                  </Box>
-
-                  <Grid container spacing={3}>
-                    {filteredEvaluations.map((evaluation) => (
-                      <Grid item xs={12} md={6} lg={4} key={evaluation._id}>
-                        <Card
-                          sx={{
-                            borderRadius: 2,
-                            transition: 'all 0.3s ease',
-                            bgcolor: localStorage.getItem("themeMode") === "dark" ? 'rgba(66, 66, 66, 0.9)' : 'white',
-                            color: localStorage.getItem("themeMode") === "dark" ? 'white' : 'inherit',
-                            '&:hover': {
-                              transform: 'translateY(-4px)',
-                              boxShadow: `0 12px 20px ${alpha(theme.palette.primary.main, 0.15)}`
-                            },
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}
-                        >
-                          <CardContent sx={{ p: 0, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                            <Box sx={{
-                              p: 2,
-                              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2
-                            }}>
-                              <Avatar
-                                src={evaluation.employeeId && evaluation.employeeId.photo ? evaluation.employeeId.photo : ''}
-                                alt={evaluation.employeeName}
-                                sx={{
-                                  width: 56,
-                                  height: 56,
-                                  border: `2px solid ${theme.palette.primary.main}`
-                                }}
-                              >
-                                {evaluation.employeeName ? evaluation.employeeName.charAt(0) : 'E'}
-                              </Avatar>
-                              <Box>
-                                <Typography variant="h6" noWrap>
-                                  {evaluation.employeeName}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.7)" : "text.secondary"}
-                                  noWrap
-                                >
-                                  {evaluation.employeeId && evaluation.employeeId.position ? evaluation.employeeId.position : 'No position'} •
-                                  {evaluation.employeeId && evaluation.employeeId.department ? evaluation.employeeId.department : 'No department'}
-                                </Typography>
-                              </Box>
-                            </Box>
-
-                            <Box sx={{ p: 2 }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                <Chip
-                                  icon={<CalendarMonth />}
-                                  label={evaluation.periode || format(new Date(evaluation.date), 'yyyy-MM')}
-                                  size="small"
-                                  sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
-                                />
-                                <Chip
-                                  icon={<Grade />}
-                                  label={`Score: ${evaluation.globalScore}/20`}
-                                  size="small"
-                                  sx={{
-                                    bgcolor: alpha(getScoreColor(evaluation.globalScore), 0.1),
-                                    color: getScoreColor(evaluation.globalScore),
-                                    fontWeight: 'bold'
-                                  }}
-                                />
-                              </Box>
-
-                              <Typography
-                                variant="subtitle2"
-                                gutterBottom
-                                color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.9)" : "text.primary"}
-                              >
-                                Performance by Chapter:
-                              </Typography>
-
-                              {Object.entries(evaluation.chapterScores).slice(0, 3).map(([chapter, score]) => (
-                                <Box key={chapter} sx={{ mb: 1 }}>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                    <Typography
-                                      variant="body2"
-                                      noWrap
-                                      sx={{
-                                        maxWidth: '70%',
-                                        color: localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.8)" : "text.primary"
-                                      }}
-                                    >
-                                      {chapter}
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      sx={{
-                                        fontWeight: 'bold',
-                                        color: getScoreColor(score)
-                                      }}
-                                    >
-                                      {score}/10
-                                    </Typography>
-                                  </Box>
-                                  <Box
-                                    sx={{
-                                      width: '100%',
-                                      height: 4,
-                                      bgcolor: alpha(theme.palette.grey[300], 0.5),
-                                      borderRadius: 2,
-                                      overflow: 'hidden'
-                                    }}
-                                  >
-                                    <Box
-                                      sx={{
-                                        width: `${(score / 10) * 100}%`,
-                                        height: '100%',
-                                        bgcolor: getScoreColor(score),
-                                        borderRadius: 2
-                                      }}
-                                    />
-                                  </Box>
-                                </Box>
-                              ))}
-
-                              {Object.keys(evaluation.chapterScores).length > 3 && (
-                                <Typography
-                                  variant="body2"
-                                  color={localStorage.getItem("themeMode") === "dark" ? "rgba(255,255,255,0.6)" : "text.secondary"}
-                                  align="center"
-                                  sx={{ mt: 1 }}
-                                >
-                                  +{Object.keys(evaluation.chapterScores).length - 3} more chapters
-                                </Typography>
-                              )}
-                            </Box>
-
-                            <Box sx={{
-                              mt: 'auto',
-                              p: 2,
-                              pt: 1,
-                              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                              display: 'flex',
-                              justifyContent: 'space-between'
-                            }}>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<Visibility />}
-                                onClick={() => handleViewEvaluation(evaluation)}
-                                sx={{
-                                  borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.5)' : undefined,
-                                  color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined,
-                                  '&:hover': {
-                                    borderColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined,
-                                    backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.08)' : undefined
-                                  }
-                                }}
-                              >
-                                View Details
-                              </Button>
-
-                              <Box>
-                                <Tooltip title="Export to PDF">
-                                  <IconButton
-                                    color="primary"
-                                    onClick={() => generatePDF(evaluation)}
-                                    size="small"
-                                    sx={{
-                                      mr: 1,
-                                      color: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.8)' : undefined,
-                                      '&:hover': {
-                                        backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(144, 202, 249, 0.08)' : undefined
-                                      }
-                                    }}
-                                  >
-                                    <PictureAsPdf />
-                                  </IconButton>
-                                </Tooltip>
-
-                                <Tooltip title="Delete Evaluation">
-                                  <IconButton
-                                    color="error"
-                                    onClick={() => {
-                                      setDeleteId(evaluation._id);
-                                      setConfirmDeleteOpen(true);
-                                    }}
-                                    size="small"
-                                    sx={{
-                                      color: localStorage.getItem("themeMode") === "dark" ? 'rgba(244, 67, 54, 0.8)' : undefined,
-                                      '&:hover': {
-                                        backgroundColor: localStorage.getItem("themeMode") === "dark" ? 'rgba(244, 67, 54, 0.08)' : undefined
-                                      }
-                                    }}
-                                  >
-                                    <Delete />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </>
-              )}
             </Box>
 
-            {/* Evaluation Detail Dialog */}
-            <Dialog
-              open={detailDialogOpen}
-              onClose={() => setDetailDialogOpen(false)}
-              maxWidth="md"
-              fullWidth
-              PaperProps={{
-                sx: {
-                  borderRadius: 2,
-                  overflow: 'hidden'
-                }
-              }}
-            >
-              {selectedEvaluation && (
-                <>
-                  <DialogTitle sx={{
-                    bgcolor: theme.palette.primary.main,
-                    color: 'white',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <Typography variant="h6">
-                      Evaluation Details
-                    </Typography>
-                    <IconButton
-                      onClick={() => setDetailDialogOpen(false)}
-                      sx={{ color: 'white' }}
-                    >
-                      <Close />
-                    </IconButton>
-                  </DialogTitle>
+            {/* Employee List */}
+            <Box sx={{ flexGrow: 1, overflow: 'auto', p: 0 }}>
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {Object.values(groupedEvaluations)
+                    .filter(employee =>
+                      !searchQuery ||
+                      employee.name.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map(employee => {
+                      // Get the latest evaluation for this employee
+                      const latestEval = employee.evaluations.sort((a, b) =>
+                        new Date(b.date) - new Date(a.date)
+                      )[0];
 
-                  <DialogContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <Avatar
-                        src={selectedEvaluation.employeeId && selectedEvaluation.employeeId.photo ? selectedEvaluation.employeeId.photo : ''}
-                        alt={selectedEvaluation.employeeName}
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          mr: 2,
-                          border: `2px solid ${theme.palette.primary.main}`
-                        }}
-                      >
-                        {selectedEvaluation.employeeName ? selectedEvaluation.employeeName.charAt(0) : 'E'}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h5">
-                          {selectedEvaluation.employeeName}
-                        </Typography>
-                        <Typography variant="body1" color="textSecondary">
-                          {selectedEvaluation.employeeId && selectedEvaluation.employeeId.position ? selectedEvaluation.employeeId.position : 'No position'} •
-                          {selectedEvaluation.employeeId && selectedEvaluation.employeeId.department ? selectedEvaluation.employeeId.department : 'No department'}
-                        </Typography>
-                      </Box>
-                      <Chip
-                        icon={<Grade />}
-                        label={`Global Score: ${selectedEvaluation.globalScore}/20`}
-                        sx={{
-                          ml: 'auto',
-                          bgcolor: alpha(getScoreColor(selectedEvaluation.globalScore), 0.1),
-                          color: getScoreColor(selectedEvaluation.globalScore),
-                          fontWeight: 'bold',
-                          px: 2,
-                          py: 2.5,
-                          fontSize: '1rem'
-                        }}
-                      />
-                    </Box>
-
-                    <Divider sx={{ mb: 3 }} />
-
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="h6" gutterBottom>
-                          Evaluation Period
-                        </Typography>
-                        <Paper
-                          variant="outlined"
+                      return (
+                        <ListItemButton
+                          key={employee.id}
+                          selected={selectedEmployeeId === employee.id}
+                          onClick={() => handleEmployeeSelect(employee.id)}
                           sx={{
-                            p: 2,
-                            display: 'flex',
-                            alignItems: 'center',
-                            borderRadius: 2
+                            py: 2,
+                            px: 2,
+                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                            transition: 'all 0.2s ease',
+                            background: selectedEmployeeId === employee.id
+                              ? alpha(theme.palette.primary.main, 0.08)
+                              : 'transparent',
+                            '&:hover': {
+                              background: alpha(theme.palette.primary.main, 0.05)
+                            }
                           }}
                         >
-                          <CalendarMonth color="primary" sx={{ mr: 1 }} />
-                          <Typography>
-                            {selectedEvaluation.periode || format(new Date(selectedEvaluation.date), 'yyyy-MM')}
-                          </Typography>
-                        </Paper>
-                      </Grid>
+                          <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+                            <Avatar
+                              sx={{
+                                bgcolor: alpha(getScoreColor(latestEval.globalScore), 0.2),
+                                color: getScoreColor(latestEval.globalScore),
+                                fontWeight: 'bold',
+                                width: 50,
+                                height: 50,
+                                mr: 2
+                              }}
+                            >
+                              {employee.name.charAt(0)}
+                            </Avatar>
 
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="h6" gutterBottom>
-                          Evaluation Date
-                        </Typography>
-                        <Paper
-                          variant="outlined"
-                          sx={{
-                            p: 2,
-                            display: 'flex',
-                            alignItems: 'center',
-                            borderRadius: 2
-                          }}
-                        >
-                          <CalendarMonth color="primary" sx={{ mr: 1 }} />
-                          <Typography>
-                            {format(new Date(selectedEvaluation.date), 'PPP', { locale: fr })}
-                          </Typography>
-                        </Paper>
-                      </Grid>
-                    </Grid>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                {employee.name}
+                              </Typography>
 
-                    <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>
-                      Chapter Scores
-                    </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Person fontSize="small" />
+                                CIN: {latestEval.employeeId?.cin || "N/A"}
+                              </Typography>
 
-                    <Grid container spacing={2}>
-                      {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => (
-                        <Grid item xs={12} sm={6} md={4} key={chapter}>
-                          <Paper
-                            variant="outlined"
-                            sx={{
-                              p: 2,
-                              borderRadius: 2,
-                              borderLeft: `4px solid ${getScoreColor(score)}`
-                            }}
-                          >
-                            <Typography variant="subtitle1" gutterBottom>
-                              {chapter}
-                            </Typography>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {employee.position || employee.department || "Aucun poste"}
+                              </Typography>
+                            </Box>
+
+                            <Box sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              ml: 1
+                            }}>
                               <Typography
                                 variant="h5"
                                 sx={{
                                   fontWeight: 'bold',
-                                  color: getScoreColor(score)
+                                  color: getScoreColor(latestEval.globalScore)
                                 }}
                               >
-                                {score}/10
+                                {latestEval.globalScore}
                               </Typography>
-                              <Chip
-                                label={getPerformanceRating(score)}
-                                size="small"
-                                sx={{
-                                  bgcolor: alpha(getScoreColor(score), 0.1),
-                                  color: getScoreColor(score)
-                                }}
-                              />
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                /20
+                              </Typography>
                             </Box>
-                          </Paper>
-                        </Grid>
-                      ))}
-                    </Grid>
+                          </Box>
+                        </ListItemButton>
+                      );
+                    })}
+                </List>
+              )}
 
-                    {selectedEvaluation.chapterComments && Object.keys(selectedEvaluation.chapterComments).length > 0 && (
-                      <>
-                        <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>
-                          Comments
-                        </Typography>
+              {Object.keys(groupedEvaluations).length === 0 && !loading && (
+                <Box sx={{ p: 4, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Info sx={{ fontSize: 60, color: alpha(theme.palette.text.secondary, 0.5), mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Aucune évaluation trouvée
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Essayez de modifier vos filtres ou sélectionnez une autre période
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
 
-                        {Object.entries(selectedEvaluation.chapterComments)
-                          .filter(([_, comment]) => comment)
-                          .map(([chapter, comment]) => (
-                            <Paper
-                              key={chapter}
-                              variant="outlined"
+        {/* Right Panel - Evaluation Details */}
+        <Grid item xs={12} md={7} lg={8}>
+          <Paper
+            elevation={4}
+            sx={{
+              borderRadius: 3,
+              overflow: 'hidden',
+              height: 'calc(100vh - 180px)',
+              display: 'flex',
+              flexDirection: 'column',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)}, ${alpha(theme.palette.background.paper, 0.95)})`,
+              backdropFilter: 'blur(10px)',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`
+            }}
+          >
+            {selectedEvaluation ? (
+              <>
+                {/* Header */}
+                <Box
+                  sx={{
+                    p: 3,
+                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    background: alpha(theme.palette.primary.main, 0.03),
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      {selectedEvaluation.employeeName}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Chip
+                        icon={<CalendarMonth />}
+                        label={selectedEvaluation.periode || format(new Date(selectedEvaluation.date), 'yyyy-MM')}
+                        size="small"
+                        sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+                      />
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Person fontSize="small" />
+                        CIN: {selectedEvaluation.employeeId?.cin || "N/A"}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      background: alpha(getScoreColor(selectedEvaluation.globalScore), 0.1),
+                      p: 1,
+                      borderRadius: 2
+                    }}>
+                      <Typography variant="h4" sx={{ fontWeight: 700, color: getScoreColor(selectedEvaluation.globalScore) }}>
+                        {selectedEvaluation.globalScore}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: getScoreColor(selectedEvaluation.globalScore) }}>
+                        Score Global /20
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<PictureAsPdf />}
+                      onClick={() => generatePDF(selectedEvaluation)}
+                      sx={{
+                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        boxShadow: `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                      }}
+                    >
+                      Exporter PDF
+                    </Button>
+                  </Box>
+                </Box>
+
+                {/* Content */}
+                <Box sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
+                  <Typography variant="h6" gutterBottom sx={{
+                    fontWeight: 600,
+                    color: theme.palette.primary.main,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mb: 2
+                  }}>
+                    <Assessment /> Performance par Chapitre
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => (
+                      <Grid item xs={12} sm={6} md={4} key={chapter}>
+                        <Card
+                          elevation={2}
+                          sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '4px',
+                              height: '100%',
+                              background: getScoreColor(score)
+                            }
+                          }}
+                        >
+                          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                            {chapter}
+                          </Typography>
+
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography
+                              variant="h5"
                               sx={{
-                                p: 2,
-                                mb: 2,
-                                borderRadius: 2,
-                                borderLeft: `4px solid ${theme.palette.primary.main}`
+                                fontWeight: 'bold',
+                                color: getScoreColor(score)
                               }}
                             >
-                              <Typography variant="subtitle1" gutterBottom>
-                                {chapter}
-                              </Typography>
-                              <Typography variant="body2">
-                                {comment}
-                              </Typography>
-                            </Paper>
-                          ))
-                        }
-                      </>
-                    )}
-                  </DialogContent>
+                              {score}/10
+                            </Typography>
+                            <Chip
+                              label={getPerformanceRating(score)}
+                              size="small"
+                              sx={{
+                                bgcolor: alpha(getScoreColor(score), 0.1),
+                                color: getScoreColor(score),
+                                fontWeight: 'bold'
+                              }}
+                            />
+                          </Box>
 
-                  <DialogActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      onClick={() => setDetailDialogOpen(false)}
-                      variant="outlined"
-                    >
-                      Close
-                    </Button>
-                    <Button
-                      onClick={() => generatePDF(selectedEvaluation)}
-                      variant="contained"
-                      startIcon={<Download />}
-                      color="primary"
-                    >
-                      Export to PDF
-                    </Button>
-                  </DialogActions>
-                </>
-              )}
-            </Dialog>
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: 8,
+                              bgcolor: alpha(theme.palette.grey[300], 0.5),
+                              borderRadius: 4,
+                              mt: 'auto',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: `${(score / 10) * 100}%`,
+                                height: '100%',
+                                background: `linear-gradient(90deg, ${getScoreColor(score)}, ${alpha(getScoreColor(score), 0.7)})`,
+                                borderRadius: 4
+                              }}
+                            />
+                          </Box>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-              open={confirmDeleteOpen}
-              onClose={() => setConfirmDeleteOpen(false)}
-              maxWidth="xs"
-              fullWidth
-              PaperProps={{
-                sx: {
-                  borderRadius: 2
-                }
-              }}
-            >
-              <DialogTitle>
-                Confirm Deletion
-              </DialogTitle>
-              <DialogContent>
-                <Typography>
-                  Are you sure you want to delete this evaluation? This action cannot be undone.
+                  {selectedEvaluation.chapterComments && Object.keys(selectedEvaluation.chapterComments).length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="h6" gutterBottom sx={{
+                        fontWeight: 600,
+                        color: theme.palette.primary.main,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 2
+                      }}>
+                        <Comment /> Commentaires
+                      </Typography>
+
+                      {Object.entries(selectedEvaluation.chapterComments)
+                        .filter(([_, comment]) => comment && comment.trim())
+                        .map(([chapter, comment]) => (
+                          <Card
+                            key={chapter}
+                            elevation={1}
+                            sx={{
+                              p: 2,
+                              borderRadius: 2,
+                              mb: 2,
+                              position: 'relative',
+                              overflow: 'hidden',
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '4px',
+                                height: '100%',
+                                background: theme.palette.primary.main
+                              }
+                            }}
+                          >
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.primary.main }}>
+                              {chapter}
+                            </Typography>
+                            <Typography variant="body2">
+                              {comment}
+                            </Typography>
+                          </Card>
+                        ))}
+                    </Box>
+                  )}
+                </Box>
+              </>
+            ) : (
+              <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
+                p: 4,
+                textAlign: 'center'
+              }}>
+                <Assessment sx={{ fontSize: 100, color: alpha(theme.palette.primary.main, 0.2), mb: 3 }} />
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                  Détails de l'Évaluation
                 </Typography>
-              </DialogContent>
-              <DialogActions sx={{ p: 2 }}>
-                <Button
-                  onClick={() => setConfirmDeleteOpen(false)}
-                  variant="outlined"
-                  disabled={deleteLoading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => handleDeleteEvaluation(deleteId)}
-                  variant="contained"
-                  color="error"
-                  disabled={deleteLoading}
-                  startIcon={deleteLoading ? <CircularProgress size={20} /> : <Delete />}
-                >
-                  {deleteLoading ? "Deleting..." : "Delete"}
-                </Button>
-              </DialogActions>
-            </Dialog>
+                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 500 }}>
+                  Sélectionnez un employé dans la liste à gauche pour voir les détails de son évaluation.
+                </Typography>
+              </Box>
+            )}
           </Paper>
-        </Fade>
-      </Container>
-    </LocalizationProvider>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 
