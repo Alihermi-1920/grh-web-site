@@ -1,5 +1,5 @@
 // server/controllers/congeController.js
-const Conge = require('../models/Conge');
+const Conge = require('../models/conge');
 const Employee = require('../models/Employee');
 const LeaveBalance = require('../models/LeaveBalance');
 const fs = require('fs');

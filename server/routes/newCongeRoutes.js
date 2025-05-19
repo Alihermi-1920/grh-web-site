@@ -4,7 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const Conge = require('../models/Conge');
+const Conge = require('../models/conge');
 const Employee = require('../models/Employee');
 const LeaveBalance = require('../models/LeaveBalance');
 
@@ -12,12 +12,12 @@ const LeaveBalance = require('../models/LeaveBalance');
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../../client/public/uploads/medical');
-    
+
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    
+
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
@@ -45,13 +45,13 @@ const extractEmployeeId = (req, res, next) => {
   console.log('Request method:', req.method);
   console.log('Request query:', req.query);
   console.log('Request body:', req.body);
-  
+
   // Extract employee ID from query parameters
   if (req.query && (req.query.employee || req.query.employeeId)) {
     req._employeeId = req.query.employee || req.query.employeeId;
     console.log('Employee ID from query:', req._employeeId);
   }
-  
+
   next();
 };
 
@@ -66,52 +66,52 @@ router.post('/', extractEmployeeId, (req, res, next) => {
     console.log('POST-MULTER: Employee ID from middleware:', req._employeeId);
     console.log('Request body after multer:', req.body);
     console.log('Request files:', req.files);
-    
+
     // Get employee ID from various sources
-    let employeeId = req.body.employee || 
-                    req.body.employeeId || 
-                    req._employeeId || 
-                    req.query.employee || 
+    let employeeId = req.body.employee ||
+                    req.body.employeeId ||
+                    req._employeeId ||
+                    req.query.employee ||
                     req.query.employeeId;
-    
+
     console.log('Final employee ID:', employeeId);
-    
+
     if (!employeeId) {
       console.error('Employee ID is missing');
       return res.status(400).json({ error: "ID d'employé manquant" });
     }
-    
+
     // Validate employee ID format
     if (!employeeId.match(/^[0-9a-fA-F]{24}$/)) {
       console.error('Invalid employee ID format:', employeeId);
       return res.status(400).json({ error: "Format d'ID d'employé invalide" });
     }
-    
+
     // Get other fields from body
     const { leaveType, startDate, endDate, numberOfDays, reason } = req.body;
     const isMedical = req.body.isMedical === 'true' || req.body.leaveType === 'Congé médical';
-    
+
     // Validate required fields
     if (!leaveType || !startDate || !endDate || !numberOfDays || !reason) {
       console.error('Missing required fields');
       return res.status(400).json({ error: "Tous les champs sont obligatoires" });
     }
-    
+
     // Find the employee
     const employee = await Employee.findById(employeeId);
     if (!employee) {
       console.error('Employee not found:', employeeId);
       return res.status(404).json({ error: "Employé non trouvé" });
     }
-    
+
     console.log('Found employee:', employee.firstName, employee.lastName);
-    
+
     // Check if employee has a chef
     if (!employee.chefId) {
       console.error('Employee has no chef assigned:', employeeId);
       return res.status(400).json({ error: "Aucun chef responsable assigné à cet employé" });
     }
-    
+
     // Create the leave request
     const conge = new Conge({
       employee: employeeId,
@@ -125,7 +125,7 @@ router.post('/', extractEmployeeId, (req, res, next) => {
       status: 'En attente',
       deductFromBalance: !isMedical
     });
-    
+
     // Add documents if any
     if (req.files && req.files.length > 0) {
       conge.documents = req.files.map(file => ({
@@ -136,11 +136,11 @@ router.post('/', extractEmployeeId, (req, res, next) => {
         uploadDate: new Date()
       }));
     }
-    
+
     // Save the leave request
     await conge.save();
     console.log('Leave request created successfully:', conge._id);
-    
+
     res.status(201).json(conge);
   } catch (error) {
     console.error('Error creating leave request:', error);
@@ -153,36 +153,36 @@ router.get('/', async (req, res) => {
   try {
     console.log('=== GET LEAVE REQUESTS ===');
     console.log('Request query:', req.query);
-    
+
     const { employee, employeeId, chef, chefId, status } = req.query;
     let query = {};
-    
+
     // Filter by employee
     if (employee || employeeId) {
       query.employee = employee || employeeId;
       console.log('Filtering by employee:', query.employee);
     }
-    
+
     // Filter by chef
     if (chef || chefId) {
       query.chef = chef || chefId;
       console.log('Filtering by chef:', query.chef);
     }
-    
+
     // Filter by status
     if (status) {
       query.status = status;
       console.log('Filtering by status:', query.status);
     }
-    
+
     console.log('Final query:', query);
-    
+
     const conges = await Conge.find(query)
       .populate('employee', 'firstName lastName email photo')
       .sort({ createdAt: -1 });
-    
+
     console.log(`Found ${conges.length} leave requests`);
-    
+
     res.status(200).json(conges);
   } catch (error) {
     console.error('Error getting leave requests:', error);
@@ -196,23 +196,23 @@ router.get('/balance/:employeeId', async (req, res) => {
     console.log('=== GET LEAVE BALANCE ===');
     const { employeeId } = req.params;
     console.log('Employee ID:', employeeId);
-    
+
     // Validate employee ID
     if (!employeeId.match(/^[0-9a-fA-F]{24}$/)) {
       console.error('Invalid employee ID format:', employeeId);
       return res.status(400).json({ error: "Format d'ID d'employé invalide" });
     }
-    
+
     // Find the employee
     const employee = await Employee.findById(employeeId);
     if (!employee) {
       console.error('Employee not found:', employeeId);
       return res.status(404).json({ error: "Employé non trouvé" });
     }
-    
+
     // Find or create leave balance
     let leaveBalance = await LeaveBalance.findOne({ employee: employeeId });
-    
+
     if (!leaveBalance) {
       console.log('Creating new leave balance for employee:', employeeId);
       leaveBalance = new LeaveBalance({
@@ -222,12 +222,12 @@ router.get('/balance/:employeeId', async (req, res) => {
         remainingDays: 30,
         medicalDays: 0
       });
-      
+
       await leaveBalance.save();
     }
-    
+
     console.log('Leave balance:', leaveBalance);
-    
+
     res.status(200).json(leaveBalance);
   } catch (error) {
     console.error('Error getting leave balance:', error);
@@ -244,30 +244,30 @@ router.put('/:congeId/status', async (req, res) => {
     console.log('Leave request ID:', congeId);
     console.log('New status:', status);
     console.log('Justification:', justification);
-    
+
     // Validate status
     if (!status || !['En attente', 'Approuvé', 'Rejeté'].includes(status)) {
       console.error('Invalid status:', status);
       return res.status(400).json({ error: "Statut invalide" });
     }
-    
+
     // Find the leave request
     const conge = await Conge.findById(congeId);
     if (!conge) {
       console.error('Leave request not found:', congeId);
       return res.status(404).json({ error: "Demande de congé non trouvée" });
     }
-    
+
     // Update the leave request
     conge.status = status;
     if (justification) {
       conge.chefJustification = justification;
     }
-    
+
     // If the request is approved and not medical, update the leave balance
     if (status === 'Approuvé' && !conge.isMedical) {
       let leaveBalance = await LeaveBalance.findOne({ employee: conge.employee });
-      
+
       if (!leaveBalance) {
         leaveBalance = new LeaveBalance({
           employee: conge.employee,
@@ -280,14 +280,14 @@ router.put('/:congeId/status', async (req, res) => {
         leaveBalance.usedDays += conge.numberOfDays;
         leaveBalance.remainingDays = leaveBalance.totalDays - leaveBalance.usedDays;
       }
-      
+
       await leaveBalance.save();
       console.log('Leave balance updated:', leaveBalance);
     }
-    
+
     await conge.save();
     console.log('Leave request status updated successfully');
-    
+
     res.status(200).json(conge);
   } catch (error) {
     console.error('Error updating leave request status:', error);
@@ -301,14 +301,14 @@ router.delete('/:congeId', async (req, res) => {
     console.log('=== DELETE LEAVE REQUEST ===');
     const { congeId } = req.params;
     console.log('Leave request ID:', congeId);
-    
+
     // Find the leave request
     const conge = await Conge.findById(congeId);
     if (!conge) {
       console.error('Leave request not found:', congeId);
       return res.status(404).json({ error: "Demande de congé non trouvée" });
     }
-    
+
     // Delete associated documents
     if (conge.documents && conge.documents.length > 0) {
       conge.documents.forEach(doc => {
@@ -319,11 +319,11 @@ router.delete('/:congeId', async (req, res) => {
         }
       });
     }
-    
+
     // If the leave was approved and not medical, restore the leave balance
     if (conge.status === 'Approuvé' && !conge.isMedical) {
       const leaveBalance = await LeaveBalance.findOne({ employee: conge.employee });
-      
+
       if (leaveBalance) {
         leaveBalance.usedDays -= conge.numberOfDays;
         leaveBalance.remainingDays = leaveBalance.totalDays - leaveBalance.usedDays;
@@ -331,10 +331,10 @@ router.delete('/:congeId', async (req, res) => {
         console.log('Leave balance restored:', leaveBalance);
       }
     }
-    
+
     await Conge.findByIdAndDelete(congeId);
     console.log('Leave request deleted successfully');
-    
+
     res.status(200).json({ message: "Demande de congé supprimée avec succès" });
   } catch (error) {
     console.error('Error deleting leave request:', error);

@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const Conge = require("../models/Conge");
+const Conge = require("../models/conge");
 const LeaveBalance = require("../models/LeaveBalance");
 const Employee = require("../models/Employee");
 
