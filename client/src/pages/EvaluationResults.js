@@ -34,7 +34,13 @@ import {
   ListItemAvatar,
   ListItemText,
   ListItemButton,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from "@mui/material";
 import {
   Assessment,
@@ -115,10 +121,46 @@ const EvaluationResults = () => {
 
   // Helper function to get performance rating based on score
   const getPerformanceRating = (score) => {
+    // For global scores (out of 20)
     if (score >= 16) return "Excellent";
     if (score >= 12) return "Bon";
     if (score >= 8) return "Moyen";
     return "À améliorer";
+  };
+
+  // Helper function to get performance rating for chapter scores (out of 10)
+  const getChapterPerformanceRating = (score) => {
+    // For chapter scores (out of 10)
+    if (score >= 8) return "Excellent";
+    if (score >= 6) return "Bon";
+    if (score >= 4) return "Moyen";
+    return "À améliorer";
+  };
+
+  // Helper function to extract CIN from employee data
+  const extractCIN = (evaluation) => {
+    // Check all possible locations where CIN might be stored
+    if (evaluation.employeeId?.cin) return evaluation.employeeId.cin;
+    if (evaluation.employeeId?.CIN) return evaluation.employeeId.CIN;
+    if (evaluation.CIN) return evaluation.CIN;
+    if (evaluation.cin) return evaluation.cin;
+
+    // If employeeId is populated with employee data
+    const employee = employees.find(emp => emp._id === (evaluation.employeeId?._id || evaluation.employeeId));
+    if (employee?.cin) return employee.cin;
+    if (employee?.CIN) return employee.CIN;
+
+    // If we still don't have a CIN, check if there's a numeric ID that looks like a CIN
+    if (typeof evaluation.employeeId === 'object') {
+      for (const key in evaluation.employeeId) {
+        const value = evaluation.employeeId[key];
+        if (typeof value === 'string' && /^\d{8}$/.test(value)) {
+          return value;
+        }
+      }
+    }
+
+    return "Non disponible";
   };
 
   // Fetch evaluations from the server
@@ -143,7 +185,8 @@ const EvaluationResults = () => {
       // Add timestamp to prevent caching
       queryParams.append("_t", Date.now());
 
-      const response = await fetch(`http://localhost:5000/api/evaluationresultat?${queryParams}`, {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/evaluationresultat?${queryParams}`, {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
@@ -195,10 +238,11 @@ const EvaluationResults = () => {
   const fetchEmployees = async () => {
     try {
       // If user is a chef, only fetch their employees
-      let url = "http://localhost:5000/api/employees";
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      let url = `${API_URL}/api/employees`;
 
       if (user && user.role === "Chef") {
-        url = `http://localhost:5000/api/employees/chef/${user._id}`;
+        url = `${API_URL}/api/employees/chef/${user._id}`;
       }
 
       const response = await fetch(url, {
@@ -254,7 +298,8 @@ const EvaluationResults = () => {
   const handleDeleteEvaluation = async (id) => {
     setDeleteLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/evaluationresultat/${id}`, {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/evaluationresultat/${id}`, {
         method: 'DELETE'
       });
 
@@ -347,7 +392,7 @@ const EvaluationResults = () => {
 
     // Convert Map to array for the table
     const chapterScores = Object.entries(evaluation.chapterScores).map(([chapter, score]) => {
-      return [chapter, score, getPerformanceRating(score)];
+      return [chapter, score, getChapterPerformanceRating(score)];
     });
 
     // Scores Table
@@ -586,10 +631,23 @@ const EvaluationResults = () => {
                             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
                             transition: 'all 0.2s ease',
                             background: selectedEmployeeId === employee.id
-                              ? alpha(theme.palette.primary.main, 0.08)
+                              ? theme.palette.mode === 'dark'
+                                ? '#1e2a3b' // Dark navy blue for dark mode
+                                : '#e6f0f9' // Light blue for light mode
                               : 'transparent',
                             '&:hover': {
-                              background: alpha(theme.palette.primary.main, 0.05)
+                              background: theme.palette.mode === 'dark'
+                                ? '#1a2436'
+                                : '#edf2f7'
+                            },
+                            // Override the purple selection color from theme
+                            '&.Mui-selected': {
+                              backgroundColor: theme.palette.mode === 'dark' ? '#1e2a3b' : '#e6f0f9',
+                              color: theme.palette.text.primary,
+                              '&:hover': {
+                                backgroundColor: theme.palette.mode === 'dark' ? '#1a2436' : '#edf2f7',
+                                color: theme.palette.text.primary
+                              }
                             }
                           }}
                         >
@@ -614,7 +672,7 @@ const EvaluationResults = () => {
 
                               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <Person fontSize="small" />
-                                CIN: {latestEval.employeeId?.cin || "N/A"}
+                                CIN: {extractCIN(latestEval)}
                               </Typography>
 
                               <Typography variant="body2" color="text.secondary">
@@ -705,7 +763,7 @@ const EvaluationResults = () => {
                       />
                       <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Person fontSize="small" />
-                        CIN: {selectedEvaluation.employeeId?.cin || "N/A"}
+                        CIN: {extractCIN(selectedEvaluation)}
                       </Typography>
                     </Box>
                   </Box>
@@ -754,78 +812,135 @@ const EvaluationResults = () => {
                     <Assessment /> Performance par Chapitre
                   </Typography>
 
-                  <Grid container spacing={2}>
-                    {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => (
-                      <Grid item xs={12} sm={6} md={4} key={chapter}>
-                        <Card
-                          elevation={2}
-                          sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '4px',
-                              height: '100%',
-                              background: getScoreColor(score)
-                            }
-                          }}
-                        >
-                          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                            {chapter}
-                          </Typography>
-
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography
-                              variant="h5"
+                  {/* Professional Table Layout */}
+                  <TableContainer
+                    component={Paper}
+                    elevation={0}
+                    sx={{
+                      border: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                      borderRadius: 0,
+                      mb: 4
+                    }}
+                  >
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{
+                          backgroundColor: theme.palette.mode === 'dark' ? '#1e2a3b' : '#f8fafc',
+                        }}>
+                          <TableCell sx={{
+                            fontWeight: 'bold',
+                            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                          }}>
+                            Chapitre
+                          </TableCell>
+                          <TableCell align="center" sx={{
+                            fontWeight: 'bold',
+                            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                          }}>
+                            Score
+                          </TableCell>
+                          <TableCell align="center" sx={{
+                            fontWeight: 'bold',
+                            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                          }}>
+                            Performance
+                          </TableCell>
+                          <TableCell sx={{
+                            fontWeight: 'bold',
+                            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                            width: '30%'
+                          }}>
+                            Progression
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => (
+                          <TableRow
+                            key={chapter}
+                            sx={{
+                              '&:last-child td, &:last-child th': { border: 0 },
+                              '&:nth-of-type(even)': {
+                                backgroundColor: theme.palette.mode === 'dark' ? '#171923' : '#f8fafc',
+                              }
+                            }}
+                          >
+                            <TableCell
+                              component="th"
+                              scope="row"
+                              sx={{
+                                fontWeight: 500,
+                                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                              }}
+                            >
+                              {chapter}
+                            </TableCell>
+                            <TableCell
+                              align="center"
                               sx={{
                                 fontWeight: 'bold',
-                                color: getScoreColor(score)
+                                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
                               }}
                             >
                               {score}/10
-                            </Typography>
-                            <Chip
-                              label={getPerformanceRating(score)}
-                              size="small"
+                            </TableCell>
+                            <TableCell
+                              align="center"
                               sx={{
-                                bgcolor: alpha(getScoreColor(score), 0.1),
-                                color: getScoreColor(score),
-                                fontWeight: 'bold'
+                                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
                               }}
-                            />
-                          </Box>
-
-                          <Box
-                            sx={{
-                              width: '100%',
-                              height: 8,
-                              bgcolor: alpha(theme.palette.grey[300], 0.5),
-                              borderRadius: 4,
-                              mt: 'auto',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            <Box
+                            >
+                              <Box
+                                sx={{
+                                  display: 'inline-block',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  backgroundColor: theme.palette.mode === 'dark' ? '#2d3748' : '#f1f5f9',
+                                  color: theme.palette.text.primary,
+                                  fontWeight: 'medium',
+                                  fontSize: '0.875rem',
+                                  border: `1px solid ${theme.palette.mode === 'dark' ? '#4a5568' : '#e2e8f0'}`,
+                                }}
+                              >
+                                {getChapterPerformanceRating(score)}
+                              </Box>
+                            </TableCell>
+                            <TableCell
                               sx={{
-                                width: `${(score / 10) * 100}%`,
-                                height: '100%',
-                                background: `linear-gradient(90deg, ${getScoreColor(score)}, ${alpha(getScoreColor(score), 0.7)})`,
-                                borderRadius: 4
+                                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
                               }}
-                            />
-                          </Box>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Box
+                                  sx={{
+                                    flexGrow: 1,
+                                    height: 8,
+                                    bgcolor: theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0',
+                                    position: 'relative',
+                                    mr: 2
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      height: '100%',
+                                      width: `${(score / 10) * 100}%`,
+                                      backgroundColor: theme.palette.mode === 'dark' ? '#4a5568' : '#64748b',
+                                    }}
+                                  />
+                                </Box>
+                                <Typography variant="body2" sx={{ minWidth: '45px' }}>
+                                  {(score / 10) * 100}%
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
 
                   {selectedEvaluation.chapterComments && Object.keys(selectedEvaluation.chapterComments).length > 0 && (
                     <Box sx={{ mt: 4 }}>
@@ -845,30 +960,50 @@ const EvaluationResults = () => {
                         .map(([chapter, comment]) => (
                           <Card
                             key={chapter}
-                            elevation={1}
+                            elevation={0}
                             sx={{
-                              p: 2,
-                              borderRadius: 2,
-                              mb: 2,
+                              p: 0,
+                              mb: 3,
                               position: 'relative',
                               overflow: 'hidden',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '4px',
-                                height: '100%',
-                                background: theme.palette.primary.main
-                              }
+                              border: `1px solid ${theme.palette.mode === 'dark' ? '#2d3748' : '#e2e8f0'}`,
+                              backgroundColor: theme.palette.mode === 'dark' ? '#1a202c' : '#ffffff',
+                              borderRadius: 0,
+                              transition: 'all 0.2s ease',
                             }}
                           >
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.primary.main }}>
-                              {chapter}
-                            </Typography>
-                            <Typography variant="body2">
-                              {comment}
-                            </Typography>
+                            {/* Professional header with chapter name */}
+                            <Box
+                              sx={{
+                                p: 2,
+                                backgroundColor: theme.palette.mode === 'dark' ? '#2d3748' : '#f8fafc',
+                                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? '#4a5568' : '#e2e8f0'}`,
+                              }}
+                            >
+                              <Typography
+                                variant="subtitle1"
+                                sx={{
+                                  fontWeight: 600,
+                                  color: theme.palette.text.primary,
+                                }}
+                              >
+                                {chapter}
+                              </Typography>
+                            </Box>
+
+                            {/* Comment content */}
+                            <Box sx={{ p: 2 }}>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: theme.palette.text.secondary,
+                                  lineHeight: 1.6,
+                                  whiteSpace: 'pre-line'
+                                }}
+                              >
+                                {comment}
+                              </Typography>
+                            </Box>
                           </Card>
                         ))}
                     </Box>

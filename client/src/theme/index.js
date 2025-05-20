@@ -12,6 +12,9 @@ export const createAppTheme = (mode = getThemeMode()) => {
   return createTheme({
     typography: {
       fontFamily: 'Inter, sans-serif',
+      // Reduce base font size to 90% of default
+      fontSize: 14, // Default MUI is 16px, so this is ~90%
+      htmlFontSize: 16 * 0.9, // Adjust for rem calculations
     },
     palette: {
       mode: mode,

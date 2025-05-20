@@ -47,6 +47,20 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
   background: theme.palette.mode === 'light'
     ? 'radial-gradient(ellipse at 50% 50%, hsl(210, 100%, 97%), hsl(0, 0%, 100%))'
     : 'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
+
+  // Login-specific autocomplete styling
+  '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus, & input:-webkit-autofill:active': {
+    transition: 'background-color 5000s ease-in-out 0s',
+  },
+
+  // Dark mode specific styling for login page only
+  ...(theme.palette.mode === 'dark' && {
+    '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus, & input:-webkit-autofill:active': {
+      WebkitBoxShadow: '0 0 0 1000px #121212 inset !important',
+      WebkitTextFillColor: '#fff !important',
+      caretColor: '#fff !important',
+    }
+  })
 }));
 
 const Login = () => {
