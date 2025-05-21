@@ -133,7 +133,7 @@ const AdminSidebar = ({
           HRMS
         </Typography>
 
-        {/* Compact Profile */}
+        {/* Clean Modern Admin Dashboard Header */}
         <Box
           component={motion.div}
           initial={{ opacity: 0, y: 10 }}
@@ -141,47 +141,32 @@ const AdminSidebar = ({
           transition={{ delay: 0.1, duration: 0.3 }}
           sx={{
             width: '100%',
-            mt: 1,
-            py: 1.5,
-            px: 2,
+            mt: 2,
+            mb: 1,
             display: 'flex',
+            justifyContent: 'center',
             alignItems: 'center',
-            gap: 1.5,
-            borderRadius: 2,
-            backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            gap: 1
           }}
         >
-          <Avatar
+          <AdminPanelSettings
             sx={{
-              width: 38,
-              height: 38,
-              bgcolor: darkMode ? '#1976d2' : '#1976d2',
+              fontSize: 22,
+              color: darkMode ? '#90caf9' : '#546e7a',
+              opacity: 0.9
+            }}
+          />
+          <Typography
+            variant="subtitle1"
+            fontWeight="600"
+            sx={{
+              color: darkMode ? '#e0e0e0' : '#424242',
+              letterSpacing: '0.3px',
+              fontSize: '1rem'
             }}
           >
-            <AdminPanelSettings sx={{ fontSize: 20, color: "white" }} />
-          </Avatar>
-          <Box sx={{ overflow: 'hidden' }}>
-            <Typography variant="body2" fontWeight="600" sx={{
-              color: darkMode ? 'white' : '#333',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
-              Admin Dupont
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                color: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
-              }}
-            >
-              <Person fontSize="small" style={{ fontSize: '0.7rem', marginRight: '3px' }} />
-              Super Administrateur
-            </Typography>
-          </Box>
+            AdminDashboard
+          </Typography>
         </Box>
       </Box>
 

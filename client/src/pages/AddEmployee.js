@@ -38,8 +38,10 @@ import {
   CreditCard,
   SupervisorAccount,
   Cake,
-  Wc
+  Wc,
+  Badge
 } from "@mui/icons-material";
+import CredentialOptionsDialog from "../components/CredentialOptionsDialog";
 
 // Composant Alert pour le Snackbar
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -73,6 +75,10 @@ const AddEmployee = ({ onSuccess, departments }) => {
 
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+  // État pour la boîte de dialogue des identifiants
+  const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
+  const [newEmployee, setNewEmployee] = useState(null);
 
   // Charger la liste des chefs
   useEffect(() => {
@@ -272,6 +278,25 @@ const AddEmployee = ({ onSuccess, departments }) => {
           message: "Employé ajouté avec succès!",
           severity: "success"
         });
+
+        // Stocker les informations de l'employé pour la génération des identifiants
+        console.log("Employee created successfully:", result);
+        console.log("Form data with password:", formData);
+
+        // Make sure we have all the necessary data for the PDF
+        setNewEmployee({
+          ...result,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password, // Ajouter le mot de passe en clair pour le PDF
+          department: formData.department,
+          position: formData.position || result.position || "Nouvel employé",
+          cin: formData.cin // Add CIN for the PDF
+        });
+
+        // Ouvrir la boîte de dialogue des identifiants
+        setCredentialDialogOpen(true);
 
         // Réinitialiser le formulaire
         setFormData({
@@ -870,6 +895,13 @@ const AddEmployee = ({ onSuccess, departments }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Boîte de dialogue pour les options de génération d'identifiants */}
+      <CredentialOptionsDialog
+        open={credentialDialogOpen}
+        onClose={() => setCredentialDialogOpen(false)}
+        employee={newEmployee}
+      />
     </Container>
   );
 };

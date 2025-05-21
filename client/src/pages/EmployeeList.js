@@ -40,8 +40,7 @@ import {
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Visibility,
-  VisibilityOff,
+
   PictureAsPdf,
   Home,
   FilterList,
@@ -62,22 +61,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Composant pour masquer / afficher le mot de passe
-const MaskedPassword = ({ password }) => {
-  const [visible, setVisible] = useState(false);
-  const toggleVisibility = () => setVisible((prev) => !prev);
 
-  return (
-    <Box sx={{ display: "flex", alignItems: "center" }}>
-      <Typography variant="body2" sx={{ mr: 0.5 }}>
-        {visible ? password : "••••••••"}
-      </Typography>
-      <IconButton onClick={toggleVisibility} size="small">
-        {visible ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-      </IconButton>
-    </Box>
-  );
-};
 
 // Composant principal pour la liste des employés
 const EmployeeListPage = () => {
@@ -471,7 +455,7 @@ const EmployeeListPage = () => {
       lastName: employee.lastName || "",
       department: employee.department || "",
       email: employee.email || "",
-      password: employee.plainPassword || "",
+      password: "", // Always set password field to empty
       role: employee.role || "",
       phone: employee.phone || "",
       cin: employee.cin || "",
@@ -1030,16 +1014,7 @@ const EmployeeListPage = () => {
                       >
                         Email
                       </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{
-                          fontWeight: 600,
-                          backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
-                          color: 'text.primary'
-                        }}
-                      >
-                        Mot de passe
-                      </TableCell>
+
                       <TableCell
                         sx={{
                           fontWeight: 600,
@@ -1150,9 +1125,7 @@ const EmployeeListPage = () => {
                           {emp.department || "-"}
                         </TableCell>
                         <TableCell>{emp.email || "-"}</TableCell>
-                        <TableCell align="center">
-                          <MaskedPassword password={emp.plainPassword || ""} />
-                        </TableCell>
+
                         <TableCell>
                           {emp.role ? (
                             <Chip
@@ -1343,6 +1316,7 @@ const EmployeeListPage = () => {
                 fullWidth
                 value={editedEmployee.password}
                 onChange={(e) => setEditedEmployee({...editedEmployee, password: e.target.value})}
+                helperText="Laissez vide pour conserver le mot de passe actuel"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
