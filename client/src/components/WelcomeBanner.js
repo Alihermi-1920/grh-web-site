@@ -1,10 +1,15 @@
 // src/components/WelcomeBanner.js
+// Composant de bannière de bienvenue utilisant Material UI
+// Documentation Material UI Paper: https://mui.com/material-ui/react-paper/
+// Documentation Material UI Typography: https://mui.com/material-ui/react-typography/
 import React, { useContext } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useTheme } from '@mui/material';
+import { WavingHand } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
 const WelcomeBanner = () => {
   const { user } = useContext(AuthContext);
+  const theme = useTheme();
 
   // Déterminer le moment de la journée
   const getGreeting = () => {
@@ -44,37 +49,49 @@ const WelcomeBanner = () => {
     return "";
   };
 
+  // Obtenir la date du jour formatée
+  const getFormattedDate = () => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date().toLocaleDateString('fr-FR', options);
+  };
+
   return (
     <Paper
-      elevation={1}
       sx={{
         p: 3,
         mb: 4,
         borderRadius: 2,
-        backgroundColor: 'background.paper',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        backgroundColor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
       }}
     >
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      <Box>
         <Typography
           variant="h5"
           component="h1"
           fontWeight="600"
-          sx={{ mb: 0.5 }}
+          sx={{ mb: 0.5, display: 'flex', alignItems: 'center' }}
         >
           {getRole()
-            ? `${getGreeting()}, ${getRole()} ${getFirstName()} 👋`
-            : `${getGreeting()}, ${getFirstName()} 👋`}
+            ? `${getGreeting()}, ${getRole()} ${getFirstName()}`
+            : `${getGreeting()}, ${getFirstName()}`}
+          <WavingHand sx={{ ml: 1, color: '#FFC107', fontSize: 24 }} />
+        </Typography>
+        
+        <Typography variant="body2" color="text.secondary">
+          {getFormattedDate()}
         </Typography>
 
         {getMotivationalQuote() && (
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            sx={{ mt: 1, fontStyle: 'italic' }}
-          >
-            "{getMotivationalQuote()}"
-          </Typography>
+          <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ fontStyle: 'italic' }}
+            >
+              "{getMotivationalQuote()}"
+            </Typography>
+          </Box>
         )}
       </Box>
     </Paper>

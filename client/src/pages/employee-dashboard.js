@@ -41,12 +41,8 @@ import {
   Business,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
-import EmployeeTaskChat from "./EmployeeTaskChat"; // Composant pour la communication des tâches
-import EmployeeProjectDashboard from "./EmployeeProjectDashboard"; // Import du tableau de bord des projets
 import EmployeeLeaveRequest from "./EmployeeLeaveRequest"; // Ancien composant de demande de congé
 import FinalLeaveRequest from "./FinalLeaveRequest"; // Nouveau composant de demande de congé amélioré
-import EmployeeTaskPage from "./EmployeeTaskPage"; // Nouveau composant de gestion des tâches
-import EmployeeProjectDetail from "./EmployeeProjectDetail"; // Composant de détail de projet
 import DashboardHomeEmployee from "./DashboardHomeEmployee"; // Nouveau tableau de bord employé
 import AmeliorationAI from "./AmeliorationAI"; // Nouveau composant d'amélioration de performance AI
 import EmployeeProfile from "./EmployeeProfile"; // Nouveau composant de profil employé
@@ -62,7 +58,6 @@ const EmployeeDashboard = ({ initialView }) => {
   // Set initial view based on props, URL params, or location state
   const getInitialView = () => {
     if (initialView) return initialView;
-    if (projectId) return "projectDetail";
     if (location.state?.activeView) return location.state.activeView;
     return "dashboard";
   };
@@ -291,21 +286,6 @@ const EmployeeDashboard = ({ initialView }) => {
           </ListItemButton>
         </ListItem>
 
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("projects")}
-            selected={activeView === "projects"}
-            sx={getMenuItemStyles(activeView === "projects")}
-          >
-            <ListItemIcon sx={getIconStyles(activeView === "projects")}>
-              <WorkOutline />
-            </ListItemIcon>
-            <ListItemText
-              primary="Mes Projets"
-              primaryTypographyProps={getTextStyles(activeView === "projects")}
-            />
-          </ListItemButton>
-        </ListItem>
 
 
 
@@ -329,21 +309,6 @@ const EmployeeDashboard = ({ initialView }) => {
 
 
 
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("taskChat")}
-            selected={activeView === "taskChat"}
-            sx={getMenuItemStyles(activeView === "taskChat")}
-          >
-            <ListItemIcon sx={getIconStyles(activeView === "taskChat")}>
-              <TaskAlt />
-            </ListItemIcon>
-            <ListItemText
-              primary="Mes Tâches"
-              primaryTypographyProps={getTextStyles(activeView === "taskChat")}
-            />
-          </ListItemButton>
-        </ListItem>
 
 
 
@@ -424,10 +389,7 @@ const EmployeeDashboard = ({ initialView }) => {
                 <Typography variant="h5" fontWeight="600" color="primary.main">
                   {activeView === "dashboard" && "Espace de Travail Delice"}
                   {activeView === "profile" && "Mon Profil"}
-                  {activeView === "projects" && "Mes Projets"}
-                  {activeView === "projectDetail" && "Détail du Projet"}
                   {activeView === "leaves" && "Mes Congés"}
-                  {activeView === "taskChat" && "Mes Tâches"}
                   {activeView === "performanceAI" && "Amélioration de Performance AI"}
                   {!activeView && "Espace de Travail Delice"}
                 </Typography>
@@ -460,10 +422,7 @@ const EmployeeDashboard = ({ initialView }) => {
             <Fade in timeout={800}>
               <Box>
                 {activeView === "profile" && <EmployeeProfile />}
-                {activeView === "projects" && <EmployeeProjectDashboard />}
-                {activeView === "projectDetail" && <EmployeeProjectDetail />}
                 {activeView === "leaves" && <FinalLeaveRequest />}
-                {activeView === "taskChat" && <EmployeeTaskPage />}
 
                 {activeView === "performanceAI" && <AmeliorationAI />}
                 {(activeView === "dashboard" || !activeView) && (

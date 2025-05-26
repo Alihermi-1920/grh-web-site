@@ -4,53 +4,22 @@ import AddDepartment from "./AddDepartment";
 import AddEmployee from "./AddEmployee";
 import Attendance from "./Attendance";
 import EmployeeListPage from "./EmployeeList";
-import ProjectPage from "./ProjectPage";
-import ProjectListPage from "./ProjectListPage";
 import EvaluationManager from "./EvaluationManager";
 import EvaluationResults from "./EvaluationResults";
 import DashboardHome from "./DashboardHome";
 import LeaveApproval from "./LeaveApproval";
 import AttendanceCalendar from "./AttendanceCalendar";
-import MaintenanceSettings from "./MaintenanceSettings";
 import AdminSidebar from "../components/AdminSidebar";
 // import MonthlyRecruitmentChart from "../components/MonthlyRecruitmentChart";
 
 import {
-  AddBusiness,
-  ExpandLess,
-  ExpandMore,
-  PersonAdd,
-  PeopleAlt,
-  AdminPanelSettings,
-  WorkOutline,
-  Quiz,
-  Home,
-  EventAvailable,
-  CalendarViewMonth,
-  Logout,
-  Business,
-  Groups,
   LightMode,
-  DarkMode,
-  BarChart,
-  Build,
-  Person,
-  BeachAccess,
-  TaskAlt,
-  FormatListBulleted
+  DarkMode
 } from "@mui/icons-material";
 
 import {
   Box,
-  Typography,
   CssBaseline,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Avatar,
   Button,
   Stack,
   Container,
@@ -67,7 +36,7 @@ import {
   Menu as MuiMenu,
   MenuItem,
   Zoom,
-  alpha,
+  alpha
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { createAppTheme } from "../theme";
@@ -75,10 +44,8 @@ import { createAppTheme } from "../theme";
 const Dashboard = () => {
   const [activeView, setActiveView] = useState("dashboardHome");
   const [openEmployeeSubmenu, setOpenEmployeeSubmenu] = useState(false);
-  const [openProjectSubmenu, setOpenProjectSubmenu] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
 
   // Create theme based on dark mode state
@@ -105,17 +72,9 @@ const Dashboard = () => {
       .catch(err => console.error("Erreur récupération employés :", err));
   }, []);
 
-  // Chargement des projets
-  useEffect(() => {
-    fetch("http://localhost:5000/api/projects")
-      .then(res => res.json())
-      .then(data => setProjects(data))
-      .catch(err => console.error("Erreur récupération projets :", err));
-  }, []);
 
   // Comptages simples
   const employeeCount = employees.length;
-  const projectCount = projects.length;
   const departmentCount = departments.length;
 
   // Calculer la distribution des employés par département
@@ -145,7 +104,6 @@ const Dashboard = () => {
   };
   const handleLogout = () => { console.log("Déconnexion"); window.location.href = "/login"; };
   const handleEmployeeClick = () => setOpenEmployeeSubmenu(!openEmployeeSubmenu);
-  const handleProjectClick = () => setOpenProjectSubmenu(!openProjectSubmenu);
 
 
 
@@ -171,8 +129,6 @@ const Dashboard = () => {
           setActiveView={setActiveView}
           openEmployeeSubmenu={openEmployeeSubmenu}
           setOpenEmployeeSubmenu={setOpenEmployeeSubmenu}
-          openProjectSubmenu={openProjectSubmenu}
-          setOpenProjectSubmenu={setOpenProjectSubmenu}
           darkMode={darkMode}
           handleLogout={handleLogout}
           drawerWidth={drawerWidth}
@@ -251,7 +207,6 @@ const Dashboard = () => {
               {activeView === "dashboardHome" && (
                 <DashboardHome
                   employeeCount={employeeCount}
-                  projectCount={projectCount}
                   departmentCount={departmentCount}
                   departmentLabels={departmentLabels}
                   departmentDistribution={departmentDistribution}
@@ -265,12 +220,9 @@ const Dashboard = () => {
               {activeView === "attendance" && <Attendance employees={employees} />}
               {activeView === "attendanceCalendar" && <AttendanceCalendar employees={employees} />}
               {activeView === "employeeList" && <EmployeeListPage employees={employees} />}
-              {activeView === "projectPage" && <ProjectPage departments={departments} employees={employees} />}
-              {activeView === "projectList" && <ProjectListPage projects={projects} employees={employees} />}
               {activeView === "evaluationManager" && <EvaluationManager employees={employees} />}
               {activeView === "evaluationResults" && <EvaluationResults />}
               {activeView === "leaveApproval" && <LeaveApproval employees={employees} />}
-              {activeView === "maintenanceSettings" && <MaintenanceSettings />}
             </Box>
           </Container>
         </Box>

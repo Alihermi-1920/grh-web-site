@@ -1,3 +1,6 @@
+// Composant de résumé des statistiques d'équipe
+// Documentation Material UI Card: https://mui.com/material-ui/react-card/
+// Documentation Material UI Grid: https://mui.com/material-ui/react-grid/
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
@@ -5,19 +8,15 @@ import {
   Typography,
   CircularProgress,
   useTheme,
-  Grid,
-  alpha
+  Grid
 } from '@mui/material';
 import {
   Group as GroupIcon,
-  Assignment as AssignmentIcon,
-  CheckCircle as CheckCircleIcon,
-  EventBusy as EventBusyIcon,
-  Star as StarIcon,
-  Speed as SpeedIcon
+  Star as StarIcon
 } from '@mui/icons-material';
 import { AuthContext } from '../../context/AuthContext';
 
+// Composant StatCard simplifié
 const StatCard = ({ icon, title, value, subtitle, color }) => {
   const theme = useTheme();
 
@@ -25,43 +24,39 @@ const StatCard = ({ icon, title, value, subtitle, color }) => {
     <Box
       sx={{
         p: 2,
-        borderRadius: 3,
-        bgcolor: alpha(color, 0.1),
+        borderRadius: 2,
+        bgcolor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
         display: 'flex',
         alignItems: 'center',
         gap: 2,
-        height: '100%',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: `0 10px 20px ${alpha(color, 0.2)}`
-        }
+        height: '100%'
       }}
     >
       <Box
         sx={{
-          width: 50,
-          height: 50,
+          width: 40,
+          height: 40,
           borderRadius: '50%',
-          bgcolor: alpha(color, 0.2),
+          bgcolor: `${color}22`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}
       >
-        {React.cloneElement(icon, { sx: { color: color, fontSize: 28 } })}
+        {React.cloneElement(icon, { sx: { color: color, fontSize: 20 } })}
       </Box>
       <Box>
         <Typography variant="h5" fontWeight="bold" color={color}>
           {value}
         </Typography>
-        <Typography variant="body2" fontWeight="medium" color={theme.palette.text.primary}>
+        <Typography variant="body2" fontWeight="medium">
           {title}
         </Typography>
         {subtitle && (
           <Typography
             variant="caption"
-            color={theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'text.secondary'}
+            color="text.secondary"
           >
             {subtitle}
           </Typography>
@@ -69,8 +64,9 @@ const StatCard = ({ icon, title, value, subtitle, color }) => {
       </Box>
     </Box>
   );
-};
+}
 
+// Composant principal TeamStatsSummary
 const TeamStatsSummary = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,31 +89,6 @@ const TeamStatsSummary = () => {
 
         const employees = await employeesResponse.json();
 
-        // Fetch tasks for these employees
-        const tasksResponse = await fetch(`http://localhost:5000/api/tasks?assignedBy=${user._id}`);
-
-        if (!tasksResponse.ok) {
-          throw new Error('Failed to fetch tasks data');
-        }
-
-        const tasks = await tasksResponse.json();
-
-        // Fetch projects for this chef
-        const projectsResponse = await fetch(`http://localhost:5000/api/projects?chef=${user._id}`);
-
-        if (!projectsResponse.ok) {
-          throw new Error('Failed to fetch projects data');
-        }
-
-        const allProjects = await projectsResponse.json();
-
-        // Filter projects to only include those where this chef is the project leader
-        const projects = allProjects.filter(project =>
-          project.projectLeader === user._id ||
-          (project.projectLeader && project.projectLeader._id === user._id)
-        );
-
-        console.log(`Filtered ${allProjects.length} projects to ${projects.length} for chef ${user._id}`);
 
         // Fetch evaluation results
         const evaluationsResponse = await fetch(`http://localhost:5000/api/evaluationresultat/chef/${user._id}`);
@@ -132,14 +103,6 @@ const TeamStatsSummary = () => {
         // 1. Employee count
         const employeeCount = employees.length;
 
-        // 2. Task statistics
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter(task => task.status === 'completed').length;
-        const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-        // 3. Project count
-        const projectCount = projects.length;
-        const activeProjects = projects.filter(project => project.status !== 'completed').length;
 
         // 4. Average evaluation score
         let avgEvaluationScore = 0;
@@ -149,43 +112,10 @@ const TeamStatsSummary = () => {
           avgEvaluationScore = totalScore / evaluations.length;
         }
 
-        // 5. Overdue tasks
-        const today = new Date();
-        const overdueTasks = tasks.filter(task =>
-          task.status !== 'completed' &&
-          task.deadline &&
-          new Date(task.deadline) < today
-        ).length;
-
-        // 6. Average task duration (in days)
-        const tasksWithDuration = tasks.filter(task =>
-          task.status === 'completed' && task.createdAt && task.updatedAt
-        );
-
-        let avgTaskDuration = 0;
-
-        if (tasksWithDuration.length > 0) {
-          const totalDuration = tasksWithDuration.reduce((sum, task) => {
-            const createdDate = new Date(task.createdAt);
-            const completedDate = new Date(task.updatedAt);
-            const durationMs = completedDate - createdDate;
-            const durationDays = durationMs / (1000 * 60 * 60 * 24);
-            return sum + durationDays;
-          }, 0);
-
-          avgTaskDuration = totalDuration / tasksWithDuration.length;
-        }
 
         setStats({
           employeeCount,
-          totalTasks,
-          completedTasks,
-          completionRate,
-          projectCount,
-          activeProjects,
-          avgEvaluationScore,
-          overdueTasks,
-          avgTaskDuration
+          avgEvaluationScore
         });
       } catch (err) {
         console.error('Error fetching team stats:', err);
@@ -199,36 +129,42 @@ const TeamStatsSummary = () => {
 
   return (
     <Card
-      elevation={0}
-      variant="outlined"
       sx={{
         p: 3,
-        borderRadius: 2
+        borderRadius: 2,
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: theme.palette.background.paper
       }}
     >
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        Statistiques de l'équipe
+      </Typography>
+      
       {loading ? (
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 200
+          minHeight: 150,
+          py: 3
         }}>
-          <CircularProgress size={40} thickness={4} />
+          <CircularProgress size={30} />
         </Box>
       ) : !stats ? (
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: 200
+          minHeight: 150,
+          py: 3
         }}>
           <Typography variant="body1" color="text.secondary">
             Aucune donnée disponible
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={6}>
             <StatCard
               icon={<GroupIcon />}
               title="Employés"
@@ -237,52 +173,13 @@ const TeamStatsSummary = () => {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              icon={<AssignmentIcon />}
-              title="Projets Actifs"
-              value={stats.activeProjects}
-              subtitle={`sur ${stats.projectCount} projets`}
-              color={theme.palette.secondary.main}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              icon={<CheckCircleIcon />}
-              title="Taux de Complétion"
-              value={`${stats.completionRate.toFixed(0)}%`}
-              subtitle={`${stats.completedTasks} sur ${stats.totalTasks} tâches`}
-              color={theme.palette.success.main}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={6} md={6}>
             <StatCard
               icon={<StarIcon />}
               title="Score Moyen"
               value={stats.avgEvaluationScore.toFixed(1)}
               subtitle="sur 5 points"
-              color="#FF9800" // Orange
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              icon={<EventBusyIcon />}
-              title="Tâches en Retard"
-              value={stats.overdueTasks}
-              color={theme.palette.error.main}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              icon={<SpeedIcon />}
-              title="Durée Moyenne"
-              value={`${stats.avgTaskDuration.toFixed(1)}j`}
-              subtitle="par tâche"
-              color="#9C27B0" // Purple
+              color={theme.palette.warning.main}
             />
           </Grid>
         </Grid>

@@ -59,14 +59,11 @@ import { ThemeProvider } from "@mui/material/styles";
 import ChefEmployeeList from "./ChefEmployeeList";
 import Evaluation from "./Evaluation";
 import EvaluationResults from "./EvaluationResults";
-import ChefProjectPage from "./ChefProjectPage";
 import ChefAttendance from "./ChefAttendance";
 import ChefAttendanceCalendar from "./ChefAttendanceCalendar";
 
 import ChefLeaveManagement from "./ChefLeaveManagement"; // Nouveau composant de gestion des congés
 import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
-import ChefTaskManagement from "./ChefTaskManagement"; // Composant de gestion des tâches
-import ChefTaskDetail from "./ChefTaskDetail"; // Composant de détail des tâches
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
@@ -75,27 +72,7 @@ const ChefDashboard = () => {
   const { user } = useContext(AuthContext);
   const location = useLocation();
   const [activeView, setActiveView] = useState("dashboardHomeChef");
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
-
-  // Handle location state for navigation
-  useEffect(() => {
-    if (location.state?.activeView) {
-      console.log("Navigation state received:", location.state);
-      setActiveView(location.state.activeView);
-
-      // If we have a taskId, set it
-      if (location.state.activeView === "taskDetail" && location.state.taskId) {
-        console.log("Setting task ID from navigation:", location.state.taskId);
-        setSelectedTaskId(location.state.taskId);
-      }
-    }
-  }, [location.state]);
-
-  // Debug selected task ID changes
-  useEffect(() => {
-    console.log("Selected task ID updated:", selectedTaskId);
-  }, [selectedTaskId]);
-  const [newProjectNotifications, setNewProjectNotifications] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
   const [openAttendanceSubmenu, setOpenAttendanceSubmenu] = useState(false);
@@ -119,7 +96,7 @@ const ChefDashboard = () => {
         const response = await fetch("http://localhost:5000/api/notifications/count");
         if (response.ok) {
           const data = await response.json();
-          setNewProjectNotifications(data.newProjectCount);
+          setUnreadNotifications(data.unreadCount);
         }
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -388,39 +365,6 @@ const ChefDashboard = () => {
           </ListItemButton>
         </ListItem>
 
-        {/* Projets */}
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("projectList")}
-            selected={activeView === "projectList"}
-            sx={getMenuItemStyles(activeView === "projectList")}
-          >
-            <ListItemIcon sx={getIconStyles(activeView === "projectList")}>
-              <WorkOutline />
-            </ListItemIcon>
-            <ListItemText
-              primary="Mes Projets"
-              primaryTypographyProps={getTextStyles(activeView === "projectList")}
-            />
-          </ListItemButton>
-        </ListItem>
-
-        {/* Gestion des tâches */}
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setActiveView("taskManagement")}
-            selected={activeView === "taskManagement"}
-            sx={getMenuItemStyles(activeView === "taskManagement")}
-          >
-            <ListItemIcon sx={getIconStyles(activeView === "taskManagement")}>
-              <TaskAlt />
-            </ListItemIcon>
-            <ListItemText
-              primary="Gestion des tâches"
-              primaryTypographyProps={getTextStyles(activeView === "taskManagement")}
-            />
-          </ListItemButton>
-        </ListItem>
 
 
 
@@ -565,13 +509,10 @@ const ChefDashboard = () => {
                 <Typography variant="h5" fontWeight="600" color="primary.main">
                   {activeView === "dashboardHomeChef" && "Espace de Travail Delice"}
                   {activeView === "employeeList" && "Mes Employés"}
-                  {activeView === "projectList" && "Mes Projets"}
                   {activeView === "evaluation" && "Évaluation"}
                   {activeView === "attendance" && "Liste de Présences"}
                   {activeView === "attendanceCalendar" && "Calendrier de Présence"}
                   {activeView === "leaveManagement" && "Gestion des Congés"}
-                  {activeView === "taskManagement" && "Gestion des Tâches"}
-                  {activeView === "taskDetail" && "Détail de la Tâche"}
                   {!activeView && "Espace de Travail Delice"}
                 </Typography>
               </Box>
@@ -604,15 +545,12 @@ const ChefDashboard = () => {
               <Box>
                 {activeView === "dashboardHomeChef" && <DashboardHomeChef />}
                 {activeView === "employeeList" && <ChefEmployeeList />}
-                {activeView === "projectList" && <ChefProjectPage />}
                 {activeView === "evaluation" && <Evaluation />}
                 {activeView === "evaluationResults" && <EvaluationResults />}
                 {activeView === "attendance" && <ChefAttendance />}
                 {activeView === "attendanceCalendar" && <ChefAttendanceCalendar />}
                 {activeView === "leaveManagement" && <ChefLeaveManagement />}
 
-                {activeView === "taskManagement" && <ChefTaskManagement />}
-                {activeView === "taskDetail" && selectedTaskId && <ChefTaskDetail taskId={selectedTaskId} />}
                 {!activeView && (
                   <Box
                     sx={{

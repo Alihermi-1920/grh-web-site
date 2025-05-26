@@ -1,3 +1,7 @@
+// Composant de graphique de performance des employés utilisant Material UI et Chart.js
+// Documentation Material UI Card: https://mui.com/material-ui/react-card/
+// Documentation Material UI LinearProgress: https://mui.com/material-ui/react-progress/
+// Documentation Material UI Avatar: https://mui.com/material-ui/react-avatar/
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Box,
@@ -7,7 +11,6 @@ import {
   useTheme,
   Avatar,
   LinearProgress,
-  Tooltip,
   Divider
 } from '@mui/material';
 import { Bar } from 'react-chartjs-2';
@@ -33,6 +36,7 @@ ChartJS.register(
 );
 
 // Create custom horizontal bar component
+// Documentation Chart.js: https://www.chartjs.org/docs/latest/
 const CustomHorizontalBar = ({ data, options }) => {
   const chartOptions = {
     ...options,
@@ -42,6 +46,9 @@ const CustomHorizontalBar = ({ data, options }) => {
   return <Bar data={data} options={chartOptions} />;
 };
 
+// Composant principal EmployeePerformanceChart
+// Documentation Material UI Box: https://mui.com/material-ui/react-box/
+// Documentation Material UI Typography: https://mui.com/material-ui/react-typography/
 const EmployeePerformanceChart = () => {
   const [chartData, setChartData] = useState(null);
   const [employeeStats, setEmployeeStats] = useState([]);
@@ -149,24 +156,20 @@ const EmployeePerformanceChart = () => {
 
   return (
     <Card
-      elevation={0}
-      variant="outlined"
       sx={{
         p: 3,
         borderRadius: 2,
         height: '100%',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: theme.palette.background.paper
       }}
     >
       <Typography
         variant="h6"
         fontWeight="600"
-        sx={{
-          mb: 2,
-          color: theme.palette.text.primary,
-          fontSize: '1.1rem'
-        }}
+        sx={{ mb: 2 }}
       >
         Performance des Employés
       </Typography>
@@ -176,24 +179,30 @@ const EmployeePerformanceChart = () => {
           flexGrow: 1,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          py: 3
         }}>
-          <CircularProgress size={40} thickness={4} />
+          <CircularProgress size={30} />
         </Box>
       ) : employeeStats.length === 0 ? (
-        <Box sx={{
-          flexGrow: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+        <Box 
+          sx={{
+            flexGrow: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: 3,
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+            borderRadius: 2
+          }}
+        >
           <Typography variant="body1" color="text.secondary">
             Aucune donnée de performance disponible
           </Typography>
         </Box>
       ) : (
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ height: 200, mb: 2 }}>
+          <Box sx={{ height: 200, mb: 2, p: 1, borderRadius: 2 }}>
             {chartData && (
               <CustomHorizontalBar
                 data={chartData}
@@ -207,15 +216,11 @@ const EmployeePerformanceChart = () => {
                     tooltip: {
                       backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30, 40, 60, 0.9)' : 'rgba(0, 0, 0, 0.8)',
                       padding: 12,
-                      titleColor: theme.palette.mode === 'dark' ? '#ffffff' : undefined,
-                      bodyColor: theme.palette.mode === 'dark' ? '#e0e0e0' : undefined,
                       titleFont: {
-                        size: 13,
-                        family: "'Inter', sans-serif"
+                        size: 13
                       },
                       bodyFont: {
-                        size: 12,
-                        family: "'Inter', sans-serif"
+                        size: 12
                       },
                       callbacks: {
                         label: function(context) {
@@ -229,14 +234,9 @@ const EmployeePerformanceChart = () => {
                       beginAtZero: true,
                       max: 100,
                       grid: {
-                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider
+                        color: theme.palette.divider
                       },
                       ticks: {
-                        font: {
-                          size: 10,
-                          family: "'Inter', sans-serif"
-                        },
-                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.secondary,
                         callback: function(value) {
                           return value + '%';
                         }
@@ -244,21 +244,9 @@ const EmployeePerformanceChart = () => {
                     },
                     y: {
                       grid: {
-                        display: false,
-                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined
-                      },
-                      ticks: {
-                        font: {
-                          size: 10,
-                          family: "'Inter', sans-serif"
-                        },
-                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.secondary
+                        display: false
                       }
                     }
-                  },
-                  animation: {
-                    duration: 1000,
-                    easing: 'easeOutQuart'
                   }
                 }}
               />
@@ -275,9 +263,18 @@ const EmployeePerformanceChart = () => {
             Top Performers
           </Typography>
 
+          {/* Liste des top performers */}
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             {employeeStats.slice(0, 3).map((stat, index) => (
-              <Box key={stat.employee._id} sx={{ mb: 2 }}>
+              <Box 
+                key={stat.employee._id} 
+                sx={{ 
+                  mb: 2, 
+                  p: 1.5, 
+                  borderRadius: 2,
+                  border: `1px solid ${theme.palette.divider}`
+                }}
+              >
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Avatar
                     src={stat.employee.photo}
@@ -289,14 +286,12 @@ const EmployeePerformanceChart = () => {
                       {stat.employee.firstName} {stat.employee.lastName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {stat.completedTasks} tâches terminées sur {stat.totalTasks}
+                      Performance basée sur les tâches assignées
                     </Typography>
                   </Box>
-                  <Tooltip title="Taux de complétion">
-                    <Typography variant="body2" fontWeight="bold">
-                      {stat.completionRate.toFixed(0)}%
-                    </Typography>
-                  </Tooltip>
+                  <Typography variant="body2" fontWeight="bold">
+                    {stat.completionRate.toFixed(0)}%
+                  </Typography>
                 </Box>
                 <LinearProgress
                   variant="determinate"
@@ -304,7 +299,7 @@ const EmployeePerformanceChart = () => {
                   sx={{
                     height: 6,
                     borderRadius: 3,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.grey[200],
+                    bgcolor: theme.palette.grey[200],
                     '& .MuiLinearProgress-bar': {
                       bgcolor: index === 0
                         ? theme.palette.success.main

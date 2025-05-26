@@ -5,7 +5,6 @@ import WelcomeBanner from "../components/WelcomeBanner";
 // Import our employee dashboard components
 import MotivationalLeaderboard from "../components/employee-dashboard/MotivationalLeaderboard";
 import PersonalPerformanceCard from "../components/employee-dashboard/PersonalPerformanceCard";
-import TaskProgress from "../components/employee-dashboard/TaskProgress";
 
 const DashboardHomeEmployee = ({ setActiveView }) => {
   const theme = useTheme();
@@ -42,8 +41,6 @@ const DashboardHomeEmployee = ({ setActiveView }) => {
         <Grid
           item
           xs={12}
-          md={7}
-          lg={8}
           sx={{
             animation: 'fadeIn 0.5s ease-in-out 0.1s both',
           }}
@@ -51,18 +48,6 @@ const DashboardHomeEmployee = ({ setActiveView }) => {
           <MotivationalLeaderboard />
         </Grid>
 
-        {/* Task Progress */}
-        <Grid
-          item
-          xs={12}
-          md={5}
-          lg={4}
-          sx={{
-            animation: 'fadeIn 0.5s ease-in-out 0.2s both',
-          }}
-        >
-          <TaskProgress setActiveView={setActiveView} />
-        </Grid>
       </Grid>
     </Box>
   );

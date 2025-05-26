@@ -3,7 +3,6 @@ import {
   Drawer,
   Box,
   Typography,
-  Avatar,
   List,
   ListItem,
   ListItemButton,
@@ -19,7 +18,6 @@ import {
   PersonAdd,
   PeopleAlt,
   AdminPanelSettings,
-  WorkOutline,
   Quiz,
   Home,
   EventAvailable,
@@ -27,10 +25,7 @@ import {
   Logout,
   Groups,
   BarChart,
-  Build,
-  Person,
-  BeachAccess,
-  FormatListBulleted
+  BeachAccess
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 
@@ -40,8 +35,6 @@ const AdminSidebar = ({
   setActiveView,
   openEmployeeSubmenu,
   setOpenEmployeeSubmenu,
-  openProjectSubmenu,
-  setOpenProjectSubmenu,
   darkMode,
   handleLogout,
   drawerWidth
@@ -88,7 +81,6 @@ const AdminSidebar = ({
   });
 
   const handleEmployeeClick = () => setOpenEmployeeSubmenu(!openEmployeeSubmenu);
-  const handleProjectClick = () => setOpenProjectSubmenu(!openProjectSubmenu);
 
   return (
     <Drawer
@@ -311,63 +303,6 @@ const AdminSidebar = ({
           </ListItemButton>
         </ListItem>
 
-        {/* Projets */}
-        <ListItem disablePadding sx={{ mb: 0.5 }}>
-          <ListItemButton
-            onClick={handleProjectClick}
-            selected={['projectPage', 'projectList'].includes(activeView)}
-            sx={getMenuItemStyles(['projectPage', 'projectList'].includes(activeView))}
-          >
-            <ListItemIcon sx={getIconStyles()}>
-              <WorkOutline />
-            </ListItemIcon>
-            <ListItemText
-              primary="Projets"
-              primaryTypographyProps={getTextStyles(['projectPage', 'projectList'].includes(activeView))}
-            />
-            {openProjectSubmenu ? <ExpandLess /> : <ExpandMore />}
-          </ListItemButton>
-        </ListItem>
-        <Collapse in={openProjectSubmenu} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => setActiveView("projectPage")}
-                selected={activeView === "projectPage"}
-                sx={getSubmenuItemStyles(activeView === "projectPage")}
-              >
-                <ListItemIcon sx={{ minWidth: 36, color: 'inherit', transition: 'all 0.2s ease' }}>
-                  <WorkOutline fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Nouveau projet"
-                  primaryTypographyProps={{
-                    ...getTextStyles(activeView === "projectPage"),
-                    fontSize: 14
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => setActiveView("projectList")}
-                selected={activeView === "projectList"}
-                sx={getSubmenuItemStyles(activeView === "projectList")}
-              >
-                <ListItemIcon sx={{ minWidth: 36, color: 'inherit', transition: 'all 0.2s ease' }}>
-                  <FormatListBulleted fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Liste des projets"
-                  primaryTypographyProps={{
-                    ...getTextStyles(activeView === "projectList"),
-                    fontSize: 14
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </Collapse>
 
         {/* Évaluations */}
         <ListItem disablePadding sx={{ mb: 0.5 }}>
@@ -420,22 +355,6 @@ const AdminSidebar = ({
           </ListItemButton>
         </ListItem>
 
-        {/* Mode Maintenance */}
-        <ListItem disablePadding sx={{ mb: 0.5 }}>
-          <ListItemButton
-            onClick={() => setActiveView("maintenanceSettings")}
-            selected={activeView === "maintenanceSettings"}
-            sx={getMenuItemStyles(activeView === "maintenanceSettings")}
-          >
-            <ListItemIcon sx={getIconStyles()}>
-              <Build />
-            </ListItemIcon>
-            <ListItemText
-              primary="Mode Maintenance"
-              primaryTypographyProps={getTextStyles(activeView === "maintenanceSettings")}
-            />
-          </ListItemButton>
-        </ListItem>
 
         {/* Déconnexion */}
         <Box sx={{ mt: 'auto', pt: 4 }}>

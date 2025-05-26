@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
 router.get("/count", async (req, res) => {
   try {
     const count = await Notification.countDocuments({ read: false });
-    res.json({ newProjectCount: count });
+    res.json({ unreadCount: count });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
@@ -25,12 +25,12 @@ router.get("/count", async (req, res) => {
 
 // POST a new notification
 router.post("/", async (req, res) => {
-  const { type, message, project } = req.body;
+  const { type, message } = req.body;
   if (!type || !message) {
     return res.status(400).json({ message: "Le type et le message sont obligatoires" });
   }
   try {
-    const notification = new Notification({ type, message, project });
+    const notification = new Notification({ type, message });
     await notification.save();
     res.status(201).json(notification);
   } catch (error) {

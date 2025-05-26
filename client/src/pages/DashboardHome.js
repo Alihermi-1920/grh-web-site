@@ -9,7 +9,6 @@ import WelcomeBanner from '../components/WelcomeBanner';
 
 const DashboardHome = ({
   employeeCount,
-  projectCount,
   departmentCount,
   departmentLabels,
   departmentDistribution,
@@ -54,32 +53,7 @@ const DashboardHome = ({
           </Paper>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={4}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 2,
-              textAlign: 'center',
-              borderRadius: 4,
-              height: '100%',
-              background: darkMode
-                ? `linear-gradient(45deg, ${theme.palette.secondary.dark} 0%, ${theme.palette.secondary.main} 100%)`
-                : `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.secondary.light} 90%)`,
-              color: darkMode ? 'black' : 'black',
-              boxShadow: darkMode
-                ? '0 8px 16px rgba(0,0,0,0.3)'
-                : '0 8px 16px rgba(3,218,198,0.2)'
-            }}
-          >
-            <Assignment sx={{ fontSize: 36, opacity: 0.8, mb: 0.5 }} />
-            <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>Projets Actifs</Typography>
-            <Typography variant="h4" fontWeight="bold" sx={{ mt: 1 }}>
-              {projectCount}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={6}>
           <Paper
             elevation={2}
             sx={{

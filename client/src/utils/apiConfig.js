@@ -35,21 +35,6 @@ export const API_ENDPOINTS = {
   DEPARTMENTS: getApiUrl('api/departments'),
   DEPARTMENT_BY_ID: (id) => getApiUrl(`api/departments/${id}`),
 
-  // Projects
-  PROJECTS: getApiUrl('api/projects'),
-  PROJECTS_BY_EMPLOYEE: (employeeId) => getApiUrl(`api/projects/employee/${employeeId}`),
-  PROJECT_BY_ID: (id) => getApiUrl(`api/projects/${id}`),
-  PROJECT_DOCUMENTS: (id) => getApiUrl(`api/projects/${id}/documents`),
-  PROJECT_COMMENTS: (id) => getApiUrl(`api/projects/${id}/comments`),
-
-  // Tasks
-  TASKS: getApiUrl('api/tasks'),
-  TASKS_BY_EMPLOYEE: (employeeId) => getApiUrl(`api/tasks/employee/${employeeId}`),
-  TASKS_BY_PROJECT: (projectId) => getApiUrl(`api/tasks/project/${projectId}`),
-  TASKS_BY_ASSIGNED_BY: (userId) => getApiUrl(`api/tasks?assignedBy=${userId}`),
-  TASK_BY_ID: (id) => getApiUrl(`api/tasks/${id}`),
-  TASK_COMMENTS: (id) => getApiUrl(`api/tasks/${id}/comments`),
-  TASK_ATTACHMENTS: (id) => getApiUrl(`api/tasks/${id}/attachments`),
 
   // Evaluations
   EVALUATIONS: getApiUrl('api/evaluationresultat'),
@@ -77,9 +62,6 @@ export const API_ENDPOINTS = {
   LEAVE_DOCUMENTS: (id, employeeId) => getApiUrl(`api/conges/${id}/documents?employee=${employeeId}`),
 
   // Messages
-  TASK_MESSAGES: getApiUrl('api/task-messages'),
-  TASK_MESSAGES_BY_TASK: (taskId) => getApiUrl(`api/task-messages/task/${taskId}`),
-  TASK_MESSAGE_READ: (messageId) => getApiUrl(`api/task-messages/${messageId}/read`),
   CHEF_MESSAGES: (chefId) => getApiUrl(`api/messages/chef/${chefId}`),
 
   // Dashboard
