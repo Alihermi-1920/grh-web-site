@@ -18,6 +18,8 @@ const congeRoutes = require("./routes/conges");
 const evaluationResultatRoutes = require("./routes/evaluationresultat");
 // New routes for uploads and comments
 const uploadRoutes = require("./routes/fileUploadRoutes");
+// Nouvelle route pour les assignations de travail
+const workAssignmentRoutes = require("./routes/workAssignmentRoutes");
 // Messaging system routes removed
 // Password change route
 const passwordChangeRoutes = require("./routes/passwordChange");
@@ -79,6 +81,8 @@ app.use("/api/conges", congeRoutes);
 app.use("/api/evaluationresultat", evaluationResultatRoutes);
 // Register new routes
 app.use("/api/upload", uploadRoutes);
+// Route pour les assignations de travail
+app.use("/api/travaux", workAssignmentRoutes);
 // Message routes removed
 app.use("/api/password-change", passwordChangeRoutes);
 // Maintenance routes removed
@@ -242,6 +246,7 @@ mongoose
     console.log("- /api/conges");
     console.log("- /api/evaluationresultat");
     console.log("- /api/upload");
+    console.log("- /api/travaux");
     console.log("- /api/comments");
     console.log("- /api/password-change");
     console.log("- /api/maintenance");
@@ -250,12 +255,12 @@ mongoose
     console.log("- /api/leave-notification");
 
     // Create mock PDF for development
-    try {
-      require('./utils/createMockPdf');
-      console.log('Mock PDF created for development');
-    } catch (error) {
-      console.error('Error creating mock PDF:', error);
-    }
+    // try {
+    //   require('./utils/createMockPdf');
+    //   console.log('Mock PDF created for development');
+    // } catch (error) {
+    //   console.error('Error creating mock PDF:', error);
+    // }
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 

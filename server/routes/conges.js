@@ -228,7 +228,7 @@ router.get("/", async (req, res) => {
     }
 
     const conges = await Conge.find(query)
-      .populate("employee", "firstName lastName email photo")
+      .populate("employee", "firstName lastName email photo cin")
       .sort({ createdAt: -1 });
 
     res.json(conges);
@@ -241,7 +241,7 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const conge = await Conge.findById(req.params.id)
-      .populate("employee", "firstName lastName email photo");
+      .populate("employee", "firstName lastName email photo cin");
 
     if (!conge) {
       return res.status(404).json({ error: "Demande de congé non trouvée" });

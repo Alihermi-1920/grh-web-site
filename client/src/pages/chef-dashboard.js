@@ -1,6 +1,6 @@
 // src/pages/chef-dashboard.js
 import React, { useState, useContext, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   CssBaseline,
   Drawer,
@@ -35,6 +35,7 @@ import {
   WorkOutline,
   AdminPanelSettings,
   AssessmentOutlined,
+  AssignmentOutlined,
   Notifications,
   FormatListBulleted,
   Close as CloseIcon,
@@ -53,7 +54,8 @@ import {
   TaskAlt,
   Person,
   Business,
-  BeachAccess
+  BeachAccess,
+  Assignment
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import ChefEmployeeList from "./ChefEmployeeList";
@@ -64,6 +66,8 @@ import ChefAttendanceCalendar from "./ChefAttendanceCalendar";
 
 import ChefLeaveManagement from "./ChefLeaveManagement"; // Nouveau composant de gestion des congés
 import DashboardHomeChef from "./DashboardHomeChef"; // DashboardHomeChef est dans le même dossier pages
+import ChefWorkAssignment from "./ChefWorkAssignment"; // Composant d'assignation de travail
+
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
@@ -76,6 +80,7 @@ const ChefDashboard = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [notificationsList, setNotificationsList] = useState([]);
   const [openAttendanceSubmenu, setOpenAttendanceSubmenu] = useState(false);
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
 
@@ -365,8 +370,7 @@ const ChefDashboard = () => {
           </ListItemButton>
         </ListItem>
 
-
-
+        {/* Supprimé: Assignation de Travail */}
 
         {/* Présence avec sous-menu */}
         <ListItem disablePadding>
@@ -443,6 +447,22 @@ const ChefDashboard = () => {
           </ListItemButton>
         </ListItem>
 
+        {/* Assignation de Travail */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("workAssignment")}
+            selected={activeView === "workAssignment"}
+            sx={getMenuItemStyles(activeView === "workAssignment")}
+          >
+            <ListItemIcon sx={getIconStyles(activeView === "workAssignment")}>
+              <Assignment />
+            </ListItemIcon>
+            <ListItemText
+              primary="Assignation de Travail"
+              primaryTypographyProps={getTextStyles(activeView === "workAssignment")}
+            />
+          </ListItemButton>
+        </ListItem>
 
 
 
@@ -513,6 +533,8 @@ const ChefDashboard = () => {
                   {activeView === "attendance" && "Liste de Présences"}
                   {activeView === "attendanceCalendar" && "Calendrier de Présence"}
                   {activeView === "leaveManagement" && "Gestion des Congés"}
+                  {activeView === "workAssignment" && "Assignation de Travail"}
+                  
                   {!activeView && "Espace de Travail Delice"}
                 </Typography>
               </Box>
@@ -550,6 +572,8 @@ const ChefDashboard = () => {
                 {activeView === "attendance" && <ChefAttendance />}
                 {activeView === "attendanceCalendar" && <ChefAttendanceCalendar />}
                 {activeView === "leaveManagement" && <ChefLeaveManagement />}
+                {activeView === "workAssignment" && <ChefWorkAssignment />}
+                
 
                 {!activeView && (
                   <Box

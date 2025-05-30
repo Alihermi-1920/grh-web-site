@@ -78,26 +78,17 @@ const EmployeeLeaveRequest = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  // États pour l'interface utilisateur et les données
   const [showHistory, setShowHistory] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
-
-  // Data state
-  const [leaveBalance, setLeaveBalance] = useState({
-    totalDays: 30,
-    usedDays: 0,
-    remainingDays: 30,
-    medicalDays: 0
-  });
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [errorHistory, setErrorHistory] = useState("");
+  const [leaveBalance, setLeaveBalance] = useState(null);
   const [numberOfDays, setNumberOfDays] = useState(0);
-
-  // Pagination for history
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   // Steps for the stepper
   const steps = [
@@ -687,16 +678,7 @@ const EmployeeLeaveRequest = () => {
     }
   };
 
-  // Handle page change for history pagination
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  // Handle rows per page change for history pagination
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  // Suppression des fonctions liées à la pagination
 
   return (
     <Box sx={{ p: 3 }}>
@@ -1120,10 +1102,13 @@ const EmployeeLeaveRequest = () => {
             </Button>
 
             {!loadingHistory && leaveHistory.length > 0 && (
-              <Tooltip title="Voir en tableau">
+              <Tooltip title="Voir l'historique complet">
                 <IconButton
                   color="primary"
-                  onClick={() => setHistoryDialog(true)}
+                  onClick={() => {
+                    setSelectedLeave(null);
+                    setHistoryDialog(true);
+                  }}
                   sx={{ mt: 2 }}
                 >
                   <Visibility />
@@ -1146,8 +1131,8 @@ const EmployeeLeaveRequest = () => {
                   Aucune demande de congé trouvée.
                 </Typography>
               ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table sx={{ minWidth: 650 }} aria-label="table des demandes de congé">
+                <TableContainer>
+                  <Table aria-label="tableau des demandes de congé">
                     <TableHead>
                       <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100' }}>
                         <TableCell>Type</TableCell>
@@ -1158,72 +1143,56 @@ const EmployeeLeaveRequest = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {leaveHistory
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((leave) => (
-                          <TableRow
-                            key={leave._id}
-                            sx={{
-                              '&:last-child td, &:last-child th': { border: 0 },
-                              borderLeft: `4px solid ${getStatusColor(leave.status)}`,
-                              '&:hover': { bgcolor: theme.palette.action.hover }
-                            }}
-                          >
-                            <TableCell component="th" scope="row">
-                              <Typography variant="body2" fontWeight="medium">
-                                {leave.leaveType}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "-"}
-                                {" → "}
-                                {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "-"}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={leave.numberOfDays}
-                                size="small"
-                                color={leave.isMedical ? "info" : "default"}
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                icon={getStatusIcon(leave.status)}
-                                label={leave.status}
-                                size="small"
-                                sx={{
-                                  bgcolor: getStatusColor(leave.status) + "20",
-                                  color: getStatusColor(leave.status),
-                                  fontWeight: "medium"
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell align="right">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleViewLeave(leave)}
-                              >
-                                <Visibility fontSize="small" />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                      {leaveHistory.map((leave) => (
+                        <TableRow
+                          key={leave._id}
+                          sx={{
+                            '&:last-child td, &:last-child th': { border: 0 },
+                            '&:hover': { bgcolor: theme.palette.action.hover }
+                          }}
+                        >
+                          <TableCell component="th" scope="row">
+                            <Typography variant="body2" fontWeight="medium">
+                              {leave.leaveType}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                              {" → "}
+                              {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2">
+                              {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography 
+                              variant="body2" 
+                              sx={{
+                                color: leave.status === "Approuvé" ? "green" : 
+                                       leave.status === "Rejeté" ? "red" : "orange",
+                                fontWeight: "bold"
+                              }}
+                            >
+                              {leave.status}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleViewLeave(leave)}
+                            >
+                              <Visibility fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
-                  <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={leaveHistory.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    labelRowsPerPage="Lignes par page:"
-                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} sur ${count}`}
-                  />
                 </TableContainer>
               )}
             </Paper>
@@ -1231,33 +1200,34 @@ const EmployeeLeaveRequest = () => {
         </Grid>
       </Grid>
 
-      {/* Dialogue de détails de congé */}
+      {/* Dialogue d'historique des congés */}
       <Dialog
         open={historyDialog}
         onClose={() => setHistoryDialog(false)}
         maxWidth="md"
         fullWidth
       >
-        {selectedLeave && (
+        {selectedLeave ? (
           <>
             <DialogTitle>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Typography variant="h6">
                   Détails de la demande
                 </Typography>
-                <Chip
-                  icon={getStatusIcon(selectedLeave.status)}
-                  label={selectedLeave.status}
-                  size="small"
+                <Typography 
+                  variant="body2" 
                   sx={{
-                    bgcolor: getStatusColor(selectedLeave.status) + "20",
-                    color: getStatusColor(selectedLeave.status),
+                    color: selectedLeave.status === "Approuvé" ? "green" : 
+                           selectedLeave.status === "Rejeté" ? "red" : "orange",
                     fontWeight: "bold"
                   }}
-                />
+                >
+                  {selectedLeave.status}
+                </Typography>
               </Box>
             </DialogTitle>
             <DialogContent dividers>
+              {/* Contenu existant pour les détails d'un congé spécifique */}
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -1335,6 +1305,94 @@ const EmployeeLeaveRequest = () => {
                   </Grid>
                 )}
               </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setHistoryDialog(false)}>
+                Fermer
+              </Button>
+            </DialogActions>
+          </>
+        ) : (
+          <>
+            <DialogTitle>
+              <Typography variant="h6">
+                Historique des Demandes de Congé
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers>
+              {loadingHistory ? (
+                <Box sx={{ display: "flex", justifyContent: "center", my: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : leaveHistory.length === 0 ? (
+                <Typography variant="body1" color="text.secondary" sx={{ py: 2 }}>
+                  Aucune demande de congé trouvée.
+                </Typography>
+              ) : (
+                <TableContainer>
+                  <Table aria-label="tableau des demandes de congé">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100' }}>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Période</TableCell>
+                        <TableCell align="center">Jours</TableCell>
+                        <TableCell align="center">Statut</TableCell>
+                        <TableCell align="right">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {leaveHistory.map((leave) => (
+                        <TableRow
+                          key={leave._id}
+                          sx={{
+                            '&:last-child td, &:last-child th': { border: 0 },
+                            '&:hover': { bgcolor: theme.palette.action.hover }
+                          }}
+                        >
+                          <TableCell component="th" scope="row">
+                            <Typography variant="body2" fontWeight="medium">
+                              {leave.leaveType}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                              {" → "}
+                              {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2">
+                              {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography 
+                              variant="body2" 
+                              sx={{
+                                color: leave.status === "Approuvé" ? "green" : 
+                                       leave.status === "Rejeté" ? "red" : "orange",
+                                fontWeight: "bold"
+                              }}
+                            >
+                              {leave.status}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleViewLeave(leave)}
+                            >
+                              <Visibility fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setHistoryDialog(false)}>

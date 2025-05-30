@@ -41,6 +41,22 @@ import autoTable from "jspdf-autotable";
 const EvaluationResults = () => {
   const { user } = useContext(AuthContext);
 
+  // Générer dynamiquement les années pour le filtre (année courante et 4 années précédentes)
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    
+    // Ajouter l'année courante et les 4 années précédentes
+    for (let i = 0; i < 5; i++) {
+      years.push(currentYear - i);
+    }
+    
+    return years;
+  };
+
+  // Générer les années pour le filtre
+  const yearOptions = generateYearOptions();
+
   // Variables d'état simples
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +99,53 @@ const EvaluationResults = () => {
     return "À améliorer";
   };
 
+  // Fonction pour récupérer le CIN de l'employé à partir de la base de données
+  const getCINFromEmployeeDatabase = async (employeeId) => {
+    try {
+      if (!employeeId) {
+        console.warn("getCINFromEmployeeDatabase: ID employé non fourni");
+        return null;
+      }
+
+      // Vérifier si l'employeeId est un objet avec _id
+      const actualEmployeeId = typeof employeeId === 'object' && employeeId._id ? employeeId._id : employeeId;
+      
+      console.log(`Récupération du CIN pour l'employé ID: ${actualEmployeeId}`);
+      
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/employees/${actualEmployeeId}`);
+      
+      if (!response.ok) {
+        console.error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+        throw new Error(`Erreur lors de la récupération des données de l'employé: ${response.statusText}`);
+      }
+      
+      const employeeData = await response.json();
+      console.log("Données employé reçues:", employeeData);
+      
+      // Vérifier si les données contiennent un CIN
+      if (employeeData) {
+        // Chercher le CIN dans différentes propriétés possibles
+        const cin = employeeData.cin || employeeData.CIN || 
+                   (employeeData.employee && (employeeData.employee.cin || employeeData.employee.CIN));
+        
+        if (cin) {
+          console.log(`CIN trouvé dans la base de données: ${cin}`);
+          return cin;
+        } else {
+          console.warn("Aucun CIN trouvé dans les données de l'employé:", employeeData);
+        }
+      } else {
+        console.warn("Aucune donnée d'employé reçue");
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Erreur lors de la récupération du CIN depuis la base de données:", error);
+      return null;
+    }
+  };
+
   // Fonction simple pour obtenir le CIN
   // Helper function to extract CIN from employee data
   const extractCIN = (evaluation) => {
@@ -91,14 +154,14 @@ const EvaluationResults = () => {
     if (evaluation.employeeId?.CIN) return evaluation.employeeId.CIN;
     if (evaluation.CIN) return evaluation.CIN;
     if (evaluation.cin) return evaluation.cin;
-
+  
     // If employeeId is populated with employee data
     if (evaluations && evaluations.length > 0) {
       const employee = evaluations.find(emp => emp._id === (evaluation.employeeId?._id || evaluation.employeeId));
       if (employee?.cin) return employee.cin;
       if (employee?.CIN) return employee.CIN;
     }
-
+  
     // If we still don't have a CIN, check if there's a numeric ID that looks like a CIN
     if (typeof evaluation.employeeId === 'object') {
       for (const key in evaluation.employeeId) {
@@ -112,53 +175,127 @@ const EvaluationResults = () => {
     return "Non disponible";
   };
 
-  const getCIN = (evaluation) => {
-    return extractCIN(evaluation);
-  };
-
-  // Fonction pour récupérer les évaluations
-  const fetchEvaluations = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      let queryParams = new URLSearchParams();
-      if (selectedYear) queryParams.append("year", selectedYear);
-      if (selectedMonth) queryParams.append("month", selectedMonth);
-
-      if (user && user.role === "Chef") {
-        queryParams.append("userRole", "Chef");
-        queryParams.append("chefId", user._id);
-      }
-
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${API_URL}/api/evaluationresultat?${queryParams}`);
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des évaluations");
-      }
-
-      const data = await response.json();
-      setEvaluations(data);
-
-      // Sélectionner le premier employé automatiquement
-      if (data.length > 0 && !selectedEmployeeId) {
-        const firstEmployeeId = data[0].employeeId?._id || data[0].employeeId;
-        setSelectedEmployeeId(firstEmployeeId);
-        setSelectedEvaluation(data[0]);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error("Erreur:", error);
-      setError("Erreur lors du chargement des évaluations");
-      setLoading(false);
+  // Fonction pour obtenir le CIN avec possibilité de récupération depuis la base de données
+  const getCIN = async (evaluation) => {
+    if (!evaluation) {
+      console.warn("getCIN: Aucune évaluation fournie");
+      return "Non disponible";
     }
+  
+    // D'abord essayer d'extraire le CIN des données d'évaluation
+    const localCIN = extractCIN(evaluation);
+    console.log("CIN local extrait:", localCIN);
+    
+    // Si le CIN n'est pas disponible localement, essayer de le récupérer depuis la base de données
+    if (localCIN === "Non disponible") {
+      const employeeId = evaluation.employeeId?._id || evaluation.employeeId;
+      console.log("EmployeeId pour récupération du CIN:", employeeId);
+      
+      if (employeeId) {
+        try {
+          const databaseCIN = await getCINFromEmployeeDatabase(employeeId);
+          console.log("CIN récupéré de la base de données:", databaseCIN);
+          if (databaseCIN) {
+            return databaseCIN;
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération du CIN depuis la base de données:", error);
+        }
+      }
+    } else {
+      return localCIN;
+    }
+    
+    // Si aucun CIN n'a été trouvé, retourner "Non disponible"
+    return "Non disponible";
   };
+
+  // Composant pour afficher le CIN
+const CINDisplay = ({ evaluation }) => {
+  const [cin, setCin] = useState("");
+  
+  useEffect(() => {
+    const fetchCIN = async () => {
+      if (!evaluation) {
+        setCin("Non disponible");
+        return;
+      }
+      
+      const cinValue = await getCIN(evaluation);
+      setCin(cinValue);
+    };
+    
+    fetchCIN();
+  }, [evaluation]);
+  
+  return <Typography variant="body2">CIN: {cin }</Typography>;
+};
+
+// Fonction pour récupérer les évaluations
+const fetchEvaluations = async () => {
+  setLoading(true);
+  setError("");
+
+  try {
+    let queryParams = new URLSearchParams();
+    if (selectedYear) queryParams.append("year", selectedYear);
+    if (selectedMonth) queryParams.append("month", selectedMonth);
+
+    if (user && user.role === "Chef") {
+      queryParams.append("userRole", "Chef");
+      queryParams.append("chefId", user._id);
+    }
+
+    // Ajouter un paramètre pour demander l'inclusion des données complètes des employés
+    queryParams.append("includeEmployeeData", "true");
+
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    console.log(`Récupération des évaluations avec les paramètres: ${queryParams.toString()}`);
+    const response = await fetch(`${API_URL}/api/evaluationresultat?${queryParams}`);
+
+    if (!response.ok) {
+      console.error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+      throw new Error("Erreur lors du chargement des évaluations");
+    }
+
+    const data = await response.json();
+    console.log("Données d'évaluation reçues:", data);
+    setEvaluations(data);
+
+    // Sélectionner le premier employé automatiquement
+    if (data.length > 0 && !selectedEmployeeId) {
+      const firstEmployeeId = data[0].employeeId?._id || data[0].employeeId;
+      setSelectedEmployeeId(firstEmployeeId);
+      setSelectedEvaluation(data[0]);
+    }
+
+    setLoading(false);
+  } catch (error) {
+    console.error("Erreur:", error);
+    setError("Erreur lors du chargement des évaluations");
+    setLoading(false);
+  }
+};
 
   // Fonction simple de recherche
   const handleSearch = (event) => {
     setSearchQuery(event.target.value);
+  };
+
+  // Fonction pour filtrer les évaluations selon la recherche
+  const filterEvaluations = async () => {
+    if (!searchQuery) return evaluations;
+    
+    const filtered = [];
+    for (const evaluation of evaluations) {
+      const cin = await getCIN(evaluation);
+      if (evaluation.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cin.toLowerCase().includes(searchQuery.toLowerCase())) {
+        filtered.push(evaluation);
+      }
+    }
+    
+    return filtered;
   };
 
   // Fonction pour sélectionner un employé
@@ -181,7 +318,7 @@ const EvaluationResults = () => {
   };
 
   // Fonction simple pour générer le PDF
-  const generatePDF = (evaluation) => {
+  const generatePDF = async (evaluation) => {
     const doc = new jsPDF();
     
     // Titre
@@ -189,9 +326,10 @@ const EvaluationResults = () => {
     doc.text("Rapport d'Évaluation", 20, 20);
     
     // Informations de l'employé
+    const cin = await getCIN(evaluation);
     doc.setFontSize(12);
     doc.text(`Employé: ${evaluation.employeeName}`, 20, 40);
-    doc.text(`CIN: ${getCIN(evaluation)}`, 20, 50);
+    doc.text(`CIN: ${cin}`, 20, 50);
     doc.text(`Score Global: ${evaluation.globalScore}/20`, 20, 60);
     
     // Tableau des scores
@@ -216,11 +354,20 @@ const EvaluationResults = () => {
   }, [selectedYear, selectedMonth]);
 
   // Filtrer les évaluations selon la recherche
-  const filteredEvaluations = evaluations.filter(evaluation => {
-    if (!searchQuery) return true;
-    return evaluation.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           getCIN(evaluation).toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const [filteredEvaluations, setFilteredEvaluations] = useState([]);
+  
+  useEffect(() => {
+    const applyFilters = async () => {
+      if (!searchQuery) {
+        setFilteredEvaluations(evaluations);
+      } else {
+        const filtered = await filterEvaluations();
+        setFilteredEvaluations(filtered);
+      }
+    };
+    
+    applyFilters();
+  }, [searchQuery, evaluations]);
 
   // Grouper les évaluations par employé
   const groupedEvaluations = {};
@@ -278,7 +425,7 @@ const EvaluationResults = () => {
                 <FormControl fullWidth size="small">
                   <InputLabel>Année</InputLabel>
                   <Select value={selectedYear} onChange={handleYearChange} label="Année">
-                    {[2024, 2023, 2022, 2021, 2020].map((year) => (
+                    {yearOptions.map((year) => (
                       <MenuItem key={year} value={year}>{year}</MenuItem>
                     ))}
                   </Select>
@@ -303,8 +450,7 @@ const EvaluationResults = () => {
             {/* Liste des employés */}
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                {/* Source: https://mui.com/material-ui/react-progress/ */}
-                <CircularProgress />
+                <Typography variant="body1">Chargement des évaluations...</Typography>
               </Box>
             ) : (
               /* Source: https://mui.com/material-ui/react-list/ */
@@ -328,9 +474,7 @@ const EvaluationResults = () => {
                         primary={employee.name}
                         secondary={
                           <Box>
-                            <Typography variant="body2">
-                              CIN: {getCIN(latestEval)}
-                            </Typography>
+                            <CINDisplay evaluation={latestEval} />
                             <Typography
                               variant="h6"
                               sx={{ color: getScoreColor(latestEval.globalScore) }}
@@ -365,9 +509,7 @@ const EvaluationResults = () => {
                     <Typography variant="h5">
                       {selectedEvaluation.employeeName}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      CIN: {getCIN(selectedEvaluation)}
-                    </Typography>
+                    <CINDisplay evaluation={selectedEvaluation} />
                     <Typography variant="body2" color="text.secondary">
                       Période: {selectedEvaluation.periode || format(new Date(selectedEvaluation.date), 'yyyy-MM')}
                     </Typography>
@@ -404,7 +546,7 @@ const EvaluationResults = () => {
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell>Chapitre</TableCell>
+                        <TableCell >Chapitre</TableCell>
                         <TableCell align="center">Score</TableCell>
                         <TableCell align="center">Performance</TableCell>
                       </TableRow>

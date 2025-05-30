@@ -27,6 +27,7 @@ import {
   PeopleAlt,
   AdminPanelSettings,
   BeachAccess,
+  Work,
   WorkOutline,
   LightMode,
   DarkMode,
@@ -39,6 +40,7 @@ import {
   Psychology,
   Person,
   Business,
+  Assignment,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
 import EmployeeLeaveRequest from "./EmployeeLeaveRequest"; // Ancien composant de demande de congé
@@ -46,6 +48,7 @@ import FinalLeaveRequest from "./FinalLeaveRequest"; // Nouveau composant de dem
 import DashboardHomeEmployee from "./DashboardHomeEmployee"; // Nouveau tableau de bord employé
 import AmeliorationAI from "./AmeliorationAI"; // Nouveau composant d'amélioration de performance AI
 import EmployeeProfile from "./EmployeeProfile"; // Nouveau composant de profil employé
+import EmployeeWorkView from "./EmployeeWorkView";
 import { AuthContext } from "../context/AuthContext";
 import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
@@ -74,6 +77,7 @@ const EmployeeDashboard = ({ initialView }) => {
   const [leaveBalance, setLeaveBalance] = useState(15);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
   const [drawerOpen, setDrawerOpen] = useState(true);
+  const navigate = useNavigate();
 
   // Create theme based on dark mode state
   const theme = createAppTheme(darkMode ? "dark" : "light");
@@ -289,6 +293,7 @@ const EmployeeDashboard = ({ initialView }) => {
 
 
 
+        {/* Mes Congés */}
         <ListItem disablePadding>
           <ListItemButton
             onClick={() => setActiveView("leaves")}
@@ -305,12 +310,23 @@ const EmployeeDashboard = ({ initialView }) => {
           </ListItemButton>
         </ListItem>
 
-
-
-
-
-
-
+        {/* Supprimé: Mes Travaux */}
+        
+        {/* <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("workView")}
+            selected={activeView === "workView"}
+            sx={getMenuItemStyles(activeView === "workView")}
+          >
+            <ListItemIcon sx={getIconStyles(activeView === "workView")}>
+              <Work />
+            </ListItemIcon>
+            <ListItemText
+              primary="Mes Travaux"
+              primaryTypographyProps={getTextStyles(activeView === "workView")}
+            />
+          </ListItemButton>
+        </ListItem> */}
 
         <ListItem disablePadding>
           <ListItemButton
@@ -324,6 +340,22 @@ const EmployeeDashboard = ({ initialView }) => {
             <ListItemText
               primary="Amélioration AI"
               primaryTypographyProps={getTextStyles(activeView === "performanceAI")}
+            />
+          </ListItemButton>
+        </ListItem>
+        
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setActiveView("workView")}
+            selected={activeView === "workView"}
+            sx={getMenuItemStyles(activeView === "workView")}
+          >
+            <ListItemIcon sx={getIconStyles(activeView === "workView")}>
+              <Assignment />
+            </ListItemIcon>
+            <ListItemText
+              primary="Mes Travaux"
+              primaryTypographyProps={getTextStyles(activeView === "workView")}
             />
           </ListItemButton>
         </ListItem>
@@ -391,6 +423,7 @@ const EmployeeDashboard = ({ initialView }) => {
                   {activeView === "profile" && "Mon Profil"}
                   {activeView === "leaves" && "Mes Congés"}
                   {activeView === "performanceAI" && "Amélioration de Performance AI"}
+                  {activeView === "workView" && "Mes Travaux"}
                   {!activeView && "Espace de Travail Delice"}
                 </Typography>
               </Box>
@@ -423,8 +456,8 @@ const EmployeeDashboard = ({ initialView }) => {
               <Box>
                 {activeView === "profile" && <EmployeeProfile />}
                 {activeView === "leaves" && <FinalLeaveRequest />}
-
                 {activeView === "performanceAI" && <AmeliorationAI />}
+                {activeView === "workView" && <EmployeeWorkView />}
                 {(activeView === "dashboard" || !activeView) && (
                   <DashboardHomeEmployee setActiveView={setActiveView} />
                 )}

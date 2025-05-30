@@ -75,6 +75,13 @@ export const API_ENDPOINTS = {
   // Files
   FILE_UPLOAD: getApiUrl('api/files/upload'),
 
+  // Work Assignments
+  WORK_ASSIGNMENTS: getApiUrl('api/travaux'),
+  WORK_ASSIGNMENTS_BY_CHEF: (chefId) => getApiUrl(`api/travaux/chef/${chefId}`),
+  WORK_ASSIGNMENTS_BY_EMPLOYEE: (employeeId) => getApiUrl(`api/travaux/employe/${employeeId}`),
+  WORK_ASSIGNMENT_BY_ID: (id) => getApiUrl(`api/travaux/${id}`),
+  WORK_ASSIGNMENT_STATUS: (id) => getApiUrl(`api/travaux/${id}/statut`),
+
   // Maintenance
   MAINTENANCE: getApiUrl('api/maintenance')
 };

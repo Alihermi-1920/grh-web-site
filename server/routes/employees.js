@@ -107,6 +107,28 @@ router.get("/chef/:chefId", async (req, res) => {
   }
 });
 
+// Endpoint pour récupérer un employé par son ID
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Valider l'ID de l'employé
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID d'employé invalide" });
+    }
+    
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res.status(404).json({ message: "Employé non trouvé" });
+    }
+    
+    res.status(200).json(employee);
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'employé:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Endpoint pour modifier un employé
 router.put("/:id", upload.single("photo"), async (req, res) => {
   try {

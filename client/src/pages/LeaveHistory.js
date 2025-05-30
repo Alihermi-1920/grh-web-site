@@ -63,6 +63,20 @@ const LeaveHistory = () => {
     }
   }, [employee, fetchLeaves]);
 
+  // Obtenir la couleur en fonction du statut
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Approuvé":
+        return "green";
+      case "Rejeté":
+        return "red";
+      case "En attente":
+        return "orange";
+      default:
+        return "grey";
+    }
+  };
+
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>
@@ -79,14 +93,13 @@ const LeaveHistory = () => {
       ) : leaves.length === 0 ? (
         <Typography>Aucune demande de congé trouvée.</Typography>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
           <Table aria-label="table des congés">
             <TableHead>
               <TableRow>
                 <TableCell>Type</TableCell>
-                <TableCell>Date de début</TableCell>
-                <TableCell>Date de fin</TableCell>
-                <TableCell>Jours demandés</TableCell>
+                <TableCell>Période</TableCell>
+                <TableCell>Jours</TableCell>
                 <TableCell>Statut</TableCell>
                 <TableCell>Commentaires</TableCell>
               </TableRow>
@@ -98,24 +111,29 @@ const LeaveHistory = () => {
                 return (
                   <TableRow key={leave._id}>
                     <TableCell>{leave.leaveType}</TableCell>
-                    <TableCell>{startDate.toLocaleDateString()}</TableCell>
-                    <TableCell>{endDate.toLocaleDateString()}</TableCell>
-                    <TableCell>{leave.numberOfDays}</TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2">
+                          Du {startDate.toLocaleDateString()}
+                        </Typography>
+                        <Typography variant="body2">
+                          Au {endDate.toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}</TableCell>
                     <TableCell>
                       <Typography
+                        variant="body2"
                         sx={{
-                          color:
-                            leave.status === "Approuvé"
-                              ? "success.main"
-                              : leave.status === "Rejeté"
-                              ? "error.main"
-                              : "warning.main",
+                          color: getStatusColor(leave.status),
+                          fontWeight: "bold"
                         }}
                       >
                         {leave.status}
                       </Typography>
                     </TableCell>
-                    <TableCell>{leave.adminJustification || "Aucun commentaire"}</TableCell>
+                    <TableCell>{leave.adminJustification || leave.chefJustification || "Aucun commentaire"}</TableCell>
                   </TableRow>
                 );
               })}

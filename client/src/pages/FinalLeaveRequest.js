@@ -63,7 +63,8 @@ import {
   CheckCircleOutline,
   Celebration,
   PictureAsPdf,
-  InfoOutlined
+  InfoOutlined,
+  Attachment
 } from '@mui/icons-material';
 import { downloadLeavePDF } from '../utils/pdfGenerator';
 import { format, differenceInCalendarDays, addDays } from 'date-fns';
@@ -400,10 +401,14 @@ const FinalLeaveRequest = () => {
     setPreviewOpen(true);
   };
 
+
   // Close preview
   const handleClosePreview = () => {
     setPreviewOpen(false);
-    setPreviewDocument(null);
+    setTimeout(() => {
+      setPreviewDocument(null);
+      setSelectedLeave(null);
+    }, 300); // Delay to avoid UI flicker
   };
 
   // Download document
@@ -877,46 +882,7 @@ const FinalLeaveRequest = () => {
       </Dialog>
 
       {/* Tabs */}
-      <Paper
-        elevation={3}
-        sx={{
-          mb: 3,
-          borderRadius: 2,
-          overflow: 'hidden'
-        }}
-      >
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => setTabValue(newValue)}
-          variant="fullWidth"
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            '& .MuiTab-root': {
-              py: 2,
-              transition: 'all 0.2s',
-              fontWeight: 500,
-              '&.Mui-selected': {
-                fontWeight: 700
-              }
-            }
-          }}
-        >
-          <Tab
-            label="Nouvelle Demande"
-            icon={<EventAvailable />}
-            iconPosition="start"
-          />
-          <Tab
-            label="Historique"
-            icon={<History />}
-            iconPosition="start"
-          />
-        </Tabs>
-      </Paper>
-
-      {/* New Leave Request Tab */}
-      {tabValue === 0 && (
+      {/* Main Content */}
         <Grid container spacing={3}>
           {/* Leave balance */}
           <Grid item xs={12} md={4}>
@@ -1637,10 +1603,8 @@ const FinalLeaveRequest = () => {
             </Paper>
           </Grid>
         </Grid>
-      )}
 
-      {/* Leave History Tab */}
-      {tabValue === 1 && (
+      {/* Historique des demandes */}
         <Paper
           elevation={3}
           sx={{
@@ -1655,86 +1619,61 @@ const FinalLeaveRequest = () => {
             Historique des Demandes
           </Typography>
 
-          <Tabs
-            value={historyTabValue}
-            onChange={(e, newValue) => setHistoryTabValue(newValue)}
-            variant="fullWidth"
-            sx={{ mb: 3 }}
-          >
-            <Tab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Description sx={{ mr: 1 }} />
-                  <span>Toutes</span>
-                </Box>
-              }
-            />
-            <Tab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <AccessTime sx={{ mr: 1 }} />
-                  <span>En attente</span>
-                  {leaveHistory.filter(l => l.status === "En attente").length > 0 && (
-                    <Chip
-                      label={leaveHistory.filter(l => l.status === "En attente").length}
-                      size="small"
-                      color="warning"
-                      sx={{ ml: 1 }}
-                    />
-                  )}
-                </Box>
-              }
-            />
-            <Tab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <CheckCircle sx={{ mr: 1 }} />
-                  <span>Approuvées</span>
-                </Box>
-              }
-            />
-            <Tab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Cancel sx={{ mr: 1 }} />
-                  <span>Rejetées</span>
-                </Box>
-              }
-            />
-          </Tabs>
-
           {loadingHistory ? (
             <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
               <CircularProgress />
             </Box>
-          ) : filteredLeaveHistory().length === 0 ? (
+          ) : leaveHistory.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
               <Typography variant="body1" color="text.secondary">
-                Aucune demande de congé trouvée dans cette catégorie.
+                Aucune demande de congé trouvée.
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={2}>
-              {filteredLeaveHistory().map((leave) => (
-                <Grid item xs={12} sm={6} md={4} key={leave._id}>
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      height: "100%",
-                      borderLeft: "4px solid " + getStatusColor(leave.status),
-                      transition: "transform 0.2s",
-                      borderRadius: 2,
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: 3
-                      }
-                    }}
-                  >
-                    <CardContent>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Typography variant="subtitle1" fontWeight="bold">
+            <Box sx={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Type</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Période</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Jours</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Motif</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Commentaire du chef</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Statut</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaveHistory.map((leave) => (
+                    <tr key={leave._id} style={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Typography variant="body2" fontWeight="medium">
                           {leave.leaveType}
                         </Typography>
+                      </td>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Typography variant="body2">
+                          {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                          {" → "}
+                          {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "-"}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Typography variant="body2">
+                          {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}`, maxWidth: '200px' }}>
+                        <Typography variant="body2" noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {leave.reason || "-"}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}`, maxWidth: '200px' }}>
+                        <Typography variant="body2" noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
+                          {leave.chefJustification || "-"}
+                        </Typography>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <Chip
                           icon={getStatusIcon(leave.status)}
                           label={leave.status}
@@ -1745,100 +1684,44 @@ const FinalLeaveRequest = () => {
                             fontWeight: "bold"
                           }}
                         />
-                      </Box>
-
-                      <Divider sx={{ my: 1 }} />
-
-                      <Stack spacing={1}>
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <CalendarMonth fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
-                          <Typography variant="body2">
-                            Du {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <CalendarMonth fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
-                          <Typography variant="body2">
-                            Au {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <EventAvailable fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
-                          <Typography variant="body2">
-                            {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: "flex", alignItems: "flex-start" }}>
-                          <Description fontSize="small" sx={{ mr: 1, mt: 0.5, color: "text.secondary" }} />
-                          <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
-                            {leave.reason}
-                          </Typography>
-                        </Box>
-
-                        {leave.chefJustification && (
-                          <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
-                            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              Commentaire du chef:
-                            </Typography>
-                            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                              "{leave.chefJustification}"
-                            </Typography>
-                          </Box>
-                        )}
-
-                        {leave.documents && leave.documents.length > 0 && (
-                          <Box sx={{ mt: 1 }}>
-                            <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                              Documents joints:
-                            </Typography>
-                            <Stack direction="row" spacing={1}>
-                              {leave.documents.map((doc, index) => (
-                                <Tooltip key={index} title={doc.originalName}>
-                                  <IconButton
-                                    size="small"
-                                    color="primary"
-                                    onClick={() => handlePreviewDocument(doc)}
-                                  >
-                                    <Visibility fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              ))}
-                            </Stack>
-                          </Box>
-                        )}
-
-                        {/* PDF Download Button - Only for approved or rejected requests */}
-                        {(leave.status === 'Approuvé' || leave.status === 'Rejeté') && (
-                          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                            <Tooltip title="Télécharger le formulaire PDF">
-                              <Button
-                                variant="outlined"
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                          {leave.documents && leave.documents.length > 0 && (
+                            <Tooltip title="Voir le document joint">
+                              <IconButton
                                 size="small"
-                                startIcon={<PictureAsPdf />}
-                                onClick={() => downloadLeavePDF(leave, user)}
-                                sx={{
-                                  borderRadius: 4,
-                                  textTransform: 'none',
-                                  fontSize: '0.75rem'
-                                }}
+                                color="primary"
+                                onClick={() => handlePreviewDocument(leave.documents[0])}
                               >
-                                Formulaire
-                              </Button>
+                                <Attachment fontSize="small" />
+                              </IconButton>
                             </Tooltip>
-                          </Box>
-                        )}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                          )}
+                          {(leave.status === 'Approuvé' || leave.status === 'Rejeté') && (
+                            <Tooltip title="Télécharger le formulaire PDF">
+                              <IconButton
+                                size="small"
+                                color="secondary"
+                                onClick={() => downloadLeavePDF(leave, user)}
+                              >
+                                <PictureAsPdf fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
           )}
         </Paper>
-      )}
 
+      
       {/* Document Preview Dialog */}
-      <Dialog open={previewOpen} onClose={handleClosePreview} maxWidth="md" fullWidth>
+      <Dialog open={previewOpen && previewDocument} onClose={handleClosePreview} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Typography variant="h6" component="div">
             {previewDocument?.originalName}

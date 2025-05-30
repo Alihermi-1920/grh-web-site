@@ -16,6 +16,8 @@ import EmployeeDashboard from './pages/employee-dashboard';
 import SimpleLeaveRequest from './pages/SimpleLeaveRequest';
 import FinalLeaveRequest from './pages/FinalLeaveRequest';
 import TestFileUpload from './pages/TestFileUpload';
+// Supprimé: import ChefWorkAssignment
+// Supprimé: import EmployeeWorkView
 import PrivateRoute from './components/PrivateRoute'; // Private route pour protéger l'accès
 import theme from './theme'; // Import our custom theme with Inter font
 import GlobalStyles from './components/GlobalStyles'; // Import our global styles
@@ -79,6 +81,8 @@ root.render(
                 <TestFileUpload />
               }
             />
+            {/* Supprimé: Route chef-work-assignment */}
+            {/* Supprimé: Route employee-work-view */}
           </Routes>
         </Router>
       </AuthProvider>
