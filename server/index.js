@@ -23,6 +23,8 @@ const workAssignmentRoutes = require("./routes/workAssignmentRoutes");
 // Messaging system routes removed
 // Password change route
 const passwordChangeRoutes = require("./routes/passwordChange");
+// Email routes
+const emailRoutes = require("./routes/email");
 // Maintenance routes removed
 // Performance AI routes removed
 
@@ -85,6 +87,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/travaux", workAssignmentRoutes);
 // Message routes removed
 app.use("/api/password-change", passwordChangeRoutes);
+// Route pour les emails
+app.use("/api/email", emailRoutes);
 // Maintenance routes removed
 // Performance AI routes removed
 
@@ -93,58 +97,7 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "API is working!" });
 });
 
-// Test email route
-app.get("/api/test-email", async (req, res) => {
-  try {
-    // Import the email service
-    const { sendTestEmail } = require('./services/emailService');
 
-    // Get the recipient email from the query parameter or use a default
-    let recipientEmail = req.query.email || 'huiihyii212@gmail.com';
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(recipientEmail)) {
-      console.error(`Invalid email format: ${recipientEmail}`);
-      recipientEmail = 'huiihyii212@gmail.com';
-      console.log(`Using default email instead: ${recipientEmail}`);
-    }
-
-    // Log all request information for debugging
-    console.log('=== TEST EMAIL REQUEST ===');
-    console.log('Request URL:', req.originalUrl);
-    console.log('Request method:', req.method);
-    console.log('Request query:', req.query);
-    console.log('Request headers:', req.headers);
-    console.log(`Sending test email to ${recipientEmail}...`);
-
-    // Send a test email
-    const result = await sendTestEmail(recipientEmail);
-
-    if (result.success) {
-      console.log('Test email sent successfully');
-      console.log('Message ID:', result.messageId);
-      res.json({
-        success: true,
-        message: `Test email sent successfully to ${recipientEmail}`,
-        messageId: result.messageId
-      });
-    } else {
-      console.error('Failed to send test email:', result.error);
-      res.status(500).json({
-        success: false,
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Error in test email route:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
 
 // Leave notification email route
 app.get("/api/leave-notification", async (req, res) => {
@@ -251,7 +204,6 @@ mongoose
     console.log("- /api/password-change");
     console.log("- /api/maintenance");
     console.log("- /api/test");
-    console.log("- /api/test-email");
     console.log("- /api/leave-notification");
 
     // Create mock PDF for development

@@ -101,30 +101,30 @@ const checkLeaveBalance = async (req, res, next) => {
       return next();
     }
 
-    // Vérifier le solde de congés
+    // Find the employee's leave balance
     let leaveBalance = await LeaveBalance.findOne({ employee: employeeId });
-    console.log("Found leave balance:", leaveBalance);
 
-    // Si aucun solde n'existe, en créer un par défaut
+    // If no balance record exists, create one with default values
     if (!leaveBalance) {
-      console.log("Creating new leave balance for employee:", employeeId);
-      leaveBalance = new LeaveBalance({ employee: employeeId });
+      console.log("No leave balance found, creating default balance");
+      leaveBalance = new LeaveBalance({
+        employee: employeeId,
+        totalDays: 30, // Default annual leave allowance
+        usedDays: 0,
+        remainingDays: 30
+      });
       await leaveBalance.save();
     }
 
-    console.log("Remaining days:", leaveBalance.remainingDays);
-    console.log("Requested days:", numberOfDays);
+    console.log("Current leave balance:", leaveBalance);
 
-    // Vérifier si l'employé a assez de jours de congé
-    if (leaveBalance.remainingDays < numberOfDays) {
-      console.log("Insufficient leave balance");
+    // Check if employee has enough leave days
+    if (numberOfDays > leaveBalance.remainingDays) {
       return res.status(400).json({
-        error: "Solde de congés insuffisant",
-        remainingDays: leaveBalance.remainingDays
+        error: `Solde de congés insuffisant. Jours demandés: ${numberOfDays}, Jours disponibles: ${leaveBalance.remainingDays}`
       });
     }
 
-    req.leaveBalance = leaveBalance;
     next();
   } catch (err) {
     console.error("Error in checkLeaveBalance:", err);
@@ -132,65 +132,74 @@ const checkLeaveBalance = async (req, res, next) => {
   }
 };
 
-// Créer une demande de congé
+// Créer une nouvelle demande de congé
 router.post("/", checkEmployeeExists, checkLeaveBalance, upload.array("documents", 5), async (req, res) => {
   try {
-    console.log("Creating leave request with employee ID:", req.employeeId);
+    console.log("Creating new leave request");
+    console.log("Request body:", req.body);
+    console.log("Files:", req.files);
 
-    // Check for unpaid leave flag
-    const isUnpaid = req.body.isUnpaid === 'true' || req.body.isUnpaid === true;
-    console.log("Is unpaid leave (in route handler):", isUnpaid);
+    const {
+      startDate,
+      endDate,
+      numberOfDays,
+      reason,
+      leaveType,
+      isMedical,
+      isUnpaid
+    } = req.body;
 
-    // Determine if this is a paid leave that should deduct from balance
-    let shouldDeductFromBalance = false;
-
-    // Only paid leave should deduct from balance
-    if (req.body.leaveType === "Congé payé") {
-      shouldDeductFromBalance = true;
+    // Validate required fields
+    if (!startDate || !endDate || !numberOfDays || !reason || !leaveType) {
+      return res.status(400).json({ error: "Tous les champs sont requis" });
     }
 
-    // Medical leave and unpaid leave should never deduct from balance
-    if (req.body.leaveType === "Congé médical" ||
-        req.body.leaveType === "Congé sans solde" ||
-        req.body.isMedical === 'true' ||
-        isUnpaid) {
-      shouldDeductFromBalance = false;
-    }
-
-    console.log("Should deduct from balance:", shouldDeductFromBalance);
-
-    // Préparer les données de base
-    const congeData = {
-      employee: req.employeeId, // Use the validated employee ID
-      leaveType: req.body.leaveType,
-      startDate: new Date(req.body.startDate),
-      endDate: new Date(req.body.endDate),
-      numberOfDays: parseInt(req.body.numberOfDays),
-      reason: req.body.reason,
-      isMedical: req.body.leaveType === "Congé médical" || req.body.isMedical === 'true',
-      // Explicitly set deductFromBalance based on our logic
-      deductFromBalance: shouldDeductFromBalance
-    };
-
-    console.log("Leave request data:", congeData);
-
-    // Ajouter les documents si présents
+    // Process uploaded documents
+    const documents = [];
     if (req.files && req.files.length > 0) {
-      congeData.documents = req.files.map(file => ({
-        fileName: file.filename,
-        originalName: file.originalname,
-        filePath: `/uploads/medical/${file.filename}`,
-        fileType: file.mimetype,
-        fileSize: file.size
-      }));
+      for (const file of req.files) {
+        // Convert Windows backslashes to forward slashes for URLs
+        const relativePath = file.path
+          .replace(/\\/g, '/')
+          .split('client/public')[1];
+
+        documents.push({
+          originalName: file.originalname,
+          filePath: relativePath,
+          fileType: file.mimetype,
+          fileSize: file.size
+        });
+      }
     }
 
-    // Créer la demande de congé
-    const newConge = new Conge(congeData);
+    // Determine if the leave should deduct from balance
+    const deductFromBalance = !(isMedical === 'true' || isMedical === true || 
+                               isUnpaid === 'true' || isUnpaid === true || 
+                               leaveType === "Congé médical" || 
+                               leaveType === "Congé sans solde");
+
+    console.log("Deduct from balance:", deductFromBalance);
+
+    // Create new leave request
+    const newConge = new Conge({
+      employee: req.employeeId,
+      startDate,
+      endDate,
+      numberOfDays: parseInt(numberOfDays),
+      reason,
+      leaveType,
+      status: "En attente",
+      documents,
+      isMedical: isMedical === 'true' || isMedical === true,
+      deductFromBalance
+    });
+
     await newConge.save();
+    console.log("Leave request saved successfully");
 
     res.status(201).json(newConge);
   } catch (err) {
+    console.error("Error creating leave request:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -356,9 +365,85 @@ router.put("/:id/status", async (req, res) => {
     }
 
     await conge.save();
+    
+    // Envoyer un email de notification à l'employé si le statut a changé
+    try {
+      // Récupérer les informations de l'employé
+      const employee = await Employee.findById(conge.employee);
+      if (employee && employee.email) {
+        // Importer le service d'email
+        const emailService = require('../services/emailService');
+        
+        console.log(`Envoi d'une notification par email à ${employee.email} pour le changement de statut à ${status}`);
+        
+        // Envoyer l'email de notification
+        const emailResult = await emailService.sendLeaveNotificationEmail(conge, employee);
+        
+        if (emailResult.success) {
+          console.log('Email de notification envoyé avec succès');
+          // Marquer la demande comme notifiée
+          conge.notified = true;
+          await conge.save();
+        } else {
+          console.error('Erreur lors de l\'envoi de l\'email de notification:', emailResult.error);
+        }
+      } else {
+        console.log("Impossible d'envoyer un email: l'employé n'a pas d'adresse email ou n'existe pas");
+      }
+    } catch (emailError) {
+      console.error('Erreur lors de la tentative d\'envoi d\'email:', emailError);
+      // Ne pas bloquer la mise à jour du statut si l'envoi d'email échoue
+    }
+    
     res.json(conge);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Route pour envoyer un email de notification pour une demande de congé
+router.post("/:id/notify", async (req, res) => {
+  try {
+    // Récupérer la demande de congé
+    const conge = await Conge.findById(req.params.id);
+    if (!conge) {
+      return res.status(404).json({ error: "Demande de congé non trouvée" });
+    }
+
+    // Récupérer les informations de l'employé
+    const employee = await Employee.findById(conge.employee);
+    if (!employee) {
+      return res.status(404).json({ error: "Employé non trouvé" });
+    }
+
+    // Vérifier que l'employé a une adresse email
+    if (!employee.email) {
+      return res.status(400).json({ error: "L'employé n'a pas d'adresse email" });
+    }
+
+    // Importer le service d'email
+    const emailService = require('../services/emailService');
+
+    // Envoyer l'email de notification
+    const result = await emailService.sendLeaveNotificationEmail(conge, employee);
+
+    if (result.success) {
+      // Mettre à jour le statut de notification de la demande de congé
+      conge.notified = true;
+      await conge.save();
+
+      res.json({
+        success: true,
+        message: `Notification envoyée avec succès à ${employee.email}`,
+        messageId: result.messageId,
+        previewUrl: result.previewUrl
+      });
+    } else {
+      res.status(500).json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de la notification:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -401,68 +486,102 @@ router.post("/:id/documents", upload.array("documents", 5), async (req, res) => 
       return res.status(400).json({ error: "ID d'employé manquant" });
     }
 
-    console.log("Employee ID for document upload:", employeeId);
-
-    // Find the leave request
     const conge = await Conge.findById(req.params.id);
     if (!conge) {
       return res.status(404).json({ error: "Demande de congé non trouvée" });
     }
 
-    // Verify that the employee owns this leave request
+    // Vérifier que l'employé est bien le propriétaire de la demande
     if (conge.employee.toString() !== employeeId) {
-      return res.status(403).json({ error: "Vous n'êtes pas autorisé à modifier cette demande" });
+      return res.status(403).json({ error: "Non autorisé à modifier cette demande" });
     }
 
     // Process uploaded documents
+    const newDocuments = [];
     if (req.files && req.files.length > 0) {
-      const documents = req.files.map(file => ({
-        fileName: file.filename,
-        originalName: file.originalname,
-        filePath: `/uploads/medical/${file.filename}`,
-        fileType: file.mimetype,
-        fileSize: file.size
-      }));
+      for (const file of req.files) {
+        // Convert Windows backslashes to forward slashes for URLs
+        const relativePath = file.path
+          .replace(/\\/g, '/')
+          .split('client/public')[1];
 
-      // Add new documents to existing ones
-      if (!conge.documents) {
-        conge.documents = [];
+        newDocuments.push({
+          originalName: file.originalname,
+          filePath: relativePath,
+          fileType: file.mimetype,
+          fileSize: file.size
+        });
       }
-
-      conge.documents = [...conge.documents, ...documents];
-      await conge.save();
-
-      res.status(200).json(conge);
-    } else {
-      res.status(400).json({ error: "Aucun document fourni" });
     }
+
+    // Ajouter les nouveaux documents à la liste existante
+    conge.documents = [...(conge.documents || []), ...newDocuments];
+    await conge.save();
+
+    res.json({ message: "Documents ajoutés avec succès", documents: conge.documents });
   } catch (err) {
     console.error("Error adding documents:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Récupérer le solde de congés d'un employé
-router.get("/balance/:employeeId", async (req, res) => {
+// Nouvelle route pour envoyer une notification par email
+router.post("/:id/notify", async (req, res) => {
   try {
-    const { employeeId } = req.params;
-
-    let leaveBalance = await LeaveBalance.findOne({ employee: employeeId });
-
-    // Si aucun solde n'existe, en créer un par défaut
-    if (!leaveBalance) {
-      leaveBalance = new LeaveBalance({ employee: employeeId });
-      await leaveBalance.save();
+    // Importer le service d'email
+    const { sendLeaveNotificationEmail } = require('../services/emailService');
+    
+    // Récupérer la demande de congé
+    const conge = await Conge.findById(req.params.id)
+      .populate("employee", "firstName lastName email photo cin");
+      
+    if (!conge) {
+      return res.status(404).json({ error: "Demande de congé non trouvée" });
     }
-
-    res.json({
-      totalDays: leaveBalance.totalDays,
-      usedDays: leaveBalance.usedDays,
-      remainingDays: leaveBalance.remainingDays,
-      medicalDays: leaveBalance.medicalDays,
-      year: leaveBalance.year
-    });
+    
+    // Vérifier que l'employé a une adresse email
+    if (!conge.employee || !conge.employee.email) {
+      return res.status(400).json({ error: "L'employé n'a pas d'adresse email" });
+    }
+    
+    // Créer l'objet de demande de congé pour l'email
+    const leaveRequest = {
+      status: conge.status,
+      startDate: conge.startDate,
+      endDate: conge.endDate,
+      numberOfDays: conge.numberOfDays,
+      leaveType: conge.leaveType,
+      reason: conge.reason,
+      justification: conge.chefJustification || ''
+    };
+    
+    // Créer l'objet employé pour l'email
+    const employee = {
+      email: conge.employee.email,
+      firstName: conge.employee.firstName || '',
+      lastName: conge.employee.lastName || ''
+    };
+    
+    // Envoyer l'email de notification
+    const result = await sendLeaveNotificationEmail(leaveRequest, employee);
+    
+    if (result.success) {
+      // Mettre à jour la demande de congé pour indiquer que la notification a été envoyée
+      conge.notificationSent = true;
+      conge.notificationDate = new Date();
+      await conge.save();
+      
+      res.json({
+        success: true,
+        message: `Notification envoyée avec succès à ${employee.email}`,
+        messageId: result.messageId,
+        previewUrl: result.previewUrl
+      });
+    } else {
+      throw new Error(result.error || "Erreur lors de l'envoi de l'email");
+    }
   } catch (err) {
+    console.error("Erreur lors de l'envoi de la notification:", err);
     res.status(500).json({ error: err.message });
   }
 });

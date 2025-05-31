@@ -30,7 +30,6 @@ import {
   CheckCircle,
   Cancel,
   AccessTime,
-  Email,
   PictureAsPdf,
   Image,
   Description,
@@ -175,31 +174,6 @@ const ChefLeaveManagement = () => {
         message: `Demande de congé ${newStatus.toLowerCase()} avec succès`,
       });
 
-      // Envoyer un email de notification
-      try {
-        const emailResponse = await fetch(`http://localhost:5000/api/conges/${selectedLeave._id}/notify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: newStatus,
-            chefJustification: justification,
-            chef: user?._id,
-          }),
-        });
-
-        if (emailResponse.ok) {
-          setFeedback({
-            type: "success",
-            message: `Demande de congé ${newStatus.toLowerCase()} avec succès. Notification envoyée à l'employé.`,
-          });
-        }
-      } catch (emailError) {
-        console.error("Erreur lors de l'envoi de l'email:", emailError);
-        // Ne pas changer le feedback de succès, juste logger l'erreur
-      }
-
       handleCloseDialog();
     } catch (error) {
       console.error("Erreur:", error);
@@ -242,69 +216,6 @@ const ChefLeaveManagement = () => {
         return <AccessTime fontSize="small" />;
       default:
         return null;
-    }
-  };
-
-  // Envoyer un email de notification
-  const handleSendEmail = async (leave) => {
-    try {
-      setActionLoading(true);
-      const response = await fetch(`http://localhost:5000/api/conges/${leave._id}/notify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: leave.status,
-          chefJustification: leave.chefJustification,
-          chef: user?._id,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors de l'envoi de l'email");
-      }
-
-      // Tester l'endpoint d'email
-      try {
-        const testEmailResponse = await fetch(`http://localhost:5000/api/email/test`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: leave.employee?.email || "test@example.com",
-          }),
-        });
-
-        if (!testEmailResponse.ok) {
-          const errorData = await testEmailResponse.json();
-          throw new Error(errorData.message || "Erreur lors du test d'email");
-        }
-
-        setFeedback({
-          type: "success",
-          message: (
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Email sx={{ mr: 1, fontSize: 18 }} />
-              <span>Notification envoyée avec succès à l'employé</span>
-            </Box>
-          )
-        });
-      } catch (testEmailError) {
-        console.error('Error with test email endpoint:', testEmailError);
-        throw testEmailError; // Relancer l'erreur pour qu'elle soit traitée par le bloc catch principal
-      }
-
-    } catch (error) {
-      console.error("Erreur lors de l'envoi de l'email:", error);
-      setFeedback({
-        type: "error",
-        message: `Erreur: ${error.message}`
-      });
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -377,7 +288,6 @@ const ChefLeaveManagement = () => {
                     <TableCell>Raison</TableCell>
                     <TableCell>Documents</TableCell>
                     <TableCell>Statut</TableCell>
-                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -473,10 +383,8 @@ const ChefLeaveManagement = () => {
                         >
                           {leave.status}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {leave.status === "En attente" ? (
-                          <Stack direction="row" spacing={1}>
+                        {leave.status === "En attente" && (
+                          <Stack direction="row" spacing={1} mt={1}>
                             <Tooltip title="Approuver">
                               <IconButton
                                 size="small"
@@ -496,17 +404,6 @@ const ChefLeaveManagement = () => {
                               </IconButton>
                             </Tooltip>
                           </Stack>
-                        ) : (
-                          <Tooltip title="Envoyer notification">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleSendEmail(leave)}
-                              disabled={actionLoading}
-                            >
-                              <Email fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
                         )}
                       </TableCell>
                     </TableRow>
