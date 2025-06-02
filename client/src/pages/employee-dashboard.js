@@ -43,7 +43,7 @@ import {
   Assignment,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
-import EmployeeLeaveRequest from "./EmployeeLeaveRequest"; // Ancien composant de demande de congé
+// Ancien composant de demande de congé
 import FinalLeaveRequest from "./FinalLeaveRequest"; // Nouveau composant de demande de congé amélioré
 import DashboardHomeEmployee from "./DashboardHomeEmployee"; // Nouveau tableau de bord employé
 import AmeliorationAI from "./AmeliorationAI"; // Nouveau composant d'amélioration de performance AI

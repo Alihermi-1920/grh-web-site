@@ -472,6 +472,51 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Récupérer le solde de congés d'un employé
+router.get("/balance/:employeeId", async (req, res) => {
+  try {
+    console.log('=== GET LEAVE BALANCE ===');
+    const { employeeId } = req.params;
+    console.log('Employee ID:', employeeId);
+
+    // Valider l'ID de l'employé
+    if (!employeeId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.error('Format d\'ID d\'employé invalide:', employeeId);
+      return res.status(400).json({ error: "Format d'ID d'employé invalide" });
+    }
+
+    // Trouver l'employé
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      console.error('Employé non trouvé:', employeeId);
+      return res.status(404).json({ error: "Employé non trouvé" });
+    }
+
+    // Trouver ou créer le solde de congés
+    let leaveBalance = await LeaveBalance.findOne({ employee: employeeId });
+
+    if (!leaveBalance) {
+      console.log('Création d\'un nouveau solde de congés pour l\'employé:', employeeId);
+      leaveBalance = new LeaveBalance({
+        employee: employeeId,
+        totalDays: 30,
+        usedDays: 0,
+        remainingDays: 30,
+        medicalDays: 0
+      });
+
+      await leaveBalance.save();
+    }
+
+    console.log('Solde de congés:', leaveBalance);
+
+    res.status(200).json(leaveBalance);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du solde de congés:', error);
+    res.status(500).json({ error: "Erreur lors de la récupération du solde de congés" });
+  }
+});
+
 // Ajouter des documents à une demande de congé existante
 router.post("/:id/documents", upload.array("documents", 5), async (req, res) => {
   try {

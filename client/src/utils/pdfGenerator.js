@@ -56,7 +56,7 @@ export const generateLeavePDF = (leaveRequest, userData) => {
 
   // Add title
   doc.setFontSize(14);
-  doc.text('FORMULAIRE DE DEMANDE DE CONGÉ', pageWidth / 2, 35, { align: 'center' });
+  doc.text('DÉCISION DE CONGÉ', pageWidth / 2, 35, { align: 'center' });
 
   // Add horizontal line
   doc.setDrawColor(0, 0, 0);
@@ -66,9 +66,8 @@ export const generateLeavePDF = (leaveRequest, userData) => {
   // Reset font
   doc.setFont('helvetica', 'normal');
 
-  // Add reference number and date
+  // Add date only (reference removed)
   doc.setFontSize(10);
-  doc.text(`Référence: CONGE-${leaveRequest._id?.substring(0, 8) || 'XXXXXXXX'}`, 20, 50);
   doc.text(`Date d'émission: ${format(new Date(), 'dd/MM/yyyy', { locale: fr })}`, pageWidth - 20, 50, { align: 'right' });
 
   // Add employee section
@@ -194,10 +193,10 @@ export const generateLeavePDF = (leaveRequest, userData) => {
   doc.setFont('helvetica', 'bold');
   doc.text('Signature de l\'employé:', 25, currentY);
 
-  // Add signature line
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.line(70, currentY, 140, currentY);
+  // Signature line removed - completely removing the line drawing code
+  // doc.setDrawColor(0, 0, 0);
+  // doc.setLineWidth(0.3);
+  // doc.line(70, currentY, 140, currentY);
 
   // Add chef section - ULTRA SIMPLIFIED VERSION
   currentY += 20;
@@ -252,7 +251,9 @@ export const generateLeavePDF = (leaveRequest, userData) => {
   // Approved checkbox
   doc.rect(25, currentY, 8, 8);
   if (leaveRequest.status === 'Approuvé') {
-    doc.text('✓', 27, currentY + 6);
+    // Fill the checkbox with black instead of just a checkmark
+    doc.setFillColor(0, 0, 0);
+    doc.rect(25, currentY, 8, 8, 'F');
   }
 
   doc.setFont('helvetica', 'bold');
@@ -262,7 +263,9 @@ export const generateLeavePDF = (leaveRequest, userData) => {
   // Rejected checkbox
   doc.rect(80, currentY, 8, 8);
   if (leaveRequest.status === 'Rejeté') {
-    doc.text('✓', 82, currentY + 6);
+    // Fill the checkbox with black instead of just a checkmark
+    doc.setFillColor(0, 0, 0);
+    doc.rect(80, currentY, 8, 8, 'F');
   }
 
   doc.text('Refusé', 95, currentY + 6);
@@ -297,14 +300,12 @@ export const generateLeavePDF = (leaveRequest, userData) => {
   doc.setFont('helvetica', 'bold');
   doc.text('Signature:', 25, currentY);
 
-  // Add signature line
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.line(60, currentY, 110, currentY);
+  // Signature line removed - completely removing the line drawing code
 
   // Right side - date
   doc.text('Date:', 120, currentY);
-  doc.line(140, currentY, 180, currentY);
+  // Date line removed - completely removing the line drawing code
+  // doc.line(140, currentY, 180, currentY);
 
   // Add the current date if approved or rejected
   if (leaveRequest.status === 'Approuvé' || leaveRequest.status === 'Rejeté') {
