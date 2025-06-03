@@ -21,6 +21,7 @@ import TestFileUpload from './pages/TestFileUpload';
 import PrivateRoute from './components/PrivateRoute'; // Private route pour protéger l'accès
 import theme from './theme'; // Import our custom theme with Inter font
 import GlobalStyles from './components/GlobalStyles'; // Import our global styles
+import './utils/axiosConfig'; // Import Axios configuration with interceptors
 import './index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

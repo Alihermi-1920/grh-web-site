@@ -63,6 +63,9 @@ const Evaluation = () => {
   // Fetch employees and evaluated employees
   useEffect(() => {
     setError("");
+    
+    // Flag to prevent state updates if component unmounts
+    let isMounted = true;
 
     // Get current chef from localStorage
     const currentUser = JSON.parse(localStorage.getItem("employee") || "{}");
@@ -108,6 +111,7 @@ const Evaluation = () => {
           employeesData = [];
         }
 
+        if (!isMounted) return; // Don't update state if component unmounted
         setEmployees(employeesData);
 
         if (periode) {
@@ -118,6 +122,7 @@ const Evaluation = () => {
               url += `&chefId=${chefId}`;
             }
 
+            // Add timestamp to prevent caching
             url += `&_t=${Date.now()}`;
 
             const evalResponse = await fetch(url, {
@@ -133,10 +138,13 @@ const Evaluation = () => {
 
             const evaluatedIds = await evalResponse.json();
 
+            if (!isMounted) return; // Don't update state if component unmounted
+
             if (!Array.isArray(evaluatedIds)) {
               setEvaluatedEmployeeIds([]);
               setFilteredEmployees(employeesData);
             } else {
+              // Update localStorage with fresh data from server
               localStorage.setItem(`evaluatedEmployees_${periode}`, JSON.stringify(evaluatedIds));
               setEvaluatedEmployeeIds(evaluatedIds);
 
@@ -155,6 +163,8 @@ const Evaluation = () => {
             }
           } catch (evalErr) {
             console.error("Error loading evaluated employees:", evalErr);
+
+            if (!isMounted) return; // Don't update state if component unmounted
 
             if (periode) {
               const cachedEvaluatedIds = localStorage.getItem(`evaluatedEmployees_${periode}`);
@@ -183,6 +193,7 @@ const Evaluation = () => {
         }
       } catch (err) {
         console.error("Error loading employees:", err);
+        if (!isMounted) return; // Don't update state if component unmounted
         setError("Error loading employees. Please try again.");
         setEmployees([]);
         setFilteredEmployees([]);
@@ -190,16 +201,32 @@ const Evaluation = () => {
     };
 
     fetchEmployees();
-  }, [periode]);
 
+    // Cleanup function to prevent memory leaks and state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [periode, selectedEmployee]); // Added selectedEmployee as dependency to refresh when it changes
   useEffect(() => {
     // Fetch questions data
+    let isMounted = true;
+    
     fetch("http://localhost:5000/api/qcm")
       .then((res) => res.json())
       .then((data) => {
-        setQuestions(data);
+        if (isMounted) {
+          setQuestions(data);
+        }
       })
-      .catch((err) => setError("Error loading questions"));
+      .catch((err) => {
+        if (isMounted) {
+          setError("Error loading questions");
+        }
+      });
+      
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Group questions by chapter
@@ -229,12 +256,12 @@ const Evaluation = () => {
     setError("");
 
     if (!periode) {
-      setError("Please select an evaluation period");
+      setError("Veuillez sélectionner une période d'évaluation");
       return;
     }
 
     if (!selectedEmployee) {
-      setError("Please select an employee");
+      setError("Veuillez sélectionner un employé");
       return;
     }
 
@@ -243,7 +270,7 @@ const Evaluation = () => {
     );
 
     if (!allAnswered) {
-      setError("Please answer all questions before submitting");
+      setError("Veuillez répondre à toutes les questions avant de soumettre");
       return;
     }
 
@@ -306,17 +333,17 @@ const Evaluation = () => {
     // Simple PDF generation from jsPDF documentation: https://github.com/parallax/jsPDF
     doc.setFont("helvetica");
     doc.setFontSize(16);
-    doc.text("Employee Evaluation Report", 20, 20);
+    doc.text("Rapport d'Évaluation d'Employé", 20, 20);
 
     doc.setFontSize(12);
-    doc.text(`Employee: ${selectedEmp.firstName} ${selectedEmp.lastName}`, 20, 40);
-    doc.text(`Period: ${periode}`, 20, 50);
-    doc.text(`Overall Score: ${globalScore}/20`, 20, 60);
+    doc.text(`Employé: ${selectedEmp.firstName} ${selectedEmp.lastName}`, 20, 40);
+    doc.text(`Période: ${periode}`, 20, 50);
+    doc.text(`Score Global: ${globalScore}/20`, 20, 60);
 
     // Add table using autoTable plugin: https://github.com/simonbengtsson/jsPDF-AutoTable
     autoTable(doc, {
       startY: 70,
-      head: [['Chapter', 'Score', 'Max Points']],
+      head: [['Chapitre', 'Score', 'Points Max']],
       body: Object.entries(results).map(([chap, score]) => [
         chap,
         score.toFixed(2),
@@ -336,12 +363,55 @@ const Evaluation = () => {
     setError("");
     setChapterComments({});
 
+    // Directly refresh the data without using setTimeout
     if (periode) {
-      const newPeriode = periode;
-      setPeriode("");
-      setTimeout(() => {
-        setPeriode(newPeriode);
-      }, 50);
+      // Force a refresh of the evaluated employees data
+      const refreshData = async () => {
+        try {
+          const currentUser = JSON.parse(localStorage.getItem("employee") || "{}");
+          const isChef = currentUser.role === "Chef";
+          const chefId = currentUser._id;
+          
+          let url = `http://localhost:5000/api/evaluationresultat/evaluated-employees?periode=${periode}`;
+          
+          if (isChef && chefId) {
+            url += `&chefId=${chefId}`;
+          }
+          
+          url += `&_t=${Date.now()}`; // Add timestamp to prevent caching
+          
+          const evalResponse = await fetch(url, {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
+          
+          if (!evalResponse.ok) {
+            throw new Error(`Failed to fetch evaluated employees: ${evalResponse.status}`);
+          }
+          
+          const evaluatedIds = await evalResponse.json();
+          
+          if (Array.isArray(evaluatedIds)) {
+            localStorage.setItem(`evaluatedEmployees_${periode}`, JSON.stringify(evaluatedIds));
+            setEvaluatedEmployeeIds(evaluatedIds);
+            
+            const notEvaluatedEmployees = employees.filter(emp => {
+              const empIdStr = emp._id.toString();
+              const isEvaluated = evaluatedIds.includes(empIdStr);
+              return !isEvaluated;
+            });
+            
+            setFilteredEmployees(notEvaluatedEmployees);
+          }
+        } catch (err) {
+          console.error("Error refreshing evaluated employees:", err);
+        }
+      };
+      
+      refreshData();
     }
   };
 
@@ -353,7 +423,7 @@ const Evaluation = () => {
       <Paper sx={{ p: 3 }}>
         {/* Basic Typography from: https://mui.com/material-ui/react-typography/ */}
         <Typography variant="h4" sx={{ mb: 3, textAlign: 'center' }}>
-          Employee Evaluation
+          Évaluation des Employés
         </Typography>
 
         {error && (
@@ -376,18 +446,18 @@ const Evaluation = () => {
                     fullWidth
                     InputLabelProps={{ shrink: true }}
                   />
-                  <FormHelperText>Select year and month</FormHelperText>
+                  <FormHelperText>Sélectionnez l'année et le mois</FormHelperText>
                 </FormControl>
               </Grid>
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Select Employee</InputLabel>
+                  <InputLabel>Sélectionner un Employé</InputLabel>
                   {/* Basic Select from: https://mui.com/material-ui/react-select/ */}
                   <Select
                     value={selectedEmployee}
                     onChange={(e) => setSelectedEmployee(e.target.value)}
-                    label="Select Employee"
+                    label="Sélectionner un Employé"
                   >
                     {filteredEmployees.map((emp) => (
                       <MenuItem key={emp._id} value={emp._id}>
@@ -397,8 +467,8 @@ const Evaluation = () => {
                   </Select>
                   <FormHelperText>
                     {filteredEmployees.length === 0 ? 
-                      "All employees evaluated for this period" : 
-                      `${filteredEmployees.length} employees available`}
+                      "Tous les employés ont été évalués pour cette période" : 
+                      `${filteredEmployees.length} employés disponibles`}
                   </FormHelperText>
                 </FormControl>
               </Grid>
@@ -408,7 +478,7 @@ const Evaluation = () => {
             {selectedEmployee && (
               <Box>
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  Evaluating: {selectedEmployeeData?.firstName} {selectedEmployeeData?.lastName}
+                  Évaluation de: {selectedEmployeeData?.firstName} {selectedEmployeeData?.lastName}
                 </Typography>
 
                 {Object.entries(groupedQuestions).map(([chapter, chapterQuestions]) => (
@@ -432,7 +502,22 @@ const Evaluation = () => {
                                   variant={answers[chapter]?.[question._id] === value ? "contained" : "outlined"}
                                   onClick={() => handleAnswerChange(chapter, question._id, value)}
                                   size="small"
-                                  sx={{ minWidth: '40px' }}
+                                  sx={{ 
+                                    minWidth: '40px',
+                                    ...(answers[chapter]?.[question._id] === value ? {
+                                      bgcolor: '#685cfe',
+                                      '&:hover': {
+                                        bgcolor: '#5348c7'
+                                      }
+                                    } : {
+                                      color: '#685cfe',
+                                      borderColor: '#685cfe',
+                                      '&:hover': {
+                                        borderColor: '#5348c7',
+                                        bgcolor: 'rgba(104, 92, 254, 0.1)'
+                                      }
+                                    })
+                                  }}
                                 >
                                   {value}
                                 </Button>
@@ -443,7 +528,7 @@ const Evaluation = () => {
                       ))}
 
                       <TextField
-                        label={`Comments for ${chapter}`}
+                        label={`Commentaires pour ${chapter}`}
                         multiline
                         rows={3}
                         fullWidth
@@ -453,7 +538,7 @@ const Evaluation = () => {
                       />
 
                       <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                        Chapter Score: {calculateCurrentChapterScore(chapter).toFixed(2)}/10
+                        Score du Chapitre: {calculateCurrentChapterScore(chapter).toFixed(2)}/10
                       </Typography>
                     </CardContent>
                   </Card>
@@ -461,13 +546,19 @@ const Evaluation = () => {
 
                 <Box sx={{ textAlign: 'center', mt: 3 }}>
                   <Button
-                    variant="contained"
-                    size="large"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                  >
-                    {loading ? <CircularProgress size={24} /> : "Submit Evaluation"}
-                  </Button>
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  sx={{ 
+                    mt: 2,
+                    bgcolor: '#685cfe',
+                    '&:hover': {
+                      bgcolor: '#5348c7'
+                    }
+                  }}
+                >
+                  {loading ? <CircularProgress size={24} /> : "Soumettre l'Évaluation"}
+                </Button>
                 </Box>
               </Box>
             )}
@@ -475,60 +566,173 @@ const Evaluation = () => {
         ) : (
           /* Results Section */
           <Box>
-            <Typography variant="h5" sx={{ mb: 3, textAlign: 'center' }}>
-              Evaluation Complete
+            <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', color: '#685cfe', fontWeight: 'bold' }}>
+              Évaluation Complétée
             </Typography>
 
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>
+            <Card 
+              elevation={3} 
+              sx={{ 
+                mb: 3, 
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid rgba(104, 92, 254, 0.2)'
+              }}
+            >
+              <Box sx={{ 
+                bgcolor: '#685cfe', 
+                color: 'white', 
+                py: 2, 
+                px: 3,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   {selectedEmployeeData?.firstName} {selectedEmployeeData?.lastName}
                 </Typography>
+                <Typography variant="body1">
+                  Période: {periode}
+                </Typography>
+              </Box>
 
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Period: {periode}
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  mb: 4, 
+                  mt: 1 
+                }}>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#685cfe' }}>
+                    Score Global: {globalScore}/20
+                  </Typography>
+                </Box>
+
+                <Typography variant="h6" sx={{ 
+                  mb: 2, 
+                  color: '#685cfe', 
+                  borderBottom: '2px solid #685cfe',
+                  pb: 1,
+                  fontWeight: 'bold'
+                }}>
+                  Résultats par Chapitre:
                 </Typography>
 
-                <Typography variant="h6" sx={{ mb: 3 }}>
-                  Global Score: {globalScore}/20
-                </Typography>
-
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Results by Chapter:
-                </Typography>
-
-                {Object.entries(results).map(([chapter, score]) => (
-                  <Box key={chapter} sx={{ mb: 2 }}>
-                    <Typography variant="body1">
-                      {chapter}: {score.toFixed(2)}/10
-                    </Typography>
-                  </Box>
-                ))}
-
-                {Object.entries(chapterComments).filter(([_, comment]) => comment).length > 0 && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Comments:
-                    </Typography>
-                    {Object.entries(chapterComments)
-                      .filter(([_, comment]) => comment)
-                      .map(([chapter, comment]) => (
-                        <Box key={chapter} sx={{ mb: 2 }}>
-                          <Typography variant="subtitle1">{chapter}:</Typography>
-                          <Typography variant="body2">{comment}</Typography>
+                <Box sx={{ overflowX: 'auto' }}>
+                  <Box sx={{
+                    display: 'table',
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    mb: 3
+                  }}>
+                    <Box sx={{ display: 'table-header-group' }}>
+                      <Box sx={{ display: 'table-row' }}>
+                        <Box sx={{ 
+                          display: 'table-cell', 
+                          p: 2, 
+                          fontWeight: 'bold',
+                          borderBottom: '2px solid #685cfe',
+                          color: '#685cfe'
+                        }}>
+                          Chapitre
+                        </Box>
+                        <Box sx={{ 
+                          display: 'table-cell', 
+                          p: 2, 
+                          fontWeight: 'bold',
+                          borderBottom: '2px solid #685cfe',
+                          color: '#685cfe',
+                          textAlign: 'right'
+                        }}>
+                          Score
+                        </Box>
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'table-row-group' }}>
+                      {Object.entries(results).map(([chapter, score]) => (
+                        <Box key={chapter} sx={{ 
+                          display: 'table-row',
+                          '&:hover': { bgcolor: 'rgba(104, 92, 254, 0.05)' }
+                        }}>
+                          <Box sx={{ 
+                            display: 'table-cell', 
+                            p: 2,
+                            borderBottom: '1px solid rgba(224, 224, 224, 1)'
+                          }}>
+                            {chapter}
+                          </Box>
+                          <Box sx={{ 
+                            display: 'table-cell', 
+                            p: 2,
+                            borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                            fontWeight: 'bold',
+                            color: '#685cfe',
+                            textAlign: 'right'
+                          }}>
+                            {score.toFixed(1)}/10
+                          </Box>
                         </Box>
                       ))}
+                    </Box>
+                  </Box>
+                </Box>
+
+                {Object.entries(chapterComments).filter(([_, comment]) => comment).length > 0 && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" sx={{ 
+                      mb: 2, 
+                      color: '#685cfe', 
+                      borderBottom: '2px solid #685cfe',
+                      pb: 1,
+                      fontWeight: 'bold'
+                    }}>
+                      Commentaires:
+                    </Typography>
+                    <Box>
+                      {Object.entries(chapterComments)
+                        .filter(([_, comment]) => comment)
+                        .map(([chapter, comment]) => (
+                          <Box key={chapter} sx={{ mb: 2, p: 2, borderLeft: '3px solid #685cfe', bgcolor: 'rgba(104, 92, 254, 0.05)' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#685cfe' }}>
+                              {chapter}:
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              {comment}
+                            </Typography>
+                          </Box>
+                        ))}
+                    </Box>
                   </Box>
                 )}
               </CardContent>
             </Card>
 
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-              <Button variant="contained" onClick={resetForm}>
-                New Evaluation
+              <Button 
+                variant="contained" 
+                onClick={resetForm}
+                sx={{ 
+                  bgcolor: '#685cfe',
+                  '&:hover': {
+                    bgcolor: '#5348c7'
+                  }
+                }}
+              >
+                Nouvelle Évaluation
               </Button>
-              <Button variant="outlined" onClick={generatePDF}>
-                Download PDF
+              <Button 
+                variant="outlined" 
+                onClick={generatePDF}
+                sx={{ 
+                  color: '#685cfe',
+                  borderColor: '#685cfe',
+                  '&:hover': {
+                    borderColor: '#5348c7',
+                    bgcolor: 'rgba(104, 92, 254, 0.1)'
+                  }
+                }}
+              >
+                Télécharger PDF
               </Button>
             </Box>
           </Box>

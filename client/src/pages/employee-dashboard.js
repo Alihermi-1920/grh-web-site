@@ -1,4 +1,4 @@
-// src/pages/EmployeeDashboard.js
+// src/pages/employee-dashboard.js
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
@@ -54,7 +54,7 @@ import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
 
 const EmployeeDashboard = ({ initialView }) => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const location = useLocation();
   const { projectId } = useParams();
 
@@ -99,7 +99,8 @@ const EmployeeDashboard = ({ initialView }) => {
 
   const handleLogout = () => {
     console.log("Déconnexion effectuée.");
-    window.location.href = "/login";
+    logout(); // Utilise la fonction logout du AuthContext
+    // Remove the navigate call as AuthContext.logout already handles redirection
   };
 
   const toggleDrawer = () => setDrawerOpen(!drawerOpen);
@@ -289,6 +290,7 @@ const EmployeeDashboard = ({ initialView }) => {
             />
           </ListItemButton>
         </ListItem>
+
 
 
 

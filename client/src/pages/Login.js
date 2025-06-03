@@ -149,13 +149,32 @@ const Login = () => {
 
       // Rediriger en fonction du rôle
       const role = res.data.role.trim().toLowerCase();
+      let destination = "/";
+      
       if (role === "admin") {
-        navigate("/dashboard");
+        destination = "/dashboard";
       } else if (role === "chef") {
-        navigate("/chef-dashboard");
+        destination = "/chef-dashboard";
       } else {
-        navigate("/employee-dashboard");
+        destination = "/employee-dashboard";
       }
+      
+      // Remplacer l'historique au lieu d'ajouter une nouvelle entrée
+      // Cela empêche de revenir à la page de connexion avec le bouton retour
+      navigate(destination, { replace: true });
+      
+      // Ajouter une entrée d'historique supplémentaire pour empêcher la navigation arrière
+      window.history.pushState(null, "", destination);
+      
+      // Pour l'employé, ajouter une entrée supplémentaire après un court délai
+      // Cela aide à prévenir les problèmes de navigation avec les flèches du navigateur
+      if (role === "employee") {
+        setTimeout(() => {
+          window.history.pushState(null, "", destination);
+          console.log("Added extra history entry for employee role");
+        }, 100);
+      }
+      
     } catch (error) {
       alert("Erreur : " + (error.response?.data?.message || "Erreur lors de la connexion"));
     }

@@ -9,10 +9,10 @@ import {
   ListItemText,
   Avatar,
   Divider,
-  useTheme
+  useTheme,
+  Chip
 } from '@mui/material';
-import StarIcon from '@mui/icons-material/Star';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { AuthContext } from '../../context/AuthContext';
 
 // Composant principal du tableau de classement des employés
@@ -22,6 +22,7 @@ const EmployeeLeaderboard = () => {
   const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
   const theme = useTheme();
+  const primaryColor = '#685cfe'; // Couleur principale du thème
 
   // Fonction pour récupérer les données des employés et leurs évaluations
   const fetchEmployeeData = async () => {
@@ -111,48 +112,19 @@ const EmployeeLeaderboard = () => {
   // Fonction pour déterminer la couleur de la médaille en fonction du rang
   const getMedalColor = (index) => {
     switch (index) {
-      case 0: return theme.palette.warning.main; // Or pour le 1er
-      case 1: return theme.palette.grey[400]; // Argent pour le 2ème
-      case 2: return theme.palette.warning.dark; // Bronze pour le 3ème
-      default: return theme.palette.grey[300]; // Gris pour les autres
+      case 0: return '#FFD700'; // Or pour le 1er
+      case 1: return '#e65a22'; // Argent pour le 2ème
+      case 2: return '#17e8b4'; // Bronze pour le 3ème
+      default: return primaryColor; // Couleur principale pour les autres
     }
   };
 
-  // Fonction pour afficher les étoiles de notation
-  const renderRatingStars = (score) => {
-    const fullStars = Math.floor(score);
-    const hasHalfStar = score - fullStars >= 0.5;
-    const stars = [];
-    
-    for (let i = 0; i < 5; i++) {
-      if (i < fullStars) {
-        stars.push(
-          <StarIcon 
-            key={i} 
-            fontSize="small" 
-            sx={{ color: theme.palette.warning.main, width: 16, height: 16 }} 
-          />
-        );
-      } else if (i === fullStars && hasHalfStar) {
-        stars.push(
-          <StarIcon 
-            key={i} 
-            fontSize="small" 
-            sx={{ color: theme.palette.warning.main, width: 16, height: 16 }} 
-          />
-        );
-      } else {
-        stars.push(
-          <StarBorderIcon 
-            key={i} 
-            fontSize="small" 
-            sx={{ color: theme.palette.warning.main, width: 16, height: 16 }} 
-          />
-        );
-      }
+  // Fonction pour obtenir l'icône de trophée pour les 3 premiers
+  const getTrophyIcon = (index) => {
+    if (index < 3) {
+      return <EmojiEventsIcon sx={{ color: getMedalColor(index), mr: 1 }} />;
     }
-    
-    return stars;
+    return null;
   };
 
   return (
@@ -161,21 +133,23 @@ const EmployeeLeaderboard = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        border: `1px solid ${theme.palette.divider}`,
         borderRadius: 2,
         bgcolor: theme.palette.background.paper,
-        p: 2
+        boxShadow: '0 6px 18px 0 rgba(0,0,0,0.06)',
+        p: 3,
+        overflow: 'hidden'
       }}
     >
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" fontWeight="600">
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+        <EmojiEventsIcon sx={{ color: primaryColor, mr: 1, fontSize: 28 }} />
+        <Typography variant="h6" fontWeight="600" color={primaryColor}>
           Classement des Employés
         </Typography>
       </Box>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
-          <CircularProgress size={30} />
+          <CircularProgress size={30} sx={{ color: primaryColor }} />
         </Box>
       ) : error ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
@@ -189,11 +163,16 @@ const EmployeeLeaderboard = () => {
         <List sx={{ flexGrow: 1, overflow: 'auto', py: 0 }}>
           {employees.map((employee, index) => (
             <React.Fragment key={employee._id}>
-              {index > 0 && <Divider component="li" />}
+              {index > 0 && <Divider component="li" sx={{ my: 1 }} />}
               <ListItem
                 sx={{
-                  py: 1.5,
+                  py: 2,
                   px: 2,
+                  borderRadius: 2,
+                  transition: 'background-color 0.3s',
+                  '&:hover': {
+                    bgcolor: `${primaryColor}10`,
+                  }
                 }}
               >
                 <ListItemAvatar>
@@ -201,46 +180,60 @@ const EmployeeLeaderboard = () => {
                     src={employee.photo}
                     alt={`${employee.firstName} ${employee.lastName}`}
                     sx={{
-                      width: 40,
-                      height: 40,
-                      border: index < 3 ? `2px solid ${getMedalColor(index)}` : 'none'
+                      width: 50,
+                      height: 50,
+                      border: index < 3 ? `2px solid ${getMedalColor(index)}` : 'none',
+                      boxShadow: index < 3 ? '0 4px 8px rgba(0,0,0,0.1)' : 'none'
                     }}
                   />
                 </ListItemAvatar>
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" fontWeight="medium">
+                      {getTrophyIcon(index)}
+                      <Typography variant="body1" fontWeight="medium">
                         {employee.firstName} {employee.lastName}
                       </Typography>
-                      <Box 
+                      <Chip 
+                        label={`#${index + 1}`}
+                        size="small"
                         sx={{
                           ml: 1,
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          fontWeight: 'medium',
-                          bgcolor: index < 3 ? getMedalColor(index) : theme.palette.grey[100],
-                          color: index < 3 ? '#fff' : theme.palette.text.primary
+                          bgcolor: index < 3 ? getMedalColor(index) : `${primaryColor}20`,
+                          color: index < 3 ? '#fff' : primaryColor,
+                          fontWeight: 'bold',
+                          height: 24
                         }}
-                      >
-                        #{index + 1}
-                      </Box>
+                      />
                     </Box>
                   }
                   secondary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                      {renderRatingStars(employee.averageScore)}
-                      <Typography variant="caption" sx={{ ml: 1, color: theme.palette.text.secondary }}>
-                        ({employee.evaluationCount} évaluation{employee.evaluationCount > 1 ? 's' : ''})
-                      </Typography>
-                    </Box>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                      {employee.evaluationCount} évaluation{employee.evaluationCount > 1 ? 's' : ''}
+                    </Typography>
                   }
                 />
-                <Typography variant="body2" fontWeight="bold">
-                  {employee.averageScore.toFixed(1)}/5
-                </Typography>
+                <Box 
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold" 
+                    sx={{ 
+                      color: index < 3 ? getMedalColor(index) : primaryColor,
+                    }}
+                  >
+                    {employee.averageScore.toFixed(1)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    sur 5
+                  </Typography>
+                </Box>
               </ListItem>
             </React.Fragment>
           ))}

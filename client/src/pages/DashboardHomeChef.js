@@ -1,71 +1,30 @@
-// src/pages/DashboardHomeChef.js
-import React from "react";
-import { Box, Grid, useTheme } from "@mui/material";
-import WelcomeBanner from "../components/WelcomeBanner";
-
-// Import our new dashboard components
-import EmployeePerformanceChart from "../components/dashboard/EmployeePerformanceChart";
-import TeamStatsSummary from "../components/dashboard/TeamStatsSummary";
-import EmployeeLeaderboard from "../components/dashboard/EmployeeLeaderboard";
+import React from 'react';
+import { Box, Grid, Container } from '@mui/material';
+import WelcomeBanner from '../components/WelcomeBanner';
+import TeamStatsSummary from '../components/dashboard/TeamStatsSummary';
+import EmployeeLeaderboard from '../components/dashboard/EmployeeLeaderboard';
 
 const DashboardHomeChef = () => {
-  const theme = useTheme();
-
   return (
-    <Box
-      sx={{
-        minHeight: '100%',
-        p: 3,
-        animation: 'fadeIn 0.5s ease-in-out',
-        '@keyframes fadeIn': {
-          '0%': {
-            opacity: 0,
-            transform: 'translateY(10px)'
-          },
-          '100%': {
-            opacity: 1,
-            transform: 'translateY(0)'
-          }
-        }
-      }}
-    >
-      {/* Bannière de bienvenue */}
-      <WelcomeBanner />
-
-      {/* Team Stats Summary - Full width */}
-      <Box sx={{ mt: 3, mb: 3 }}>
-        <TeamStatsSummary />
-      </Box>
-
-      {/* Main dashboard grid */}
-      <Grid container spacing={3}>
-
-        {/* Employee Performance Chart */}
-        <Grid
-          item
-          xs={12}
-          md={6}
-          lg={6}
-          sx={{
-            animation: 'fadeIn 0.5s ease-in-out 0.1s both',
-          }}
-        >
-          <EmployeePerformanceChart />
+    <Box sx={{ flexGrow: 1, py: 4, px: { xs: 2, md: 4 } }}>
+      <Container maxWidth="xl">
+        <Grid container spacing={4}>
+          {/* Bannière de bienvenue */}
+          <Grid item xs={12}>
+            <WelcomeBanner />
+          </Grid>
+          
+          {/* Statistiques de l'équipe */}
+          <Grid item xs={12}>
+            <TeamStatsSummary />
+          </Grid>
+          
+          {/* Classement des employés */}
+          <Grid item xs={12} md={8} sx={{ mx: 'auto' }}>
+            <EmployeeLeaderboard />
+          </Grid>
         </Grid>
-
-        {/* Employee Leaderboard */}
-        <Grid
-          item
-          xs={12}
-          md={6}
-          lg={6}
-          sx={{
-            animation: 'fadeIn 0.5s ease-in-out 0.2s both',
-          }}
-        >
-          <EmployeeLeaderboard />
-        </Grid>
-      </Grid>
+      </Container>
     </Box>
   );
 };

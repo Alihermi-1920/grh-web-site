@@ -1,77 +1,66 @@
-// Composant de résumé des statistiques d'équipe
-// Documentation Material UI Card: https://mui.com/material-ui/react-card/
-// Documentation Material UI Grid: https://mui.com/material-ui/react-grid/
+
 import React, { useState, useEffect, useContext } from 'react';
-import {
-  Box,
-  Card,
-  Typography,
-  CircularProgress,
-  useTheme,
-  Grid
-} from '@mui/material';
-import {
-  Group as GroupIcon,
-  Star as StarIcon
-} from '@mui/icons-material';
+import { Box, Grid, Typography, Paper, CircularProgress, useTheme } from '@mui/material';
+import GroupIcon from '@mui/icons-material/Group';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { AuthContext } from '../../context/AuthContext';
+import { API_ENDPOINTS } from '../../utils/apiConfig';
 
-// Composant StatCard simplifié
-const StatCard = ({ icon, title, value, subtitle, color }) => {
+// Composant pour afficher une carte de statistique
+const StatCard = ({ icon, title, value, color, bgColor }) => {
   const theme = useTheme();
-
+  
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
-        p: 2,
-        borderRadius: 2,
-        bgcolor: theme.palette.background.paper,
-        border: `1px solid ${theme.palette.divider}`,
+        p: 3,
+        height: '100%',
         display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        height: '100%'
+        borderRadius: 3,
+        bgcolor: bgColor,
+        boxShadow: '0 8px 24px 0 rgba(0,0,0,0.08)',
+        transition: 'transform 0.3s, box-shadow 0.3s',
+        '&:hover': {
+          transform: 'translateY(-5px)',
+          boxShadow: '0 12px 28px 0 rgba(0,0,0,0.12)'
+        }
       }}
     >
       <Box
         sx={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          bgcolor: `${color}22`,
+          width: 70,
+          height: 70,
           display: 'flex',
+          borderRadius: 2,
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          bgcolor: color,
+          color: '#fff',
+          mr: 3
         }}
       >
-        {React.cloneElement(icon, { sx: { color: color, fontSize: 20 } })}
+        {React.cloneElement(icon, { sx: { fontSize: 36 } })}
       </Box>
-      <Box>
-        <Typography variant="h5" fontWeight="bold" color={color}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
           {value}
         </Typography>
-        <Typography variant="body2" fontWeight="medium">
+        <Typography variant="subtitle1" color="text.secondary" fontWeight="medium">
           {title}
         </Typography>
-        {subtitle && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-          >
-            {subtitle}
-          </Typography>
-        )}
       </Box>
-    </Box>
+    </Paper>
   );
-}
+};
 
-// Composant principal TeamStatsSummary
+// Composant principal pour afficher les statistiques de l'équipe
 const TeamStatsSummary = () => {
-  const [stats, setStats] = useState(null);
+  const [employeeCount, setEmployeeCount] = useState(0);
+  const [assignmentsCount, setAssignmentsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
-  const theme = useTheme();
+  const primaryColor = '#685cfe'; // Couleur principale du thème
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,45 +69,28 @@ const TeamStatsSummary = () => {
       try {
         setLoading(true);
 
-        // Fetch employees under this chef
+        // Récupérer le nombre d'employés
         const employeesResponse = await fetch(`http://localhost:5000/api/employees/chef/${user._id}`);
-
+        
         if (!employeesResponse.ok) {
-          throw new Error('Failed to fetch employees data');
+          throw new Error('Impossible de récupérer les données des employés');
         }
+        
+        const employeesData = await employeesResponse.json();
+        setEmployeeCount(employeesData.length);
 
-        const employees = await employeesResponse.json();
-
-
-        // Fetch evaluation results
-        const evaluationsResponse = await fetch(`http://localhost:5000/api/evaluationresultat/chef/${user._id}`);
-        let evaluations = [];
-
-        if (evaluationsResponse.ok) {
-          evaluations = await evaluationsResponse.json();
+        // Récupérer le nombre d'assignations de travail
+        const assignmentsResponse = await fetch(API_ENDPOINTS.WORK_ASSIGNMENTS_BY_CHEF(user._id));
+        
+        if (!assignmentsResponse.ok) {
+          throw new Error('Impossible de récupérer les données des assignations');
         }
+        
+        const assignmentsData = await assignmentsResponse.json();
+        setAssignmentsCount(assignmentsData.length);
 
-        // Calculate statistics
-
-        // 1. Employee count
-        const employeeCount = employees.length;
-
-
-        // 4. Average evaluation score
-        let avgEvaluationScore = 0;
-
-        if (evaluations.length > 0) {
-          const totalScore = evaluations.reduce((sum, evaluation) => sum + evaluation.score, 0);
-          avgEvaluationScore = totalScore / evaluations.length;
-        }
-
-
-        setStats({
-          employeeCount,
-          avgEvaluationScore
-        });
-      } catch (err) {
-        console.error('Error fetching team stats:', err);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données:', error);
       } finally {
         setLoading(false);
       }
@@ -127,64 +99,35 @@ const TeamStatsSummary = () => {
     fetchData();
   }, [user]);
 
-  return (
-    <Card
-      sx={{
-        p: 3,
-        borderRadius: 2,
-        border: `1px solid ${theme.palette.divider}`,
-        bgcolor: theme.palette.background.paper
-      }}
-    >
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Statistiques de l'équipe
-      </Typography>
-      
-      {loading ? (
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 150,
-          py: 3
-        }}>
-          <CircularProgress size={30} />
-        </Box>
-      ) : !stats ? (
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 150,
-          py: 3
-        }}>
-          <Typography variant="body1" color="text.secondary">
-            Aucune donnée disponible
-          </Typography>
-        </Box>
-      ) : (
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={6}>
-            <StatCard
-              icon={<GroupIcon />}
-              title="Employés"
-              value={stats.employeeCount}
-              color={theme.palette.primary.main}
-            />
-          </Grid>
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <CircularProgress size={40} sx={{ color: primaryColor }} />
+      </Box>
+    );
+  }
 
-          <Grid item xs={12} sm={6} md={6}>
-            <StatCard
-              icon={<StarIcon />}
-              title="Score Moyen"
-              value={stats.avgEvaluationScore.toFixed(1)}
-              subtitle="sur 5 points"
-              color={theme.palette.warning.main}
-            />
-          </Grid>
-        </Grid>
-      )}
-    </Card>
+  return (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <StatCard
+          icon={<GroupIcon />}
+          title="Employés"
+          value={employeeCount}
+          color={primaryColor}
+          bgColor={`${primaryColor}10`}
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <StatCard
+          icon={<AssignmentIcon />}
+          title="Travaux Assignés"
+          value={assignmentsCount}
+          color="#FF6B8A"
+          bgColor="#FF6B8A10"
+        />
+      </Grid>
+    </Grid>
   );
 };
 

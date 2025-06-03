@@ -500,105 +500,163 @@ const fetchEvaluations = async () => {
 
         {/* Section de droite - Détails de l'évaluation */}
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3, height: '600px', overflow: 'auto' }}>
+          <Paper sx={{ p: 0, height: '600px', overflow: 'auto', borderRadius: 2, boxShadow: 3 }}>
             {selectedEvaluation ? (
               <>
-                {/* En-tête */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                {/* En-tête avec score intégré */}
+                <Box sx={{ 
+                  bgcolor: '#685cfe', 
+                  color: 'white', 
+                  p: 3, 
+                  borderTopLeftRadius: 8, 
+                  borderTopRightRadius: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
                   <Box>
-                    <Typography variant="h5">
+                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                       {selectedEvaluation.employeeName}
                     </Typography>
                     <CINDisplay evaluation={selectedEvaluation} />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2">
                       Période: {selectedEvaluation.periode || format(new Date(selectedEvaluation.date), 'yyyy-MM')}
                     </Typography>
                   </Box>
 
-                  <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}>
                     <Typography
                       variant="h4"
-                      sx={{ color: getScoreColor(selectedEvaluation.globalScore) }}
+                      sx={{ fontWeight: 'bold' }}
                     >
                       {selectedEvaluation.globalScore}/20
                     </Typography>
                     <Typography variant="body2">Score Global</Typography>
-                    
-                    {/* Source: https://mui.com/material-ui/react-button/ */}
+                  </Box>
+                </Box>
+
+                <Box sx={{ p: 3 }}>
+                  {/* Tableau des scores par chapitre */}
+                  <Typography variant="h6" sx={{ 
+                    mb: 2, 
+                    color: '#685cfe', 
+                    fontWeight: 'bold',
+                    borderBottom: '2px solid #685cfe',
+                    pb: 1
+                  }}>
+                    Scores par Chapitre
+                  </Typography>
+
+                  {/* Table layout instead of cards */}
+                  <TableContainer component={Paper} variant="outlined" sx={{ mb: 4, boxShadow: 'none', border: '1px solid rgba(104, 92, 254, 0.2)' }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: 'rgba(104, 92, 254, 0.05)' }}>
+                          <TableCell sx={{ fontWeight: 'bold', color: '#685cfe' }}>Chapitre</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', color: '#685cfe' }}>Score</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', color: '#685cfe' }}>Performance</TableCell>
+                          
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => {
+                          // Determine color based on score
+                          let color = '#dc3545'; // red for low scores
+                          if (score >= 6) color = '#fd7e14'; // orange for medium scores
+                          if (score >= 8) color = '#20c997'; // teal for good scores
+                          if (score >= 9) color = '#198754'; // green for excellent scores
+                          
+                          return (
+                            <TableRow key={chapter} hover>
+                              <TableCell>{chapter}</TableCell>
+                              <TableCell align="center">
+                                <Typography sx={{ fontWeight: 'bold', color }}>
+                                  {score}/10
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box 
+                                  sx={{ 
+                                    px: 1.5, 
+                                    py: 0.5, 
+                                    bgcolor: `${color}20`, 
+                                    color, 
+                                    borderRadius: 1,
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    display: 'inline-block'
+                                  }}
+                                >
+                                  {getPerformanceText(score)}
+                                </Box>
+                              </TableCell>
+                              
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Section des commentaires */}
+                  {selectedEvaluation.chapterComments && Object.keys(selectedEvaluation.chapterComments).length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" sx={{ 
+                        mb: 2, 
+                        color: '#685cfe', 
+                        fontWeight: 'bold',
+                        borderBottom: '2px solid #685cfe',
+                        pb: 1
+                      }}>
+                        Commentaires
+                      </Typography>
+
+                      {Object.entries(selectedEvaluation.chapterComments)
+                        .filter(([_, comment]) => comment && comment.trim())
+                        .map(([chapter, comment]) => (
+                          <Card key={chapter} sx={{ 
+                            mb: 2, 
+                            border: '1px solid rgba(104, 92, 254, 0.2)',
+                            boxShadow: 'none'
+                          }}>
+                            <CardContent>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, color: '#685cfe' }}>
+                                {chapter}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ 
+                                bgcolor: 'rgba(104, 92, 254, 0.05)', 
+                                p: 1.5, 
+                                borderRadius: 1,
+                                borderLeft: '3px solid #685cfe'
+                              }}>
+                                {comment}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </Box>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                     <Button
                       variant="contained"
                       startIcon={<PictureAsPdf />}
                       onClick={() => generatePDF(selectedEvaluation)}
-                      sx={{ mt: 2 }}
+                      sx={{ 
+                        bgcolor: '#685cfe',
+                        '&:hover': {
+                          bgcolor: '#5348c7'
+                        }
+                      }}
                     >
                       Exporter PDF
                     </Button>
                   </Box>
                 </Box>
-
-                {/* Tableau des scores par chapitre */}
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Scores par Chapitre
-                </Typography>
-
-                {/* Source: https://mui.com/material-ui/react-table/ */}
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell >Chapitre</TableCell>
-                        <TableCell align="center">Score</TableCell>
-                        <TableCell align="center">Performance</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {Object.entries(selectedEvaluation.chapterScores).map(([chapter, score]) => (
-                        <TableRow key={chapter}>
-                          <TableCell>{chapter}</TableCell>
-                          <TableCell align="center">{score}/10</TableCell>
-                          <TableCell align="center">
-                            <Box
-                              sx={{
-                                px: 2,
-                                py: 0.5,
-                                backgroundColor: '#f0f0f0',
-                                borderRadius: 1,
-                                display: 'inline-block'
-                              }}
-                            >
-                              {getPerformanceText(score)}
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                {/* Section des commentaires */}
-                {selectedEvaluation.chapterComments && Object.keys(selectedEvaluation.chapterComments).length > 0 && (
-                  <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Commentaires
-                    </Typography>
-
-                    {Object.entries(selectedEvaluation.chapterComments)
-                      .filter(([_, comment]) => comment && comment.trim())
-                      .map(([chapter, comment]) => (
-                        /* Source: https://mui.com/material-ui/react-card/ */
-                        <Card key={chapter} sx={{ mb: 2, border: '1px solid #ddd' }}>
-                          <CardContent>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                              {chapter}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {comment}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </Box>
-                )}
               </>
             ) : (
               <Box sx={{
@@ -607,10 +665,11 @@ const fetchEvaluations = async () => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 height: '100%',
-                textAlign: 'center'
+                textAlign: 'center',
+                p: 3
               }}>
-                <Assessment sx={{ fontSize: 60, color: '#ccc', mb: 2 }} />
-                <Typography variant="h6">
+                <Assessment sx={{ fontSize: 80, color: 'rgba(104, 92, 254, 0.3)', mb: 2 }} />
+                <Typography variant="h6" sx={{ color: '#685cfe', fontWeight: 'bold' }}>
                   Détails de l'Évaluation
                 </Typography>
                 <Typography variant="body1" color="text.secondary">

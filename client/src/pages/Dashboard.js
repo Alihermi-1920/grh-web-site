@@ -1,5 +1,6 @@
 // src/pages/Dashboard.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import axios from 'axios'; // Import axios
 import AddDepartment from "./AddDepartment";
 import AddEmployee from "./AddEmployee";
 import Attendance from "./Attendance";
@@ -10,6 +11,7 @@ import DashboardHome from "./DashboardHome";
 import LeaveApproval from "./LeaveApproval";
 import AttendanceCalendar from "./AttendanceCalendar";
 import AdminSidebar from "../components/AdminSidebar";
+import { AuthContext } from "../context/AuthContext";
 // import MonthlyRecruitmentChart from "../components/MonthlyRecruitmentChart";
 
 import {
@@ -47,17 +49,17 @@ const Dashboard = () => {
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("themeMode") === "dark");
+  const { logout } = useContext(AuthContext);
 
   // Create theme based on dark mode state
   const theme = createAppTheme(darkMode ? "dark" : "light");
 
   // Chargement des départements
   useEffect(() => {
-    fetch("http://localhost:5000/api/departments")
-      .then(res => res.json())
-      .then(data => {
+    axios.get("http://localhost:5000/api/departments")
+      .then(res => {
         // Extraire les noms des départements
-        const departmentNames = data.map(dept => dept.name);
+        const departmentNames = res.data.map(dept => dept.name);
         console.log("Départements chargés:", departmentNames);
         setDepartments(departmentNames);
       })
@@ -66,9 +68,8 @@ const Dashboard = () => {
 
   // Chargement des employés
   useEffect(() => {
-    fetch("http://localhost:5000/api/employees")
-      .then(res => res.json())
-      .then(data => setEmployees(data))
+    axios.get("http://localhost:5000/api/employees")
+      .then(res => setEmployees(res.data))
       .catch(err => console.error("Erreur récupération employés :", err));
   }, []);
 
@@ -97,12 +98,16 @@ const Dashboard = () => {
     }).length
   );
 
-  const handleThemeToggle = () => {
-    const newMode = darkMode ? "light" : "dark";
+  const toggleDarkMode = () => {
+    const newMode = !darkMode ? "dark" : "light";
     setDarkMode(!darkMode);
     localStorage.setItem("themeMode", newMode);
   };
-  const handleLogout = () => { console.log("Déconnexion"); window.location.href = "/login"; };
+  const handleLogout = () => { 
+    console.log("Déconnexion"); 
+    logout(); // Utilise la fonction logout du AuthContext
+    window.location.href = "/login"; 
+  };
   const handleEmployeeClick = () => setOpenEmployeeSubmenu(!openEmployeeSubmenu);
 
 
@@ -149,82 +154,49 @@ const Dashboard = () => {
             color="inherit"
             elevation={0}
             sx={{
-              backdropFilter: "blur(20px)",
-              backgroundColor: darkMode
-                ? alpha(theme.palette.background.paper, 0.8)
-                : alpha(theme.palette.background.paper, 0.9),
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              zIndex: (theme) => theme.zIndex.drawer - 1,
+              backgroundColor: darkMode ? "#1a1a1a" : "#ffffff",
+              borderBottom: `1px solid ${darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}`,
             }}
           >
             <Toolbar>
-
-
               <Box sx={{ flexGrow: 1 }} />
-
-              {/* Right side icons - Only dark mode toggle */}
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Zoom in={true} style={{ transitionDelay: '200ms' }}>
-                  <Tooltip title={darkMode ? "Mode clair" : "Mode sombre"} arrow>
-                    <IconButton
-                      onClick={handleThemeToggle}
-                      color="inherit"
-                      sx={{
-                        bgcolor: darkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
-                        "&:hover": {
-                          bgcolor: darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-                          transform: 'scale(1.05)'
-                        },
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {darkMode ? <LightMode /> : <DarkMode />}
-                    </IconButton>
-                  </Tooltip>
-                </Zoom>
-              </Stack>
+              <Tooltip title={darkMode ? "Mode clair" : "Mode sombre"}>
+                <IconButton onClick={toggleDarkMode} color="inherit">
+                  {darkMode ? <LightMode /> : <DarkMode />}
+                </IconButton>
+              </Tooltip>
             </Toolbar>
           </AppBar>
 
-          {/* Main Content Area */}
-          <Container
-            maxWidth="xl"
-            sx={{
-              py: 4,
-              px: { xs: 2, sm: 3, md: 4 },
-              minHeight: 'calc(100vh - 64px)',
-              transition: 'all 0.3s ease'
-            }}
+          {/* Main content area */}
+          <Box
+            component={motion.div}
+            variants={pageTransitionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            sx={{ p: 3, minHeight: "calc(100vh - 64px)" }}
           >
-            <Box
-              component={motion.div}
-              variants={pageTransitionVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              sx={{ height: '100%' }}
-            >
-              {activeView === "dashboardHome" && (
-                <DashboardHome
-                  employeeCount={employeeCount}
-                  departmentCount={departmentCount}
-                  departmentLabels={departmentLabels}
-                  departmentDistribution={departmentDistribution}
-                  monthLabels={monthLabels}
-                  recruitmentData={recruitmentData}
-                  darkMode={darkMode}
-                />
-              )}
-              {activeView === "addDepartment" && <AddDepartment />}
-              {activeView === "addEmployee" && <AddEmployee departments={departments} />}
-              {activeView === "attendance" && <Attendance employees={employees} />}
-              {activeView === "attendanceCalendar" && <AttendanceCalendar employees={employees} />}
-              {activeView === "employeeList" && <EmployeeListPage employees={employees} />}
-              {activeView === "evaluationManager" && <EvaluationManager employees={employees} />}
-              {activeView === "evaluationResults" && <EvaluationResults />}
-              {activeView === "leaveApproval" && <LeaveApproval employees={employees} />}
-            </Box>
-          </Container>
+            {/* Render the active view */}
+            {activeView === "dashboardHome" && (
+              <DashboardHome
+                employeeCount={employeeCount}
+                departmentCount={departmentCount}
+                departmentLabels={departmentLabels}
+                departmentDistribution={departmentDistribution}
+                monthLabels={monthLabels}
+                recruitmentData={recruitmentData}
+              />
+            )}
+            {activeView === "addDepartment" && <AddDepartment />}
+            {activeView === "addEmployee" && <AddEmployee departments={departments} />}
+            {activeView === "employeeList" && <EmployeeListPage />}
+            {activeView === "attendance" && <Attendance />}
+            {activeView === "evaluationManager" && <EvaluationManager />}
+            {activeView === "evaluationResults" && <EvaluationResults />}
+            {activeView === "leaveApproval" && <LeaveApproval />}
+            {activeView === "attendanceCalendar" && <AttendanceCalendar />}
+          </Box>
         </Box>
       </Box>
     </ThemeProvider>

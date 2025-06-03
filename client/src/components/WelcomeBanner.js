@@ -11,12 +11,9 @@ const WelcomeBanner = () => {
   const { user } = useContext(AuthContext);
   const theme = useTheme();
 
-  // Déterminer le moment de la journée
+  // Salutation simple et neutre en français
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Bonjour";
-    if (hour < 18) return "Bon après-midi";
-    return "Bonsoir";
+    return "Salut";
   };
 
   // Obtenir le prénom de l'utilisateur

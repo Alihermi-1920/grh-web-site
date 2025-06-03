@@ -73,7 +73,7 @@ import { createAppTheme } from "../theme";
 import WelcomeBanner from "../components/WelcomeBanner"; // Import de la bannière de bienvenue
 
 const ChefDashboard = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const location = useLocation();
   const [activeView, setActiveView] = useState("dashboardHomeChef");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -128,7 +128,8 @@ const ChefDashboard = () => {
 
   const handleLogout = () => {
     console.log("Déconnexion effectuée.");
-    window.location.href = "/login";
+    logout(); // Utilise la fonction logout du AuthContext
+    // Remove the navigate call as AuthContext.logout already handles redirection
   };
 
   const handleAttendanceClick = () => setOpenAttendanceSubmenu(!openAttendanceSubmenu);
