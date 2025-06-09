@@ -340,7 +340,7 @@ const EmployeeDashboard = ({ initialView }) => {
               <Psychology />
             </ListItemIcon>
             <ListItemText
-              primary="Amélioration AI"
+              primary="Amélioration"
               primaryTypographyProps={getTextStyles(activeView === "performanceAI")}
             />
           </ListItemButton>

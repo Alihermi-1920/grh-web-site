@@ -11,6 +11,16 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUserFromStorage = () => {
       try {
+        // Clear localStorage on application startup to ensure users always start at login page
+        // This prevents the issue where the app sometimes opens directly to a chef account
+        if (window.location.pathname === '/' || window.location.pathname === '') {
+          localStorage.removeItem("employee");
+          localStorage.removeItem("user");
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
         // Essayer de récupérer l'employé d'abord
         const storedEmployee = localStorage.getItem("employee");
         if (storedEmployee) {

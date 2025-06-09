@@ -966,6 +966,22 @@ const FinalLeaveRequest = () => {
                           </Typography>
                         </Box>
                       </Grid>
+
+                      {/* Personal Leave Section */}
+                      <Grid item xs={12} sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" color="#ff9800" fontWeight="bold" gutterBottom>
+                          Congés Personnels
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Person sx={{ mr: 1, color: "#ff9800" }} />
+                          <Typography variant="body1">
+                            Utilisés: <strong>{leaveHistory.filter(leave => leave.leaveType === 'Congé personnel' && leave.status === 'Approuvé').reduce((total, leave) => total + leave.numberOfDays, 0)} jours</strong>
+                            <Tooltip title="Les congés personnels sont déduits de votre solde annuel">
+                              <InfoOutlined sx={{ ml: 1, fontSize: 16, color: 'text.secondary' }} />
+                            </Tooltip>
+                          </Typography>
+                        </Box>
+                      </Grid>
                     </Grid>
                   </Box>
                 )}
@@ -1663,13 +1679,13 @@ const FinalLeaveRequest = () => {
                           {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
                         </Typography>
                       </td>
-                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}`, maxWidth: '200px' }}>
-                        <Typography variant="body2" noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Typography variant="body2">
                           {leave.reason || "-"}
                         </Typography>
                       </td>
-                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}`, maxWidth: '200px' }}>
-                        <Typography variant="body2" noWrap sx={{ overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>
+                      <td style={{ padding: '12px 16px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                           {leave.chefJustification || "-"}
                         </Typography>
                       </td>

@@ -10,18 +10,31 @@ import {
   TableCell,
   TableBody,
   Button,
-  Alert
+  Alert,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  HourglassEmpty as PendingIcon
+  HourglassEmpty as PendingIcon,
+  Attachment,
+  Visibility,
+  Download,
+  Close,
+  PictureAsPdf
 } from "@mui/icons-material";
 
 const LeaveApproval = () => {
   const [leaves, setLeaves] = useState([]);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState(null);
 
   const fetchLeaves = async () => {
     try {
@@ -103,7 +116,24 @@ const LeaveApproval = () => {
     }
   };
 
+  // Gérer l'ouverture de la prévisualisation du document
+  const handlePreviewDocument = (document) => {
+    setPreviewDocument(document);
+    setPreviewOpen(true);
+  };
 
+  // Gérer la fermeture de la prévisualisation du document
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewDocument(null);
+  };
+
+  // Gérer le téléchargement du document
+  const handleDownloadDocument = (document) => {
+    if (document && document.filePath) {
+      window.open(document.filePath, '_blank');
+    }
+  };
 
   return (
     <Box sx={{ p: 4 }}>
@@ -122,6 +152,7 @@ const LeaveApproval = () => {
               <TableCell>Date</TableCell>
               <TableCell>Jours</TableCell>
               <TableCell>Raison</TableCell>
+              <TableCell>Documents</TableCell>
               <TableCell>Statut</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -157,6 +188,23 @@ const LeaveApproval = () => {
                   </TableCell>
                   <TableCell>{leave.numberOfDays}</TableCell>
                   <TableCell>{leave.reason}</TableCell>
+                  <TableCell>
+                    {leave.documents && leave.documents.length > 0 ? (
+                      <Tooltip title="Voir le document joint">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handlePreviewDocument(leave.documents[0])}
+                        >
+                          <Attachment fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Aucun
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       {StatusIcon && <StatusIcon fontSize="small" color={statusColor} sx={{ mr: 1 }} />}
@@ -196,6 +244,52 @@ const LeaveApproval = () => {
           </TableBody>
         </Table>
       </Paper>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={previewOpen && previewDocument} onClose={handleClosePreview} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6" component="div">
+            {previewDocument?.originalName}
+          </Typography>
+          <IconButton onClick={handleClosePreview} size="small">
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {previewDocument?.fileType?.includes("image") ? (
+            <Box sx={{ textAlign: "center" }}>
+              <img
+                src={previewDocument?.filePath}
+                alt={previewDocument?.originalName}
+                style={{ maxWidth: "100%", maxHeight: "70vh" }}
+              />
+            </Box>
+          ) : previewDocument?.fileType?.includes("pdf") ? (
+            <Box sx={{ height: "70vh" }}>
+              <iframe
+                src={previewDocument?.filePath}
+                width="100%"
+                height="100%"
+                title={previewDocument?.originalName}
+                style={{ border: "none" }}
+              />
+            </Box>
+          ) : (
+            <Typography>
+              Ce type de fichier ne peut pas être prévisualisé. Veuillez le télécharger.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => handleDownloadDocument(previewDocument)}
+            color="primary"
+            startIcon={<Download />}
+          >
+            Télécharger
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -9,15 +9,11 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { fr } from 'date-fns/locale';
 import App from './App';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
+
 import Dashboard from './pages/Dashboard';
 import ChefDashboard from './pages/chef-dashboard';
 import EmployeeDashboard from './pages/employee-dashboard';
-import SimpleLeaveRequest from './pages/SimpleLeaveRequest';
 import FinalLeaveRequest from './pages/FinalLeaveRequest';
-import TestFileUpload from './pages/TestFileUpload';
-// Supprimé: import ChefWorkAssignment
-// Supprimé: import EmployeeWorkView
 import PrivateRoute from './components/PrivateRoute'; // Private route pour protéger l'accès
 import theme from './theme'; // Import our custom theme with Inter font
 import GlobalStyles from './components/GlobalStyles'; // Import our global styles
@@ -33,7 +29,6 @@ root.render(
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<App />} />
             {/* Routes protégées avec vérification de maintenance */}
             <Route
@@ -60,14 +55,7 @@ root.render(
                 </PrivateRoute>
               }
             />
-            <Route
-              path="/simple-leave"
-              element={
-                <PrivateRoute>
-                  <SimpleLeaveRequest />
-                </PrivateRoute>
-              }
-            />
+            
             <Route
               path="/final-leave"
               element={
@@ -76,14 +64,7 @@ root.render(
                 </PrivateRoute>
               }
             />
-            <Route
-              path="/test-upload"
-              element={
-                <TestFileUpload />
-              }
-            />
-            {/* Supprimé: Route chef-work-assignment */}
-            {/* Supprimé: Route employee-work-view */}
+            
           </Routes>
         </Router>
       </AuthProvider>

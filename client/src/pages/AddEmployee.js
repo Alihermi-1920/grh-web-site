@@ -370,7 +370,7 @@ const AddEmployee = ({ onSuccess, departments }) => {
             color: 'primary.contrastText',
             py: 3,
             textAlign: 'center',
-            backgroundImage: 'linear-gradient(120deg, #1976d2 0%, #64b5f6 100%)'
+            backgroundImage: 'linear-gradient(120deg, #685cfe 0%, #685cfe 100%)'
           }}
         >
           <Typography variant="h4" component="h1" sx={{ fontWeight: 500 }}>

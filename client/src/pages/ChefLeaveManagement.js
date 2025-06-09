@@ -69,12 +69,21 @@ const ChefLeaveManagement = () => {
         data.map(async (leave) => {
           if (leave._id) {
             try {
+              console.log("Fetching documents for leave ID:", leave._id);
+              
               const docResponse = await fetch(
-                `http://localhost:5000/api/conges/${leave._id}/documents?employee=${leave.employee?._id || leave.employee}`
+                `http://localhost:5000/api/conges/${leave._id}/documents`
               );
+              
               if (docResponse.ok) {
-                const documents = await docResponse.json();
+                const documentsData = await docResponse.json();
+                console.log("Documents retrieved:", documentsData);
+                
+                // Ensure we're extracting the documents array from the response
+                const documents = documentsData.documents || [];
                 return { ...leave, documents };
+              } else {
+                console.error("Erreur lors de la récupération des documents. Status:", docResponse.status);
               }
             } catch (error) {
               console.error("Erreur lors de la récupération des documents:", error);
@@ -245,7 +254,7 @@ const ChefLeaveManagement = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 4 }}>
       {/* Afficher les messages de feedback */}
       {feedback && (
         <Alert 
@@ -257,11 +266,11 @@ const ChefLeaveManagement = () => {
         </Alert>
       )}
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-          Gestion des Congés
-        </Typography>
+      <Typography variant="h6" gutterBottom>
+        Gestion des demandes de congé
+      </Typography>
 
+      <Paper sx={{ mb: 4 }}>
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
             <CircularProgress />
@@ -273,145 +282,116 @@ const ChefLeaveManagement = () => {
             </Typography>
           </Box>
         ) : (
-          <>
-            {/* Table des demandes de congé */}
-            {/* Documentation: https://mui.com/material-ui/react-table/ */}
-            <TableContainer>
-              <Table sx={{ minWidth: 650 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Employé</TableCell>
-                    <TableCell>CIN</TableCell>
-                    <TableCell>Type de congé</TableCell>
-                    <TableCell>Période</TableCell>
-                    <TableCell>Durée</TableCell>
-                    <TableCell>Raison</TableCell>
-                    <TableCell>Documents</TableCell>
-                    <TableCell>Statut</TableCell>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Employé</TableCell>
+                <TableCell>CIN</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Période</TableCell>
+                <TableCell>Durée</TableCell>
+                <TableCell>Motif</TableCell>
+                <TableCell>Documents</TableCell>
+                <TableCell>Statut</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredLeaves().map((leave) => {
+                // Determine status color and icon
+                let statusColor = "default";
+                let StatusIcon = null;
+
+                if (leave.status === "Approuvé") {
+                  statusColor = "success";
+                  StatusIcon = CheckCircle;
+                } else if (leave.status === "Rejeté") {
+                  statusColor = "error";
+                  StatusIcon = Cancel;
+                } else if (leave.status === "En attente") {
+                  statusColor = "warning";
+                  StatusIcon = AccessTime;
+                }
+
+                return (
+                  <TableRow key={leave._id} hover>
+                    <TableCell>
+                      {leave.employee?.firstName} {leave.employee?.lastName}
+                    </TableCell>
+                    <TableCell>
+                      {leave.employee?.cin || "Non renseigné"}
+                    </TableCell>
+                    <TableCell>{leave.leaveType}</TableCell>
+                    <TableCell>
+                      {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
+                      {" → "}
+                      {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
+                    </TableCell>
+                    <TableCell>
+                      {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
+                    </TableCell>
+                    <TableCell>
+                      {leave.reason}
+                    </TableCell>
+                    <TableCell>
+                      {leave.documents && leave.documents.length > 0 ? (
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          {leave.documents.map((doc, index) => (
+                            <Tooltip key={index} title={doc.originalName || `Document ${index + 1}`}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handlePreviewDocument(doc)}
+                              >
+                                <Visibility fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Aucun
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {StatusIcon && <StatusIcon fontSize="small" color={statusColor} sx={{ mr: 1 }} />}
+                        {leave.status}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {leave.status === "En attente" ? (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            onClick={() => handleOpenDialog(leave, "approve")}
+                          >
+                            Accepter
+                          </Button>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            onClick={() => handleOpenDialog(leave, "reject")}
+                          >
+                            Rejeter
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Aucune action disponible
+                        </Typography>
+                      )}
+
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredLeaves().map((leave) => (
-                    <TableRow key={leave._id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar 
-                            src={leave.employee?.photo} 
-                            alt={leave.employee?.firstName}
-                            sx={{ width: 32, height: 32, mr: 1 }}
-                          />
-                          <Typography variant="body2">
-                            {leave.employee?.firstName} {leave.employee?.lastName}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {leave.employee?.cin || "Non renseigné"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{leave.leaveType}</TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">
-                            Du {leave.startDate ? format(new Date(leave.startDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
-                          </Typography>
-                          <Typography variant="body2">
-                            Au {leave.endDate ? format(new Date(leave.endDate), "dd/MM/yyyy", { locale: fr }) : "Non défini"}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {leave.numberOfDays} jour{leave.numberOfDays > 1 ? "s" : ""}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            maxWidth: 200, 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {leave.reason}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {leave.documents && leave.documents.length > 0 ? (
-                          <Stack direction="row" spacing={1}>
-                            {leave.documents.map((doc, index) => (
-                              <Tooltip key={index} title={doc.originalName || `Document ${index + 1}`}>
-                                <IconButton
-                                  size="small"
-                                  color="primary"
-                                  onClick={() => handlePreviewDocument(doc)}
-                                >
-                                  {doc.fileType?.includes('image') ? (
-                                    <Image fontSize="small" />
-                                  ) : doc.fileType?.includes('pdf') ? (
-                                    <PictureAsPdf fontSize="small" />
-                                  ) : (
-                                    <Description fontSize="small" />
-                                  )}
-                                </IconButton>
-                              </Tooltip>
-                            ))}
-                          </Stack>
-                        ) : leave.leaveType === "Congé médical" ? (
-                          <Chip 
-                            label="Justificatif requis" 
-                            size="small" 
-                            color="error" 
-                            variant="outlined"
-                          />
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Aucun
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography 
-                          variant="body2" 
-                          sx={{
-                            color: getStatusColor(leave.status),
-                            fontWeight: "bold"
-                          }}
-                        >
-                          {leave.status}
-                        </Typography>
-                        {leave.status === "En attente" && (
-                          <Stack direction="row" spacing={1} mt={1}>
-                            <Tooltip title="Approuver">
-                              <IconButton
-                                size="small"
-                                color="success"
-                                onClick={() => handleOpenDialog(leave, "approve")}
-                              >
-                                <ThumbUp fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Rejeter">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleOpenDialog(leave, "reject")}
-                              >
-                                <ThumbDown fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </Paper>
 

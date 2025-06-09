@@ -769,7 +769,7 @@ const EvaluationManager = () => {
                 value={newChapter}
                 onChange={(e) => setNewChapter(e.target.value)}
                 variant="outlined"
-                placeholder="Ex: Politiques RH, Gestion de Performance"
+                placeholder="Nom Du Chapitre "
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
