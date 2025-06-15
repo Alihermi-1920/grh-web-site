@@ -21,7 +21,7 @@ const leaveBalanceSchema = new mongoose.Schema(
     },
     remainingDays: {
       type: Number,
-      default: 30,
+      default: 15,
       min: 0
     },
     year: {

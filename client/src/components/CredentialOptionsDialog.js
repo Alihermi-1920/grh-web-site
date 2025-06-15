@@ -1,4 +1,11 @@
 // src/components/CredentialOptionsDialog.js
+// Material UI Dialog: https://mui.com/material-ui/react-dialog/
+// Material UI Checkbox: https://mui.com/material-ui/react-checkbox/
+// Material UI Button: https://mui.com/material-ui/react-button/
+// Material UI Alert: https://mui.com/material-ui/react-alert/
+// Material UI Typography: https://mui.com/material-ui/react-typography/
+// Material UI Box: https://mui.com/material-ui/react-box/
+// Material UI Grid: https://mui.com/material-ui/react-grid/
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -9,15 +16,11 @@ import {
   Typography,
   Box,
   Grid,
-  Card,
-  CardContent,
-  CardActionArea,
-  CardMedia,
-  Divider,
   Alert,
   CircularProgress,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Paper
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -42,47 +45,42 @@ const CredentialOptionsDialog = ({ open, onClose, employee }) => {
     }));
   };
 
-  const handleGenerate = () => {
+  // Fonction pour gérer la génération des PDFs
+  // Cette fonction télécharge les PDFs sélectionnés avec un délai suffisant entre eux
+  const handleGenerate = async () => {
     if ((!selectedOptions.digital && !selectedOptions.letter) || !employee) return;
 
     setIsGenerating(true);
 
-    // Small delay to show loading state
-    setTimeout(() => {
-      try {
-        console.log("Generating PDFs with options:", selectedOptions);
-        console.log("Employee data:", employee);
+    try {
+      console.log("Generating PDFs with options:", selectedOptions);
+      console.log("Employee data:", employee);
 
-        // Generate selected PDFs
-        if (selectedOptions.digital) {
-          console.log("Generating digital PDF");
-          downloadCredentialPDF(employee, 'digital');
-        }
+      // Fonction pour attendre un délai spécifié
+      const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // Generate letter PDF
-        if (selectedOptions.letter) {
-          console.log("Generating letter PDF");
-          // Add a small delay if both are selected to prevent browser issues
-          if (selectedOptions.digital) {
-            setTimeout(() => {
-              downloadCredentialPDF(employee, 'letter');
-            }, 800);
-          } else {
-            downloadCredentialPDF(employee, 'letter');
-          }
-        }
-
-        // Mark as complete
-        setTimeout(() => {
-          setIsGenerated(true);
-          setIsGenerating(false);
-        }, selectedOptions.digital && selectedOptions.letter ? 1000 : 500);
-
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        setIsGenerating(false);
+      // Générer les PDFs sélectionnés avec un délai suffisant entre eux
+      if (selectedOptions.digital) {
+        console.log("Generating digital PDF");
+        downloadCredentialPDF(employee, 'digital');
+        // Attendre 3 secondes avant de générer le prochain PDF (délai augmenté)
+        if (selectedOptions.letter) await wait(3000);
       }
-    }, 1000);
+
+      if (selectedOptions.letter) {
+        console.log("Generating letter PDF");
+        downloadCredentialPDF(employee, 'letter');
+      }
+
+      // Attendre un peu avant de marquer comme terminé
+      await wait(1000);
+      setIsGenerated(true);
+      setIsGenerating(false);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setIsGenerating(false);
+    }
   };
 
   const handleClose = () => {
@@ -93,201 +91,147 @@ const CredentialOptionsDialog = ({ open, onClose, employee }) => {
 
   if (!employee) return null;
 
+  // Rendu du composant
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
-      maxWidth="md"
+      // Désactiver la fermeture lorsqu'on clique à l'extérieur ou appuie sur Escape
+      // https://mui.com/material-ui/api/dialog/#props
+      disableEscapeKeyDown={!isGenerated} // Désactive la fermeture avec la touche Escape si les documents ne sont pas générés
+      onClose={(event, reason) => {
+        // Ne ferme le dialogue que si les documents ont été générés ou si l'utilisateur clique sur un bouton
+        if (isGenerated || reason !== 'backdropClick') {
+          handleClose();
+        }
+      }}
+      maxWidth="sm"
       fullWidth
+      // Material UI Dialog PaperProps: https://mui.com/material-ui/api/dialog/#props
       PaperProps={{
         sx: {
-          borderRadius: 2,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          borderRadius: 2
         }
       }}
     >
+      {/* Titre du dialogue */}
       <DialogTitle sx={{
         bgcolor: 'primary.main',
         color: 'white',
-        py: 2.5,
-        fontSize: '1.5rem'
+        py: 2
       }}>
         Générer les identifiants pour {employee.firstName} {employee.lastName}
       </DialogTitle>
 
-      <DialogContent sx={{ py: 4 }}>
+      {/* Contenu du dialogue */}
+      <DialogContent sx={{ py: 3 }}>
         {isGenerated ? (
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <CheckIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              Document généré avec succès!
+          // Affichage après génération réussie
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <CheckIcon sx={{ fontSize: 50, color: 'success.main', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              Document(s) généré(s) avec succès!
             </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              Le PDF contenant les identifiants a été téléchargé.
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Le(s) PDF contenant les identifiants a/ont été téléchargé(s).
             </Typography>
-            <Alert severity="info" sx={{ mt: 2, mx: 'auto', maxWidth: 500 }}>
-              N'oubliez pas de transmettre ce document de manière sécurisée à l'employé.
+            <Alert severity="info" sx={{ mt: 2, mx: 'auto' }}>
+              N'oubliez pas de transmettre ce(s) document(s) de manière sécurisée à l'employé.
             </Alert>
           </Box>
         ) : (
+          // Affichage des options de génération
           <>
             <Typography variant="body1" paragraph>
-              Choisissez le format du document d'identifiants à générer pour le nouvel employé:
+              Sélectionnez le(s) format(s) d'identifiants à générer:
             </Typography>
 
-            <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={6}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    height: '100%',
-                    borderColor: selectedOptions.digital ? 'primary.main' : 'divider',
-                    borderWidth: selectedOptions.digital ? 2 : 1,
-                    transition: 'all 0.2s ease-in-out',
-                    position: 'relative',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                    }
-                  }}
-                >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={selectedOptions.digital}
-                        onChange={() => handleOptionChange('digital')}
-                        onClick={(e) => e.stopPropagation()}
-                        color="primary"
-                      />
-                    }
-                    label=""
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      right: 0,
-                      zIndex: 10,
-                      m: 0,
-                      p: 1
-                    }}
-                  />
-                  <CardActionArea
-                    onClick={() => handleOptionChange('digital')}
-                    sx={{ height: '100%' }}
-                  >
-                    <CardMedia
-                      component="div"
-                      sx={{
-                        height: 140,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'primary.light',
-                        color: 'white'
-                      }}
-                    >
-                      <EmailIcon sx={{ fontSize: 60 }} />
-                    </CardMedia>
-                    <CardContent>
-                      <Typography gutterBottom variant="h5" component="div">
-                        Version Digitale
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        PDF optimisé pour l'envoi par email. Contient les identifiants de connexion
-                        et des instructions pour le premier accès au système.
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="body2" color="primary">
-                        Idéal pour l'envoi électronique
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              </Grid>
+            {/* Options simplifiées */}
+            <Box sx={{ mb: 3 }}>
+              {/* Option 1: Version Digitale */}
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2, 
+                  mb: 2, 
+                  borderColor: selectedOptions.digital ? 'primary.main' : 'divider',
+                  borderWidth: selectedOptions.digital ? 2 : 1
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedOptions.digital}
+                      onChange={() => handleOptionChange('digital')}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Grid container alignItems="center" spacing={2}>
+                      <Grid item>
+                        <EmailIcon color="primary" />
+                      </Grid>
+                      <Grid item xs>
+                        <Typography variant="subtitle1">Version Digitale</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          PDF optimisé pour l'envoi par email
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  }
+                  sx={{ width: '100%', m: 0 }}
+                />
+              </Paper>
 
-              <Grid item xs={12} md={6}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    height: '100%',
-                    borderColor: selectedOptions.letter ? 'primary.main' : 'divider',
-                    borderWidth: selectedOptions.letter ? 2 : 1,
-                    transition: 'all 0.2s ease-in-out',
-                    position: 'relative',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                    }
-                  }}
-                >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={selectedOptions.letter}
-                        onChange={() => handleOptionChange('letter')}
-                        onClick={(e) => e.stopPropagation()}
-                        color="primary"
-                      />
-                    }
-                    label=""
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      right: 0,
-                      zIndex: 10,
-                      m: 0,
-                      p: 1
-                    }}
-                  />
-                  <CardActionArea
-                    onClick={() => handleOptionChange('letter')}
-                    sx={{ height: '100%' }}
-                  >
-                    <CardMedia
-                      component="div"
-                      sx={{
-                        height: 140,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'secondary.light',
-                        color: 'white'
-                      }}
-                    >
-                      <PrintIcon sx={{ fontSize: 60 }} />
-                    </CardMedia>
-                    <CardContent>
-                      <Typography gutterBottom variant="h5" component="div">
-                        Lettre Imprimable
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Format lettre avec lignes de pliage pour enveloppe. Contient les identifiants
-                        et un avertissement de sécurité pour le premier accès.
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="body2" color="secondary">
-                        Idéal pour la remise en main propre
-                      </Typography>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              </Grid>
-            </Grid>
+              {/* Option 2: Lettre Imprimable */}
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2,
+                  borderColor: selectedOptions.letter ? 'primary.main' : 'divider',
+                  borderWidth: selectedOptions.letter ? 2 : 1
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedOptions.letter}
+                      onChange={() => handleOptionChange('letter')}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Grid container alignItems="center" spacing={2}>
+                      <Grid item>
+                        <PrintIcon color="primary" />
+                      </Grid>
+                      <Grid item xs>
+                        <Typography variant="subtitle1">Lettre Imprimable</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Format lettre avec lignes de pliage pour enveloppe
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  }
+                  sx={{ width: '100%', m: 0 }}
+                />
+              </Paper>
+            </Box>
 
-            {(selectedOptions.digital || selectedOptions.letter) && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  {selectedOptions.digital && selectedOptions.letter
-                    ? "Les documents contiennent des informations sensibles. Assurez-vous de les transmettre via des canaux sécurisés."
-                    : selectedOptions.digital
-                      ? "Ce document contient des informations sensibles. Assurez-vous de l'envoyer via un canal sécurisé."
-                      : "Après impression, pliez la lettre selon les lignes pointillées et placez-la dans une enveloppe."}
-                </Typography>
-              </Alert>
-            )}
+            {/* Message d'information */}
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2" fontWeight={selectedOptions.digital || selectedOptions.letter ? 'normal' : 'bold'}>
+                {selectedOptions.digital || selectedOptions.letter
+                  ? (selectedOptions.digital && selectedOptions.letter
+                    ? "Les deux documents seront téléchargés l'un après l'autre. Veuillez attendre que les téléchargements soient terminés avant de fermer cette fenêtre."
+                    : "Le document sélectionné sera téléchargé automatiquement. Veuillez attendre que le téléchargement soit terminé avant de fermer cette fenêtre.")
+                    : "IMPORTANT: Vous devez sélectionner au moins une option et générer les identifiants avant de fermer cette fenêtre, sinon les informations seront perdues."}
+              </Typography>
+            </Alert>
           </>
         )}
       </DialogContent>
 
+      {/* Actions du dialogue */}
       <DialogActions sx={{ px: 3, py: 2, bgcolor: 'grey.50' }}>
         <Button onClick={handleClose} color="inherit">
           {isGenerated ? 'Fermer' : 'Annuler'}
@@ -302,8 +246,7 @@ const CredentialOptionsDialog = ({ open, onClose, employee }) => {
             startIcon={isGenerating ? <CircularProgress size={20} /> : <DownloadIcon />}
           >
             {isGenerating ? 'Génération en cours...' :
-              (selectedOptions.digital && selectedOptions.letter) ?
-                'Générer les documents' : 'Générer le document'}
+              'Générer'}
           </Button>
         )}
       </DialogActions>
